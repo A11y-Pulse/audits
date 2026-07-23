@@ -1,3 +1,9 @@
-import { baseConfig } from "@a11y-pulse/test-support/vitest";
+import { defineConfig } from "vitest/config";
 
-export default baseConfig();
+export default defineConfig({
+	resolve: { tsconfigPaths: true },
+	test: {
+		include: ["src/**/*.test.{ts,tsx}"],
+		environment: "node",
+	},
+});
