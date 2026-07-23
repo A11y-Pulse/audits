@@ -23,6 +23,8 @@ jobs:
         with:
           path: ~/.cache/puppeteer
           key: puppeteer-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Allow Chrome sandbox (Ubuntu 24.04 AppArmor userns restriction)
+        run: echo 0 | sudo tee /proc/sys/kernel/apparmor_restrict_unprivileged_userns
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
