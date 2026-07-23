@@ -41,14 +41,13 @@
 		"LICENSE.md"
 	],
 	"scripts": {
-		"build": "tsup",
+		"build": "tsup && tsc -p tsconfig.build.json",
 		"typecheck": "tsc --noEmit",
 		"lint": "biome check",
 		"lint:fix": "biome check --fix",
 		"test:unit": "vitest run",
 		"test:integration": "vitest run --config vitest.integration.config.ts",
 		"test": "npm run typecheck && npm run test:unit",
-		"docs": "typedoc",
 		"prepublishOnly": "npm run build",
 		"release": "npm run build && changeset publish"
 	},
@@ -76,8 +75,7 @@
 		"happy-dom": "^20.9.0",
 		"puppeteer": "^25.3.0",
 		"tsup": "^8.5.0",
-		"typedoc": "^0.28.5",
-		"typescript": "^6.0.2",
+		"typescript": "^7.0.2",
 		"vitest": "^4.1.7"
 	}
 }
