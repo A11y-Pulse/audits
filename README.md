@@ -170,6 +170,43 @@ Use [`src/adaptors/puppeteer.ts`](./src/adaptors/puppeteer.ts) as a reference im
 - **Tab order only.** The audit tabs through elements in native tab order. It does not yet exercise arrow-key composite widgets (menus, comboboxes, toolbars, etc.) where focus moves via `aria-activedescendant` or roving `tabindex` instead of native Tab.
 - **Heuristic accuracy.** Detection is heuristic and can produce false positives and false negatives — see [Accuracy](#accuracy) and [docs/accuracy.md](./docs/accuracy.md) for known cases.
 
+## Releasing
+
+Releases are automated with [Changesets](https://github.com/changesets/changesets) and GitHub Actions. Publishing uses [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/) (OIDC) — there is no long-lived `NPM_TOKEN`.
+
+### Ship a change
+
+1. Open a PR against `main` with your code changes.
+2. Add a changeset describing the user-facing impact:
+
+   ```bash
+   npx changeset
+   ```
+
+   Choose **patch**, **minor**, or **major**, write a short changelog note, and commit the file under `.changeset/`.
+3. Merge the PR to `main`.
+
+### What happens on `main`
+
+The [Release](./.github/workflows/release.yml) workflow runs `changesets/action`:
+
+- **Pending changesets** → opens or updates a **Release packages** PR that bumps `package.json`, updates `CHANGELOG.md`, and consumes the changeset files.
+- **That release PR is merged** → the next Release run publishes with `npm run release` (`build` + `changeset publish`) via OIDC, creates git tag `vX.Y.Z`, and creates a GitHub Release. Provenance is attached automatically.
+
+If the org blocks Actions from creating pull requests, open the release PR yourself from the `changeset-release/main` branch, then merge it.
+
+Trusted Publisher on npm must stay configured for:
+
+| Field | Value |
+| --- | --- |
+| Organization or user | `A11y-Pulse` |
+| Repository | `focus-appearance-audit` |
+| Workflow filename | `release.yml` |
+
+### Consumers (e.g. the A11y Pulse runner)
+
+Bumping the published version in downstream apps is a separate change — update the dependency range / lockfile there after the npm release lands.
+
 ## License
 
 Released under the [PolyForm Shield License 1.0.0](./LICENSE.md), in plain language:
