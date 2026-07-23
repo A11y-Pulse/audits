@@ -3,6 +3,7 @@ name: Release
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -16,12 +17,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
+          # Node 22.14+ required for npm trusted publishing / OIDC.
           node-version: 22
-          cache: npm
-          registry-url: https://registry.npmjs.org
+          # Avoid restoring a cached npm that is too old for OIDC trusted publishing.
+          package-manager-cache: false
+
+      # Trusted publishing requires npm >= 11.5.1.
+      - name: Upgrade npm for OIDC trusted publishing
+        run: npm install -g npm@latest
+
       - run: npm ci
+
+      # setup-node may write an empty _authToken when registry-url/NODE_AUTH_TOKEN
+      # are involved; clear it so npm falls through to OIDC trusted publishing.
+      - name: Clear token auth so OIDC is used
+        run: npm config delete "//registry.npmjs.org/:_authToken" || true
+
       - name: Create release PR or publish
         id: changesets
         uses: changesets/action@v1
@@ -30,5 +44,6 @@ jobs:
           title: "Release packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_CONFIG_PROVENANCE: true
+          # Prefer OIDC trusted publishing. An empty NPM_TOKEN keeps older
+          # changesets/action versions from writing a bogus auth entry to .npmrc.
+          NPM_TOKEN: ""
