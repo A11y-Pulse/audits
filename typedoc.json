@@ -1,0 +1,6 @@
+{
+	"entryPoints": ["src/index.ts", "src/adaptors/puppeteer.ts"],
+	"out": "docs/api",
+	"excludePrivate": true,
+	"readme": "none"
+}
