@@ -22,8 +22,6 @@ jobs:
         with:
           # Node 22.14+ required for npm trusted publishing / OIDC.
           node-version: 22
-          # Avoid restoring a cached npm that is too old for OIDC trusted publishing.
-          package-manager-cache: false
 
       # Trusted publishing requires npm >= 11.5.1.
       - name: Upgrade npm for OIDC trusted publishing
