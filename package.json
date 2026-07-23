@@ -60,7 +60,7 @@
 		"pngjs": "^7.0.0"
 	},
 	"peerDependencies": {
-		"puppeteer": "^24.15.0"
+		"puppeteer": "^25.3.0"
 	},
 	"peerDependenciesMeta": {
 		"puppeteer": {
@@ -75,7 +75,7 @@
 		"@types/pixelmatch": "^5.2.6",
 		"@types/pngjs": "^6.0.5",
 		"happy-dom": "^20.9.0",
-		"puppeteer": "^24.15.0",
+		"puppeteer": "^25.3.0",
 		"tsup": "^8.5.0",
 		"typedoc": "^0.28.5",
 		"typescript": "^6.0.2",
