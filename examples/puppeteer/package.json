@@ -1,0 +1,12 @@
+{
+	"name": "focus-appearance-audit-puppeteer-example",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"start": "node index.mjs"
+	},
+	"dependencies": {
+		"@a11y-pulse/focus-appearance-audit": "file:../..",
+		"puppeteer": "^24.15.0"
+	}
+}
