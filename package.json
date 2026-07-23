@@ -78,7 +78,7 @@
 		"puppeteer": "^25.3.0",
 		"tsup": "^8.5.0",
 		"typedoc": "^0.28.5",
-		"typescript": "^6.0.2",
+		"typescript": "^7.0.2",
 		"vitest": "^4.1.7"
 	}
 }
