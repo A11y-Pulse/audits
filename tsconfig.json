@@ -1,0 +1,10 @@
+{
+	"extends": ["@tsconfig/node22/tsconfig.json", "../../tsconfig.base.json"],
+	"compilerOptions": {
+		"types": ["node"],
+		"lib": ["ES2022", "DOM"],
+		// tsup's .d.ts generator injects a (now-deprecated) baseUrl; silence the
+		// TS 6.0 deprecation error so the declaration build succeeds.
+		"ignoreDeprecations": "6.0"
+	}
+}

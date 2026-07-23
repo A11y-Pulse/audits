@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 208" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#868e96"/>
+    </marker>
+  </defs>
+
+  <rect x="1" y="1" width="818" height="208" rx="14" fill="#ffffff" stroke="#e9ecef"/>
+
+  <!-- ===== Panel 1: page, no focus ===== -->
+  <g transform="translate(24,24)">
+    <rect x="0" y="0" width="210" height="132" rx="8" fill="#ffffff" stroke="#ced4da"/>
+    <path d="M1,9 q0,-8 8,-8 h192 q8,0 8,8 v13 h-208 z" fill="#eef0f2"/>
+    <circle cx="13" cy="11" r="2.5" fill="#ced4da"/><circle cx="23" cy="11" r="2.5" fill="#ced4da"/><circle cx="33" cy="11" r="2.5" fill="#ced4da"/>
+    <rect x="46" y="6" width="150" height="11" rx="5" fill="#ffffff" stroke="#e0e0e0"/>
+    <rect x="16" y="38" width="74" height="8" rx="4" fill="#dee2e6"/>
+    <text x="22" y="84" font-size="11" fill="#343a40">Home</text>
+    <text x="64" y="84" font-size="11" fill="#868e96">About</text>
+    <text x="112" y="84" font-size="11" fill="#868e96">Work</text>
+    <text x="158" y="84" font-size="11" fill="#868e96">Contact</text>
+    <rect x="16" y="104" width="178" height="8" rx="4" fill="#f1f3f5"/>
+    <rect x="16" y="118" width="120" height="8" rx="4" fill="#f1f3f5"/>
+  </g>
+  <text x="129" y="180" text-anchor="middle" font-size="12.5" font-weight="600" fill="#495057">1 · Page loads</text>
+  <text x="129" y="195" text-anchor="middle" font-size="12.5" fill="#495057">Nothing is focused</text>
+
+  <!-- arrow 1->2 -->
+  <line x1="238" y1="90" x2="270" y2="90" stroke="#868e96" stroke-width="1.6" marker-end="url(#arr)"/>
+
+  <!-- ===== Panel 2: Tab, first item focused ===== -->
+  <g transform="translate(278,24)">
+    <rect x="0" y="0" width="210" height="132" rx="8" fill="#ffffff" stroke="#ced4da"/>
+    <path d="M1,9 q0,-8 8,-8 h192 q8,0 8,8 v13 h-208 z" fill="#eef0f2"/>
+    <circle cx="13" cy="11" r="2.5" fill="#ced4da"/><circle cx="23" cy="11" r="2.5" fill="#ced4da"/><circle cx="33" cy="11" r="2.5" fill="#ced4da"/>
+    <rect x="46" y="6" width="150" height="11" rx="5" fill="#ffffff" stroke="#e0e0e0"/>
+    <rect x="16" y="38" width="74" height="8" rx="4" fill="#dee2e6"/>
+    <!-- focus ring on Home (ring and label share the same centre, x=37) -->
+    <rect x="16" y="69" width="42" height="22" rx="4" fill="#eef4ff" stroke="#2563eb" stroke-width="2"/>
+    <text x="37" y="84" text-anchor="middle" font-size="11" fill="#1d4ed8" font-weight="600">Home</text>
+    <text x="64" y="84" font-size="11" fill="#868e96">About</text>
+    <text x="112" y="84" font-size="11" fill="#868e96">Work</text>
+    <text x="158" y="84" font-size="11" fill="#868e96">Contact</text>
+    <rect x="16" y="104" width="178" height="8" rx="4" fill="#f1f3f5"/>
+    <rect x="16" y="118" width="120" height="8" rx="4" fill="#f1f3f5"/>
+    <!-- Tab key badge -->
+    <rect x="150" y="40" width="48" height="20" rx="5" fill="#212529"/>
+    <text x="174" y="54" text-anchor="middle" font-size="11" fill="#ffffff">Tab &#8677;</text>
+  </g>
+  <text x="383" y="180" text-anchor="middle" font-size="12.5" font-weight="600" fill="#495057">2 · Tab focuses the first link</text>
+  <text x="383" y="195" text-anchor="middle" font-size="12.5" fill="#495057">An <tspan font-size="11.5" font-weight="600" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">outline</tspan> style is applied</text>
+
+  <!-- arrow 2->3 -->
+  <line x1="492" y1="90" x2="524" y2="90" stroke="#868e96" stroke-width="1.6" marker-end="url(#arr)"/>
+
+  <!-- ===== Panel 3: computed style before/after ===== -->
+  <g transform="translate(532,24)" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">
+    <rect x="0" y="0" width="264" height="132" rx="8" fill="#fafafa" stroke="#dee2e6"/>
+
+    <text x="14" y="28" font-size="10.5" fill="#868e96" font-family="system-ui, sans-serif">before focus</text>
+    <text x="14" y="44" font-size="11" fill="#495057">background: none</text>
+    <text x="14" y="60" font-size="11" fill="#495057">outline: none</text>
+
+    <text x="14" y="83" font-size="10.5" fill="#868e96" font-family="system-ui, sans-serif">on focus</text>
+    <rect x="10" y="86" width="244" height="34" rx="4" fill="#e8f5e9"/>
+    <text x="14" y="99" font-size="11" fill="#1b5e20">background: #eef4ff</text>
+    <text x="14" y="115" font-size="11" fill="#1b5e20">outline: 2px solid #2563eb</text>
+  </g>
+
+  <text x="664" y="180" text-anchor="middle" font-size="12.5" font-weight="600" fill="#495057">3 · Diff watched style properties</text>
+  <text x="664" y="195" text-anchor="middle" font-size="11" fill="#1b5e20" font-weight="600" font-family="system-ui, sans-serif">&#10003; Style changed &#8594; pass ("style")</text>
+</svg>

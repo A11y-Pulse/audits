@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><style>
+  body { background: #fff; }
+  button { outline: none; filter: none; background: #3366cc; color: #fff; }
+  /* The only focus change is a CSS filter, which is not in the computed-style
+     allowlist, so detection must fall through to the pixel-diff fallback. */
+  button:focus { outline: none; filter: invert(1); }
+</style></head><body>
+  <button id="filter">Filter</button>
+</body></html>

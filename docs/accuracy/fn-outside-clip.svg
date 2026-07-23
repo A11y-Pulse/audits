@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 176" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+  <rect x="1" y="1" width="498" height="174" rx="14" fill="#ffffff" stroke="#e9ecef"/>
+
+  <!-- focused combobox input (no focus style of its own) -->
+  <rect x="150" y="28" width="200" height="30" rx="6" fill="#ffffff" stroke="#ced4da"/>
+  <text x="164" y="47" font-size="12" fill="#868e96">Search fruit…</text>
+
+  <!-- dropdown listbox below; active option highlighted -->
+  <rect x="150" y="66" width="200" height="96" rx="6" fill="#ffffff" stroke="#e0e0e0"/>
+  <text x="164" y="88" font-size="12" fill="#343a40">Apple</text>
+  <rect x="154" y="96" width="192" height="26" rx="4" fill="#e7f0ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="164" y="113" font-size="12" fill="#1d4ed8" font-weight="600">Banana</text>
+  <text x="164" y="140" font-size="12" fill="#343a40">Cherry</text>
+
+  <!-- screenshot clip: element box + buffer, excludes the dropdown -->
+  <rect x="140" y="18" width="220" height="50" rx="6" fill="none" stroke="#e8590c" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="368" y="36" font-size="10.5" fill="#e8590c">screenshot</text>
+  <text x="368" y="49" font-size="10.5" fill="#e8590c">clip</text>
+</svg>

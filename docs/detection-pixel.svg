@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 398" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+  <defs>
+    <marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#868e96"/>
+    </marker>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="2.4"/>
+    </filter>
+  </defs>
+
+  <rect x="1" y="1" width="818" height="398" rx="14" fill="#ffffff" stroke="#e9ecef"/>
+
+  <!-- ===== Panel 1: page, no focus ===== -->
+  <g transform="translate(24,24)">
+    <rect x="0" y="0" width="210" height="132" rx="8" fill="#ffffff" stroke="#ced4da"/>
+    <path d="M1,9 q0,-8 8,-8 h192 q8,0 8,8 v13 h-208 z" fill="#eef0f2"/>
+    <circle cx="13" cy="11" r="2.5" fill="#ced4da"/><circle cx="23" cy="11" r="2.5" fill="#ced4da"/><circle cx="33" cy="11" r="2.5" fill="#ced4da"/>
+    <rect x="46" y="6" width="150" height="11" rx="5" fill="#ffffff" stroke="#e0e0e0"/>
+    <rect x="16" y="38" width="74" height="8" rx="4" fill="#dee2e6"/>
+    <text x="22" y="84" font-size="11" fill="#343a40">Home</text>
+    <text x="64" y="84" font-size="11" fill="#868e96">About</text>
+    <text x="112" y="84" font-size="11" fill="#868e96">Work</text>
+    <text x="158" y="84" font-size="11" fill="#868e96">Contact</text>
+    <rect x="16" y="104" width="178" height="8" rx="4" fill="#f1f3f5"/>
+    <rect x="16" y="118" width="120" height="8" rx="4" fill="#f1f3f5"/>
+  </g>
+  <text x="129" y="180" text-anchor="middle" font-size="12.5" font-weight="600" fill="#495057">1 · Page loads</text>
+  <text x="129" y="195" text-anchor="middle" font-size="12.5" fill="#495057">Nothing is focused</text>
+
+  <line x1="238" y1="90" x2="270" y2="90" stroke="#868e96" stroke-width="1.6" marker-end="url(#arr2)"/>
+
+  <!-- ===== Panel 2: focus via filter only (glow, no outline) ===== -->
+  <g transform="translate(278,24)">
+    <rect x="0" y="0" width="210" height="132" rx="8" fill="#ffffff" stroke="#ced4da"/>
+    <path d="M1,9 q0,-8 8,-8 h192 q8,0 8,8 v13 h-208 z" fill="#eef0f2"/>
+    <circle cx="13" cy="11" r="2.5" fill="#ced4da"/><circle cx="23" cy="11" r="2.5" fill="#ced4da"/><circle cx="33" cy="11" r="2.5" fill="#ced4da"/>
+    <rect x="46" y="6" width="150" height="11" rx="5" fill="#ffffff" stroke="#e0e0e0"/>
+    <rect x="16" y="38" width="74" height="8" rx="4" fill="#dee2e6"/>
+    <!-- soft glow behind Home (a filter-based focus style, no outline/box-shadow); glow and label share the same centre, x=37 -->
+    <ellipse cx="37" cy="80" rx="26" ry="13" fill="#4dabf7" opacity="0.55" filter="url(#glow)"/>
+    <text x="37" y="84" text-anchor="middle" font-size="11" fill="#0b3d91" font-weight="600">Home</text>
+    <text x="64" y="84" font-size="11" fill="#868e96">About</text>
+    <text x="112" y="84" font-size="11" fill="#868e96">Work</text>
+    <text x="158" y="84" font-size="11" fill="#868e96">Contact</text>
+    <rect x="16" y="104" width="178" height="8" rx="4" fill="#f1f3f5"/>
+    <rect x="16" y="118" width="120" height="8" rx="4" fill="#f1f3f5"/>
+    <!-- Tab key badge -->
+    <rect x="150" y="40" width="48" height="20" rx="5" fill="#212529"/>
+    <text x="174" y="54" text-anchor="middle" font-size="11" fill="#ffffff">Tab &#8677;</text>
+  </g>
+  <text x="383" y="180" text-anchor="middle" font-size="12.5" font-weight="600" fill="#495057">2 · Tab focuses the first link</text>
+  <text x="383" y="195" text-anchor="middle" font-size="12.5" fill="#495057">A <tspan font-size="11.5" font-weight="600" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">filter</tspan> style is applied</text>
+
+  <line x1="492" y1="90" x2="524" y2="90" stroke="#868e96" stroke-width="1.6" marker-end="url(#arr2)"/>
+
+  <!-- ===== Panel 3: watched styles unchanged ===== -->
+  <g transform="translate(532,24)" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">
+    <rect x="0" y="0" width="264" height="132" rx="8" fill="#fafafa" stroke="#dee2e6"/>
+
+    <text x="14" y="28" font-size="10.5" fill="#868e96" font-family="system-ui, sans-serif">before focus</text>
+    <text x="14" y="44" font-size="11" fill="#495057">background: none</text>
+    <text x="14" y="60" font-size="11" fill="#495057">outline: none</text>
+
+    <text x="14" y="83" font-size="10.5" fill="#868e96" font-family="system-ui, sans-serif">on focus</text>
+    <text x="14" y="99" font-size="11" fill="#495057">background: none</text>
+    <text x="14" y="115" font-size="11" fill="#495057">outline: none</text>
+  </g>
+  <text x="664" y="180" text-anchor="middle" font-size="12.5" font-weight="600" fill="#495057">3 · Diff watched style properties</text>
+  <text x="664" y="195" text-anchor="middle" font-size="11" fill="#8a4b00" font-weight="600" font-family="system-ui, sans-serif">&#10007; Nothing changed &#8594; pixel diff</text>
+
+  <!-- ===== Row 2 ===== -->
+  <!-- Step 4: screenshots / fall back note -->
+  <g transform="translate(24,224)">
+    <rect x="0" y="0" width="252" height="120" rx="10" fill="#fff4e5" stroke="#b26a00"/>
+    <text x="126" y="30" text-anchor="middle" font-size="13" font-weight="600" fill="#8a4b00">No style diff</text>
+    <text x="20" y="58" font-size="12" fill="#7a4500">None of the watched style properties</text>
+    <text x="20" y="76" font-size="12" fill="#7a4500">changed, so a pixel comparison is</text>
+    <text x="20" y="94" font-size="12" fill="#7a4500">performed.</text>
+  </g>
+  <text x="150" y="368" text-anchor="middle" font-size="12.5" font-weight="600" fill="#495057">4 · Take screenshots of element</text>
+  <text x="150" y="383" text-anchor="middle" font-size="12.5" fill="#495057">One with focus, one without</text>
+
+  <line x1="284" y1="284" x2="316" y2="284" stroke="#868e96" stroke-width="1.6" marker-end="url(#arr2)"/>
+
+  <!-- Step 5: 3-panel clip before / after / diff -->
+  <g transform="translate(324,224)">
+    <rect x="0" y="0" width="472" height="120" rx="10" fill="#fafafa" stroke="#dee2e6"/>
+    <text x="16" y="20" font-size="11" font-weight="600" fill="#495057">Clipped region around the link</text>
+
+    <!-- focused crop -->
+    <g transform="translate(16,30)">
+      <rect x="0" y="0" width="132" height="54" rx="6" fill="#ffffff" stroke="#dee2e6"/>
+      <ellipse cx="66" cy="27" rx="34" ry="15" fill="#4dabf7" opacity="0.55" filter="url(#glow)"/>
+      <text x="66" y="31" text-anchor="middle" font-size="12" fill="#0b3d91" font-weight="600">Home</text>
+    </g>
+    <text x="82" y="100" text-anchor="middle" font-size="11" fill="#495057">focused</text>
+
+    <!-- unfocused crop -->
+    <g transform="translate(170,30)">
+      <rect x="0" y="0" width="132" height="54" rx="6" fill="#ffffff" stroke="#dee2e6"/>
+      <text x="66" y="31" text-anchor="middle" font-size="12" fill="#343a40">Home</text>
+    </g>
+    <text x="236" y="100" text-anchor="middle" font-size="11" fill="#495057">unfocused</text>
+
+    <!-- diff crop -->
+    <g transform="translate(324,30)">
+      <rect x="0" y="0" width="132" height="54" rx="6" fill="#1b1d21"/>
+      <ellipse cx="66" cy="27" rx="34" ry="15" fill="none" stroke="#ff2d95" stroke-width="3" opacity="0.9"/>
+      <ellipse cx="66" cy="27" rx="24" ry="9" fill="#ff2d95" opacity="0.35"/>
+      <text x="66" y="31" text-anchor="middle" font-size="12" fill="#6b7280">Home</text>
+    </g>
+    <text x="390" y="100" text-anchor="middle" font-size="11" fill="#495057">diff</text>
+  </g>
+  <text x="560" y="368" text-anchor="middle" font-size="12.5" font-weight="600" fill="#495057">5 · Compare the screenshots</text>
+  <text x="560" y="383" text-anchor="middle" font-size="11" fill="#1b5e20" font-weight="600" font-family="system-ui, sans-serif">&#10003; Pixels differ &#8594; pass ("pixel-diff")</text>
+</svg>

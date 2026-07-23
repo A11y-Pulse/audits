@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><style>
+  body { background: #fff; }
+</style></head><body>
+  <!-- A focusable element inside a CLOSED shadow root with a real (outline)
+       focus indicator. document.activeElement resolves to the host, so the
+       style stage can't see the inner outline. The pixel diff still catches it:
+       it captures the focused frame before blurring, while the inner button is
+       genuinely focused, so the indicator is detected via "pixel-diff". -->
+  <div id="host"></div>
+  <script>
+    const host = document.getElementById("host");
+    const root = host.attachShadow({ mode: "closed" });
+    root.innerHTML = `
+      <style>
+        button { outline: none; }
+        button:focus { outline: 3px solid #2563eb; }
+      </style>
+      <button>Shadow button</button>
+    `;
+  </script>
+</body></html>
