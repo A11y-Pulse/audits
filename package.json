@@ -48,8 +48,7 @@
 		"test:unit": "vitest run",
 		"test:integration": "vitest run --config vitest.integration.config.ts",
 		"test": "npm run typecheck && npm run test:unit",
-		"prepublishOnly": "npm run build",
-		"release": "npm run build && changeset publish"
+		"prepublishOnly": "npm run build"
 	},
 	"publishConfig": {
 		"access": "public"
@@ -68,7 +67,6 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.4",
-		"@changesets/cli": "^2.29.5",
 		"@tsconfig/node22": "^22.0.2",
 		"@types/node": "^26.1.1",
 		"@types/pngjs": "^6.0.5",
