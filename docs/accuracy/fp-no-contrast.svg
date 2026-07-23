@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 124" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+  <rect x="1" y="1" width="498" height="122" rx="14" fill="#ffffff" stroke="#e9ecef"/>
+
+  <!-- unfocused: button on a white surface -->
+  <rect x="60" y="34" width="140" height="56" rx="8" fill="#ffffff" stroke="#eceff1"/>
+  <rect x="96" y="48" width="68" height="28" rx="7" fill="#e9ecef" stroke="#ced4da"/>
+  <text x="130" y="66" text-anchor="middle" font-size="12" fill="#343a40">Save</text>
+  <text x="130" y="112" text-anchor="middle" font-size="12.5" font-weight="600" fill="#495057">unfocused</text>
+
+  <!-- on focus: a 3px white outline on white = invisible -->
+  <rect x="300" y="34" width="140" height="56" rx="8" fill="#ffffff" stroke="#eceff1"/>
+  <!-- the white outline (drawn, but indistinguishable from the white surface) -->
+  <rect x="333" y="45" width="74" height="34" rx="9" fill="none" stroke="#ffffff" stroke-width="3"/>
+  <rect x="336" y="48" width="68" height="28" rx="7" fill="#e9ecef" stroke="#ced4da"/>
+  <text x="370" y="66" text-anchor="middle" font-size="12" fill="#343a40">Save</text>
+  <text x="370" y="112" text-anchor="middle" font-size="12.5" font-weight="600" fill="#495057">on focus</text>
+</svg>
