@@ -146,10 +146,15 @@ export function alignedRegionsDiffer(
 	const diffPixels = pixelmatch(
 		croppedA.data,
 		croppedB.data,
-		null,
+		undefined,
 		width,
 		height,
-		{ threshold: 0.1 },
+		{
+			threshold: 0.1,
+			// Preserve pre-v7 blending (white) so semitransparent pixels do not
+			// introduce checkerboard noise into focus/unfocus diffs.
+			checkerboard: false,
+		},
 	);
 
 	return diffPixels >= minDiffPixels;
