@@ -172,28 +172,21 @@ Use [`src/adaptors/puppeteer.ts`](./src/adaptors/puppeteer.ts) as a reference im
 
 ## Releasing
 
-Releases are automated with [Changesets](https://github.com/changesets/changesets) and GitHub Actions. Publishing uses [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/) (OIDC) — there is no long-lived `NPM_TOKEN`.
+Releases use [Release Drafter](https://github.com/release-drafter/release-drafter) and GitHub Actions. Publishing uses [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/) (OIDC) — there is no long-lived `NPM_TOKEN`.
 
 ### Ship a change
 
-1. Open a PR against `main` with your code changes.
-2. Add a changeset describing the user-facing impact:
+1. Open a PR against `main` and merge it. No changeset or conventional-commit prefix is required.
+2. Optionally label the PR to control the next version bump:
+   - `major` / `breaking` → major
+   - `minor` / `feature` / `enhancement` → minor
+   - `patch` / `fix` / `bug` → patch
+   - **No label → minor** (the default, including Dependabot PRs)
 
-   ```bash
-   npx changeset
-   ```
+### What happens next
 
-   Choose **patch**, **minor**, or **major**, write a short changelog note, and commit the file under `.changeset/`.
-3. Merge the PR to `main`.
-
-### What happens on `main`
-
-The [Release](./.github/workflows/release.yml) workflow runs `changesets/action`:
-
-- **Pending changesets** → opens or updates a **Release packages** PR that bumps `package.json`, updates `CHANGELOG.md`, and consumes the changeset files.
-- **That release PR is merged** → the next Release run publishes with `npm run release` (`build` + `changeset publish`) via OIDC, creates git tag `vX.Y.Z`, and creates a GitHub Release. Provenance is attached automatically.
-
-If the org blocks Actions from creating pull requests, open the release PR yourself from the `changeset-release/main` branch, then merge it.
+- On every merge to `main`, [Release Drafter](./.github/workflows/release-drafter.yml) updates a **draft GitHub Release** with the merged PR titles and the resolved next version (`v$RESOLVED_VERSION`).
+- When you **publish** that draft release in the GitHub UI, [Release](./.github/workflows/release.yml) runs: builds the package, publishes to npm via OIDC (with provenance), then syncs `package.json` / `CHANGELOG.md` on `main` to the released version.
 
 Trusted Publisher on npm must stay configured for:
 
