@@ -1,7 +1,7 @@
 # @a11y-pulse/focus-appearance-audit
 
 [![npm version](https://img.shields.io/npm/v/@a11y-pulse/focus-appearance-audit)](https://www.npmjs.com/package/@a11y-pulse/focus-appearance-audit)
-[![CI](https://github.com/A11y-Pulse/focus-appearance-audit/actions/workflows/ci.yml/badge.svg)](https://github.com/A11y-Pulse/focus-appearance-audit/actions/workflows/ci.yml)
+[![CI](https://github.com/A11y-Pulse/audits/actions/workflows/ci.yml/badge.svg)](https://github.com/A11y-Pulse/audits/actions/workflows/ci.yml)
 [![License: PolyForm Shield 1.0.0](https://img.shields.io/badge/license-PolyForm%20Shield%201.0.0-blue)](./LICENSE.md)
 
 An accessibility audit that aims to verify compliance with [**WCAG 2.0: 2.4.7 Focus Visible**](https://www.w3.org/WAI/WCAG20/Understanding/focus-visible). It tabs through a page's focusable elements and detects whether each one shows a visible focus indicator. It is built to be framework-agnostic and can be used in any environment that allows you to programmatically focus elements and read their computed styles, such as Puppeteer, Playwright, or Selenium.
@@ -172,28 +172,19 @@ Use [`src/adaptors/puppeteer.ts`](./src/adaptors/puppeteer.ts) as a reference im
 
 ## Releasing
 
-Releases use [Release Drafter](https://github.com/release-drafter/release-drafter) and GitHub Actions. Publishing uses [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/) (OIDC) — there is no long-lived `NPM_TOKEN`.
+Releases are managed in the [A11y-Pulse/audits](https://github.com/A11y-Pulse/audits) monorepo with [Changesets](https://github.com/changesets/changesets). Publishing uses [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/) (OIDC) — there is no long-lived `NPM_TOKEN`.
 
 ### Ship a change
 
-1. Open a PR against `main` and merge it. No changeset or conventional-commit prefix is required.
-2. Optionally label the PR to control the next version bump:
-   - `major` / `breaking` → major
-   - `minor` / `feature` / `enhancement` → minor
-   - `patch` / `fix` / `bug` → patch
-   - **No label → minor** (the default, including Dependabot PRs)
-
-### What happens next
-
-- On every merge to `main`, [Release Drafter](./.github/workflows/release-drafter.yml) updates a **draft GitHub Release** with the merged PR titles and the resolved next version (`v$RESOLVED_VERSION`).
-- When you **publish** that draft release in the GitHub UI, [Release](./.github/workflows/release.yml) runs: builds the package, publishes to npm via OIDC (with provenance), then syncs `package.json` / `CHANGELOG.md` on `main` to the released version.
+1. Open a PR against `main` that includes a changeset (`npx changeset`) naming `@a11y-pulse/focus-appearance-audit`.
+2. After merge, the Release workflow opens a Version PR. Merging that PR publishes this package to npm and tags `@a11y-pulse/focus-appearance-audit@<version>`.
 
 Trusted Publisher on npm must stay configured for:
 
 | Field | Value |
 | --- | --- |
 | Organization or user | `A11y-Pulse` |
-| Repository | `focus-appearance-audit` |
+| Repository | `audits` |
 | Workflow filename | `release.yml` |
 
 ### Consumers (e.g. the A11y Pulse runner)
