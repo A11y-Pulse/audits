@@ -1,0 +1,68 @@
+{
+	"name": "@a11y-pulse/text-spacing-audit",
+	"version": "0.0.0",
+	"description": "WCAG 1.4.12 Text Spacing audit that injects the SC spacing overrides and detects clipped or overlapping text.",
+	"type": "module",
+	"license": "SEE LICENSE IN LICENSE.md",
+	"author": "A11y Pulse Limited",
+	"homepage": "https://github.com/A11y-Pulse/audits/tree/main/packages/text-spacing-audit#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/A11y-Pulse/audits.git",
+		"directory": "packages/text-spacing-audit"
+	},
+	"bugs": {
+		"url": "https://github.com/A11y-Pulse/audits/issues"
+	},
+	"keywords": [
+		"accessibility",
+		"a11y",
+		"wcag",
+		"text-spacing",
+		"puppeteer",
+		"audit"
+	],
+	"engines": {
+		"node": ">=22"
+	},
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		},
+		"./puppeteer": {
+			"types": "./dist/adaptors/puppeteer.d.ts",
+			"import": "./dist/adaptors/puppeteer.js"
+		}
+	},
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE.md"
+	],
+	"scripts": {
+		"build": "tsup && tsc -p tsconfig.build.json",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check",
+		"lint:fix": "biome check --fix",
+		"test:unit": "vitest run",
+		"test:integration": "vitest run --config vitest.integration.config.ts",
+		"test": "npm run typecheck && npm run test:unit",
+		"prepublishOnly": "npm run build"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"peerDependencies": {
+		"puppeteer": "^25.3.0"
+	},
+	"peerDependenciesMeta": {
+		"puppeteer": {
+			"optional": true
+		}
+	},
+	"devDependencies": {
+		"happy-dom": "^20.9.0",
+		"puppeteer": "^25.3.0"
+	}
+}

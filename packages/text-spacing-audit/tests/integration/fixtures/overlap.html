@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Text spacing overlap</title>
+		<style>
+			.stage {
+				position: relative;
+				width: 20rem;
+				height: 5rem;
+			}
+			.block {
+				position: absolute;
+				left: 0;
+				margin: 0;
+				font: 16px/1.1 sans-serif;
+			}
+			#a {
+				top: 0;
+			}
+			#b {
+				top: 1.25rem;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="stage">
+			<p class="block" id="a">First neighbouring line of text</p>
+			<p class="block" id="b">Second neighbouring line of text</p>
+		</div>
+	</body>
+</html>
