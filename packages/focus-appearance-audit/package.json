@@ -30,6 +30,10 @@
 		".": {
 			"types": "./dist/index.d.ts",
 			"import": "./dist/index.js"
+		},
+		"./puppeteer": {
+			"types": "./dist/adaptors/puppeteer.d.ts",
+			"import": "./dist/adaptors/puppeteer.js"
 		}
 	},
 	"files": [
@@ -51,13 +55,21 @@
 		"access": "public"
 	},
 	"dependencies": {
-		"@a11y-pulse/tab-orchestrator": "*",
+		"@a11y-pulse/browser-adaptor": "*",
 		"pixelmatch": "^7.2.0",
 		"pngjs": "^7.0.0"
+	},
+	"peerDependencies": {
+		"puppeteer": "^25.5.0"
+	},
+	"peerDependenciesMeta": {
+		"puppeteer": {
+			"optional": true
+		}
 	},
 	"devDependencies": {
 		"@types/pngjs": "^6.0.5",
 		"happy-dom": "^20.11.2",
-		"puppeteer": "^25.7.0"
+		"puppeteer": "^25.5.0"
 	}
 }

@@ -93,7 +93,7 @@ describe("getSelector minimal segments", () => {
 
 	it("stops walking as soon as the selector is unique", () => {
 		// The target's class is unique on the page, so no ancestor segments are
-		// needed at all — matching how axe-core selectors stay short.
+		// needed at all. Matching how axe-core selectors stay short.
 		document.body.innerHTML = `
 			<div class="wrapper"><div class="inner"><nav class="menu">
 				<a class="standalone-cta" href="/cta">cta</a>
@@ -109,7 +109,7 @@ describe("getSelector minimal segments", () => {
 	it("discriminates structurally-identical content by href", () => {
 		// Three sections with identical classes and positions inside separate
 		// wrappers: nth-of-type pins position within each parent, so it can't
-		// tell the copies apart — but their hrefs differ, as on real pages.
+		// tell the copies apart. But their hrefs differ, as on real pages.
 		const section = (href: string) => `
 			<div class="group"><div class="column">
 				<h3 class="arrow-link"><a href="${href}">go</a></h3>
@@ -150,8 +150,8 @@ describe("getSelector minimal segments", () => {
 
 	it("does not build href features from values with CSS escape characters", () => {
 		// A backslash in an attribute value is a CSS string escape, so the
-		// selector can parse to a different string than the attribute holds —
-		// matching nothing, or worse, a different element entirely.
+		// selector can parse to a different string than the attribute holds.
+		// Matching nothing, or worse, a different element entirely.
 		document.body.innerHTML = String.raw`
 			<div><a href="docs\one">one</a><a href="docs\two">two</a></div>
 		`;
