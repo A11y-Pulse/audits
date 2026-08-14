@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>transform hidden menu</title>
+	<style>
+		html, body { margin: 0; }
+		#menu {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 280px;
+			transform: translateX(-100%);
+			background: #333;
+			color: #fff;
+		}
+		main { padding: 1rem; max-width: 100%; }
+	</style>
+</head>
+<body>
+	<nav id="menu">
+		<a href="/one">One</a>
+		<a href="/two">Two</a>
+		<a href="/three">Three</a>
+	</nav>
+	<main>Visible content that reflows.</main>
+</body>
+</html>

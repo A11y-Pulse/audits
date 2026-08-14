@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>body overflow</title>
+	<style>
+		html, body { margin: 0; height: 100%; }
+		html { overflow: hidden; }
+		body { overflow-x: auto; height: 100%; }
+		.wide { width: 1200px; height: 40px; background: #fcc; }
+	</style>
+</head>
+<body>
+	<div class="wide">Overflow lives on body rather than the documentElement.</div>
+</body>
+</html>
