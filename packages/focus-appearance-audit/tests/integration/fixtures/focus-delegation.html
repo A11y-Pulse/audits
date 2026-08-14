@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><style>
+  body { background: #fff; }
+  .wrap:focus-within { outline: 3px solid #0050ff; }
+  input:focus { outline: 3px solid #0050ff; }
+</style></head><body>
+  <div class="wrap" id="wrap" tabindex="0" onfocus="this.querySelector('input').focus()">
+    <input id="inner">
+  </div>
+  <a href="#end">End</a>
+</body></html>

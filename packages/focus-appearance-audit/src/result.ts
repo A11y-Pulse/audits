@@ -1,3 +1,6 @@
+import type { ContextChangeFinding } from "./context-change";
+import type { ObscuredMeasurement } from "./obscuring";
+
 export type DetectionMethod = "style" | "pixel-diff";
 
 export type FocusElementResult = {
@@ -15,6 +18,12 @@ export type FocusElementResult = {
 
 	/** How the indicator was detected, or null when the element failed. */
 	detectionMethod: DetectionMethod | null;
+
+	/** Focus-not-obscured (2.4.11) measurement, when measured. */
+	obscured?: ObscuredMeasurement | null;
+
+	/** Context-change-on-focus (3.2.1) findings for this tab stop, when any. */
+	contextChange?: ContextChangeFinding[];
 };
 
 export type FocusAppearanceResult = {
@@ -33,5 +42,22 @@ export type FocusAppearanceResult = {
 		 * are whatever had been gathered when the deadline hit.
 		 */
 		timedOut: boolean;
+		/**
+		 * True if the tab loop stopped because a focus-triggered navigation
+		 * destroyed the browsing context.
+		 */
+		abortedForNavigation: boolean;
+		obscured: {
+			checked: number;
+			/** Fully covered by a verified-opaque author overlay (2.4.11 violation). */
+			violations: number;
+			/** Offscreen after focus, or full cover with unknown opacity. */
+			incomplete: number;
+		};
+		contextChange: {
+			checked: number;
+			violations: number;
+			incomplete: number;
+		};
 	};
 };

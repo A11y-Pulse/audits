@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { FocusAppearanceAuditAdaptor } from "./adaptor";
 import {
 	type ActiveElementInfo,
+	type ContextChangeDrain,
 	type FocusProbe,
 	runFocusAppearanceAudit,
 	runFocusLoop,
@@ -11,15 +12,25 @@ import {
 import {
 	baselineScript,
 	blurScript,
+	clearAttributedScript,
+	clearContextFocusInsScript,
 	clearMarkersScript,
+	clearObscurerScript,
+	drainContextObserverScript,
 	elementRectScript,
 	focusScript,
+	installContextObserverScript,
 	isCenterObscuredScript,
+	locationHrefScript,
+	measureObscuringScript,
+	obscurerHandleScript,
 	pageDimensionsScript,
 	probeActiveElementScript,
 	scrollToCenterScript,
 } from "./browser-scripts";
+import type { ContextChangeSignals } from "./context-change";
 import type { Rect, StyleSnapshot } from "./detection";
+import type { ObscuredMeasurement } from "./obscuring";
 import type { DetectionMethod } from "./result";
 
 const EMPTY_STYLES: StyleSnapshot = { element: {}, before: {}, after: {} };
@@ -32,7 +43,21 @@ const OPTIONS = {
 	skipStyleCheck: false,
 	failedElementLimit: 0,
 	timeout: 0,
+	measureObscuring: true,
+	measureContextChange: true,
+	obscuringRecheckDelay: 0,
 };
+
+function emptySignals(): ContextChangeSignals {
+	return {
+		openedWindow: false,
+		submittedForm: false,
+		focusRemoved: false,
+		redirect: null,
+		softUrlChange: false,
+		navigation: false,
+	};
+}
 
 function info(index: number): ActiveElementInfo {
 	return {
@@ -50,10 +75,14 @@ function scriptedProbe(script: {
 	hasFocus: boolean[];
 	active: (ActiveElementInfo | null)[];
 	indicator: (DetectionMethod | null)[];
+	obscured?: (ObscuredMeasurement | null)[];
+	context?: ContextChangeDrain[];
 }): FocusProbe {
 	let focusCall = 0;
 	let activeCall = 0;
 	let indicatorCall = 0;
+	let obscuredCall = 0;
+	let contextCall = 0;
 
 	return {
 		captureBaseline: async () => new Map(),
@@ -61,6 +90,13 @@ function scriptedProbe(script: {
 		pressTab: async () => {},
 		settle: async () => {},
 		probeActiveElement: async () => script.active[activeCall++] ?? null,
+		installContextObserver: async () => {},
+		drainContextSignals: async () =>
+			script.context?.[contextCall++] ?? {
+				signals: emptySignals(),
+			},
+		clearContextNoise: async () => {},
+		measureObscuring: async () => script.obscured?.[obscuredCall++] ?? null,
 		detectIndicator: async () => script.indicator[indicatorCall++] ?? null,
 		clearMarkers: async () => {},
 	};
@@ -89,6 +125,10 @@ function hangingProbe(script: {
 				? Promise.resolve()
 				: new Promise<void>(() => {}),
 		probeActiveElement: async () => script.active[activeCall++] ?? null,
+		installContextObserver: async () => {},
+		drainContextSignals: async () => ({ signals: emptySignals() }),
+		clearContextNoise: async () => {},
+		measureObscuring: async () => null,
 		detectIndicator: async () => script.indicator[indicatorCall++] ?? null,
 		clearMarkers: async () => {},
 	};
@@ -456,9 +496,45 @@ function fakeAdaptor(script: AdaptorScript = {}): {
 			if (
 				fn === blurScript ||
 				fn === focusScript ||
-				fn === clearMarkersScript
+				fn === clearMarkersScript ||
+				fn === installContextObserverScript ||
+				fn === clearObscurerScript ||
+				fn === clearAttributedScript ||
+				fn === clearContextFocusInsScript
 			) {
 				return undefined;
+			}
+
+			if (fn === locationHrefScript) {
+				return "http://fake/";
+			}
+
+			if (fn === drainContextObserverScript) {
+				return {
+					openedWindow: false,
+					submittedForm: false,
+					focusRemoved: false,
+					redirect: null,
+					softUrlChange: false,
+					navigation: false,
+					attributedHtml: null,
+					hasAttributed: false,
+				};
+			}
+
+			if (fn === measureObscuringScript) {
+				return {
+					coveredFraction: 0,
+					fullyObscured: false,
+					offscreen: false,
+					opacity: "opaque",
+					obscuredByHtml: null,
+					hasObscurer: false,
+				};
+			}
+
+			if (fn === obscurerHandleScript) {
+				return null;
 			}
 
 			// The only remaining evaluate is the inline `document.hasFocus()` check.
@@ -609,5 +685,225 @@ describe("runFocusAppearanceAudit", () => {
 		expect(record.clips[0]).toEqual({ x: 90, y: 2090, width: 60, height: 40 });
 		// Same size, anchored so the element sits at the same 10px offset.
 		expect(record.clips[1]).toEqual({ x: 82, y: 86, width: 60, height: 40 });
+	});
+});
+
+describe("runFocusLoop - measureObscuring", () => {
+	const opaqueCover: ObscuredMeasurement = {
+		coveredFraction: 1,
+		fullyObscured: true,
+		offscreen: false,
+		opacity: "opaque",
+		obscuredBy: { selector: "footer.sticky", html: '<footer class="sticky">' },
+	};
+
+	it("records the obscuring measurement before detectIndicator", async () => {
+		const order: string[] = [];
+		const probe = scriptedProbe({
+			hasFocus: [true, false],
+			active: [info(0)],
+			indicator: ["style"],
+			obscured: [opaqueCover],
+		});
+		const originalMeasure = probe.measureObscuring;
+		const originalDetect = probe.detectIndicator;
+		probe.measureObscuring = async (el) => {
+			order.push("measure");
+			return originalMeasure(el);
+		};
+		probe.detectIndicator = async (el, baseline) => {
+			order.push("detect");
+			return originalDetect(el, baseline);
+		};
+
+		const result = await runFocusLoop(probe, OPTIONS);
+
+		expect(order).toEqual(["measure", "detect"]);
+		expect(result.elements[0]?.obscured).toEqual(opaqueCover);
+		expect(result.summary.obscured.violations).toBe(1);
+	});
+
+	it("skips the obscuring seam when measureObscuring is false", async () => {
+		let measured = 0;
+		const probe = scriptedProbe({
+			hasFocus: [true, false],
+			active: [info(0)],
+			indicator: ["style"],
+			obscured: [opaqueCover],
+		});
+		const original = probe.measureObscuring;
+		probe.measureObscuring = async (el) => {
+			measured++;
+			return original(el);
+		};
+
+		const result = await runFocusLoop(probe, {
+			...OPTIONS,
+			measureObscuring: false,
+		});
+
+		expect(measured).toBe(0);
+		expect(result.elements[0]?.obscured).toBeUndefined();
+		expect(result.summary.obscured.checked).toBe(0);
+	});
+
+	it("counts unknown-opacity full cover as incomplete", async () => {
+		const result = await runFocusLoop(
+			scriptedProbe({
+				hasFocus: [true, false],
+				active: [info(0)],
+				indicator: ["style"],
+				obscured: [
+					{
+						coveredFraction: 1,
+						fullyObscured: true,
+						offscreen: false,
+						opacity: "unknown",
+						obscuredBy: null,
+					},
+				],
+			}),
+			OPTIONS,
+		);
+
+		expect(result.summary.obscured.incomplete).toBe(1);
+		expect(result.summary.obscured.violations).toBe(0);
+	});
+
+	it("does not count partial cover as a violation", async () => {
+		const result = await runFocusLoop(
+			scriptedProbe({
+				hasFocus: [true, false],
+				active: [info(0)],
+				indicator: ["style"],
+				obscured: [
+					{
+						coveredFraction: 0.4,
+						fullyObscured: false,
+						offscreen: false,
+						opacity: "opaque",
+						obscuredBy: null,
+					},
+				],
+			}),
+			OPTIONS,
+		);
+
+		expect(result.summary.obscured.violations).toBe(0);
+		expect(result.summary.obscured.checked).toBe(1);
+	});
+});
+
+describe("runFocusLoop - context change", () => {
+	it("records a new-window violation on the focused element", async () => {
+		const result = await runFocusLoop(
+			scriptedProbe({
+				hasFocus: [true, false],
+				active: [info(0)],
+				indicator: ["style"],
+				context: [
+					{
+						signals: { ...emptySignals(), openedWindow: true },
+					},
+				],
+			}),
+			OPTIONS,
+		);
+
+		expect(result.elements[0]?.contextChange).toEqual([
+			{ kind: "new-window", bucket: "violation" },
+		]);
+		expect(result.summary.contextChange.violations).toBe(1);
+	});
+
+	it("records focus-removed from attributed element when settle lands on body", async () => {
+		const body: ActiveElementInfo = { ...info(0), isBody: true };
+		const result = await runFocusLoop(
+			scriptedProbe({
+				hasFocus: [true, true],
+				active: [body],
+				indicator: [],
+				context: [
+					{
+						signals: { ...emptySignals(), focusRemoved: true },
+						attributed: {
+							selector: "#blurred",
+							html: '<input id="blurred">',
+						},
+					},
+				],
+			}),
+			OPTIONS,
+		);
+
+		expect(result.elements).toHaveLength(1);
+		expect(result.elements[0]?.selector).toBe("#blurred");
+		expect(result.elements[0]?.contextChange).toEqual([
+			{ kind: "focus-removed", bucket: "violation" },
+		]);
+	});
+
+	it("aborts the loop on navigation and sets abortedForNavigation", async () => {
+		const result = await runFocusLoop(
+			scriptedProbe({
+				hasFocus: [true, true, true],
+				active: [info(0), info(1)],
+				indicator: ["style", "style"],
+				context: [
+					{
+						signals: { ...emptySignals(), navigation: true },
+						attributed: { selector: "#nav", html: '<a id="nav">' },
+					},
+				],
+			}),
+			OPTIONS,
+		);
+
+		expect(result.summary.abortedForNavigation).toBe(true);
+		expect(result.summary.checked).toBe(1);
+		expect(result.elements[0]?.contextChange).toEqual([
+			{ kind: "navigation", bucket: "violation" },
+		]);
+	});
+
+	it("does not treat a clean settle as focus-removed", async () => {
+		const result = await runFocusLoop(
+			scriptedProbe({
+				hasFocus: [true, false],
+				active: [info(0)],
+				indicator: ["style"],
+			}),
+			OPTIONS,
+		);
+
+		expect(result.elements[0]?.contextChange).toBeUndefined();
+		expect(result.summary.contextChange.violations).toBe(0);
+	});
+
+	it("skips context observation when measureContextChange is false", async () => {
+		let drained = 0;
+		const probe = scriptedProbe({
+			hasFocus: [true, false],
+			active: [info(0)],
+			indicator: ["style"],
+			context: [
+				{
+					signals: { ...emptySignals(), openedWindow: true },
+				},
+			],
+		});
+		const original = probe.drainContextSignals;
+		probe.drainContextSignals = async (el) => {
+			drained++;
+			return original(el);
+		};
+
+		const result = await runFocusLoop(probe, {
+			...OPTIONS,
+			measureContextChange: false,
+		});
+
+		expect(drained).toBe(0);
+		expect(result.elements[0]?.contextChange).toBeUndefined();
 	});
 });

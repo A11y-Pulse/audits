@@ -403,3 +403,505 @@ export function clearMarkersScript(markerAttr: string): void {
 
 	(document.activeElement as HTMLElement | null)?.blur();
 }
+
+export type MeasureObscuringResult = {
+	coveredFraction: number;
+	fullyObscured: boolean;
+	offscreen: boolean;
+	opacity: "opaque" | "semi-transparent" | "unknown";
+	obscuredByHtml: string | null;
+	/** True when a covering element was marked for selector resolution. */
+	hasObscurer: boolean;
+};
+
+/**
+ * Hit-test whether author-created content entirely hides the focused element.
+ * Marks a single covering element with `obscurerAttr` when containment confirms
+ * a full cover, so the host can resolve its selector via getSelector.
+ */
+export function measureObscuringScript(
+	el: Element | null,
+	obscurerAttr: string,
+): MeasureObscuringResult {
+	const empty: MeasureObscuringResult = {
+		coveredFraction: 0,
+		fullyObscured: false,
+		offscreen: false,
+		opacity: "opaque",
+		obscuredByHtml: null,
+		hasObscurer: false,
+	};
+
+	if (!el) {
+		return empty;
+	}
+
+	for (const marked of Array.from(
+		document.querySelectorAll(`[${obscurerAttr}]`),
+	)) {
+		marked.removeAttribute(obscurerAttr);
+	}
+
+	const rect = el.getBoundingClientRect();
+	const left = Math.max(rect.left, 0);
+	const top = Math.max(rect.top, 0);
+	const right = Math.min(rect.right, window.innerWidth);
+	const bottom = Math.min(rect.bottom, window.innerHeight);
+
+	if (right <= left || bottom <= top) {
+		return { ...empty, offscreen: true };
+	}
+
+	const width = right - left;
+	const height = bottom - top;
+
+	const points: Array<{ x: number; y: number }> = [
+		{ x: left, y: top },
+		{ x: right - 0.5, y: top },
+		{ x: left, y: bottom - 0.5 },
+		{ x: right - 0.5, y: bottom - 0.5 },
+		{ x: left + width / 2, y: top },
+		{ x: left + width / 2, y: bottom - 0.5 },
+		{ x: left, y: top + height / 2 },
+		{ x: right - 0.5, y: top + height / 2 },
+		{ x: left + width / 2, y: top + height / 2 },
+	];
+
+	if (width > 80 || height > 80) {
+		points.push(
+			{ x: left + width * 0.25, y: top + height * 0.25 },
+			{ x: left + width * 0.75, y: top + height * 0.25 },
+			{ x: left + width * 0.25, y: top + height * 0.75 },
+			{ x: left + width * 0.75, y: top + height * 0.75 },
+		);
+	}
+
+	const hitAt = (x: number, y: number): Element | null => {
+		const px = Math.min(Math.max(x, 0), window.innerWidth - 1);
+		const py = Math.min(Math.max(y, 0), window.innerHeight - 1);
+		const stack =
+			typeof document.elementsFromPoint === "function"
+				? document.elementsFromPoint(px, py)
+				: [document.elementFromPoint(px, py)].filter(Boolean);
+
+		for (let candidate of stack as Element[]) {
+			while (candidate?.shadowRoot) {
+				const inner = candidate.shadowRoot.elementFromPoint(px, py);
+
+				if (!inner || inner === candidate) {
+					break;
+				}
+
+				candidate = inner;
+			}
+
+			if (!candidate) {
+				continue;
+			}
+
+			if (
+				candidate === el ||
+				el.contains(candidate) ||
+				candidate.contains(el)
+			) {
+				return null;
+			}
+
+			return candidate;
+		}
+
+		return null;
+	};
+
+	let covered = 0;
+	const coverCounts = new Map<Element, number>();
+
+	for (const point of points) {
+		const cover = hitAt(point.x, point.y);
+
+		if (cover) {
+			covered++;
+			coverCounts.set(cover, (coverCounts.get(cover) ?? 0) + 1);
+		}
+	}
+
+	const coveredFraction = points.length === 0 ? 0 : covered / points.length;
+
+	if (coveredFraction < 1) {
+		return {
+			...empty,
+			coveredFraction,
+			fullyObscured: false,
+		};
+	}
+
+	let topCover: Element | null = null;
+	let topCount = 0;
+
+	for (const [candidate, count] of coverCounts) {
+		if (count > topCount) {
+			topCover = candidate;
+			topCount = count;
+		}
+	}
+
+	if (!topCover) {
+		return {
+			...empty,
+			coveredFraction: 1,
+			fullyObscured: false,
+			opacity: "unknown",
+		};
+	}
+
+	const coverRect = topCover.getBoundingClientRect();
+	const containsFully =
+		coverRect.left <= rect.left &&
+		coverRect.top <= rect.top &&
+		coverRect.right >= rect.right &&
+		coverRect.bottom >= rect.bottom;
+
+	if (!containsFully) {
+		// Joint multi-element cover: cannot confirm a single opaque container.
+		return {
+			coveredFraction: 1,
+			fullyObscured: true,
+			offscreen: false,
+			opacity: "unknown",
+			obscuredByHtml: null,
+			hasObscurer: false,
+		};
+	}
+
+	const classifyOpacity = (
+		node: Element,
+	): "opaque" | "semi-transparent" | "unknown" => {
+		const cs = getComputedStyle(node);
+		const opacity = Number.parseFloat(cs.opacity);
+
+		if (!Number.isFinite(opacity)) {
+			return "unknown";
+		}
+
+		if (opacity < 1) {
+			return "semi-transparent";
+		}
+
+		const bg = cs.backgroundColor;
+		const rgba = bg.match(
+			/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)(?:\s*,\s*([\d.]+))?\s*\)/,
+		);
+
+		if (rgba) {
+			const alpha = rgba[4] === undefined ? 1 : Number.parseFloat(rgba[4]);
+
+			if (alpha < 1) {
+				return alpha <= 0 ? "semi-transparent" : "semi-transparent";
+			}
+
+			return "opaque";
+		}
+
+		if (cs.backgroundImage && cs.backgroundImage !== "none") {
+			return "unknown";
+		}
+
+		return "unknown";
+	};
+
+	const opacity = classifyOpacity(topCover);
+	const openingTag = topCover.cloneNode(false) as Element;
+	openingTag.removeAttribute(obscurerAttr);
+	topCover.setAttribute(obscurerAttr, "1");
+
+	return {
+		coveredFraction: 1,
+		fullyObscured: true,
+		offscreen: false,
+		opacity,
+		obscuredByHtml: openingTag.outerHTML,
+		hasObscurer: true,
+	};
+}
+
+/** Return the element marked as the obscurer, if any. */
+export function obscurerHandleScript(): Element | null {
+	return document.querySelector("[data-a11y-obscurer]");
+}
+
+export function clearObscurerScript(obscurerAttr: string): void {
+	for (const marked of Array.from(
+		document.querySelectorAll(`[${obscurerAttr}]`),
+	)) {
+		marked.removeAttribute(obscurerAttr);
+	}
+}
+
+type ContextObserverState = {
+	baselineHref: string;
+	openedWindow: boolean;
+	submittedForm: boolean;
+	/** Elements that received focusin since the last drain. */
+	focusIns: Element[];
+	softUrlChange: boolean;
+	installed: boolean;
+};
+
+declare global {
+	interface Window {
+		__a11yContextObserver?: ContextObserverState;
+	}
+}
+
+/**
+ * Install once: wrap window.open (record + inert stub), capture-phase submit
+ * (record + preventDefault), track focusin and soft URL changes.
+ */
+export function installContextObserverScript(): void {
+	if (window.__a11yContextObserver?.installed) {
+		return;
+	}
+
+	const state: ContextObserverState = {
+		baselineHref: location.href,
+		openedWindow: false,
+		submittedForm: false,
+		focusIns: [],
+		softUrlChange: false,
+		installed: true,
+	};
+
+	window.__a11yContextObserver = state;
+
+	const originalOpen = window.open.bind(window);
+
+	window.open = (..._args: Parameters<typeof window.open>) => {
+		state.openedWindow = true;
+
+		return {
+			closed: true,
+			close() {},
+			focus() {},
+			blur() {},
+			opener: null,
+			location: { href: "" },
+		} as unknown as Window;
+	};
+
+	// Keep a reference so tooling does not tree-shake the bind as unused.
+	void originalOpen;
+
+	document.addEventListener(
+		"submit",
+		(event) => {
+			state.submittedForm = true;
+			event.preventDefault();
+			event.stopPropagation();
+		},
+		true,
+	);
+
+	document.addEventListener(
+		"focus",
+		(event) => {
+			const target = event.target;
+
+			// Prefer nodeType: instanceof can be brittle across some embeddings.
+			if (target && (target as Node).nodeType === 1) {
+				state.focusIns.push(target as Element);
+			}
+		},
+		true,
+	);
+
+	const noteSoftNav = (): void => {
+		if (location.href !== state.baselineHref) {
+			state.softUrlChange = true;
+		}
+	};
+
+	window.addEventListener("hashchange", noteSoftNav);
+	window.addEventListener("popstate", noteSoftNav);
+
+	const wrapHistory = (method: "pushState" | "replaceState"): void => {
+		const original = history[method].bind(history);
+
+		history[method] = ((...args: Parameters<History["pushState"]>) => {
+			const result = original(...args);
+			noteSoftNav();
+
+			return result;
+		}) as History["pushState"];
+	};
+
+	wrapHistory("pushState");
+	wrapHistory("replaceState");
+}
+
+export type DrainContextObserverResult = {
+	openedWindow: boolean;
+	submittedForm: boolean;
+	focusRemoved: boolean;
+	redirect: "outside" | "same-subtree" | null;
+	softUrlChange: boolean;
+	navigation: boolean;
+	attributedHtml: string | null;
+	/** True when an attributed element was marked for selector resolution. */
+	hasAttributed: boolean;
+};
+
+/**
+ * Drain observer signals for the current tab stop and reset per-stop flags.
+ * Classification of focus removal / redirection uses the post-Tab settle
+ * activeElement and the focusin history from this stop only.
+ */
+export function drainContextObserverScript(
+	markerAttr: string,
+): DrainContextObserverResult {
+	// Must be a string literal inside this function: it is serialized into the page.
+	const attributedAttr = "data-a11y-ctx-attr";
+
+	const empty: DrainContextObserverResult = {
+		openedWindow: false,
+		submittedForm: false,
+		focusRemoved: false,
+		redirect: null,
+		softUrlChange: false,
+		navigation: false,
+		attributedHtml: null,
+		hasAttributed: false,
+	};
+
+	const state = window.__a11yContextObserver;
+
+	if (!state) {
+		return empty;
+	}
+
+	for (const marked of Array.from(
+		document.querySelectorAll(`[${attributedAttr}]`),
+	)) {
+		marked.removeAttribute(attributedAttr);
+	}
+
+	const openedWindow = state.openedWindow;
+	const submittedForm = state.submittedForm;
+	const softUrlChange = state.softUrlChange;
+	const focusIns = state.focusIns.slice();
+
+	state.openedWindow = false;
+	state.submittedForm = false;
+	state.softUrlChange = false;
+	state.focusIns = [];
+
+	let active = document.activeElement;
+
+	while (active?.shadowRoot?.activeElement) {
+		active = active.shadowRoot.activeElement;
+	}
+
+	const intended =
+		focusIns.find(
+			(el) => el !== document.body && el !== document.documentElement,
+		) ?? null;
+
+	const openingHtml = (node: Element): string => {
+		const clone = node.cloneNode(false) as Element;
+		clone.removeAttribute(markerAttr);
+		clone.removeAttribute(attributedAttr);
+
+		return clone.outerHTML;
+	};
+
+	let focusRemoved = false;
+	let redirect: "outside" | "same-subtree" | null = null;
+	let attributedHtml: string | null = null;
+	let hasAttributed = false;
+
+	const bodyOrNone =
+		!active || active === document.body || active === document.documentElement;
+
+	if (intended && bodyOrNone) {
+		focusRemoved = true;
+		attributedHtml = openingHtml(intended);
+		intended.setAttribute(attributedAttr, "1");
+		hasAttributed = true;
+	} else if (intended && active && intended !== active) {
+		const composedContains = (ancestor: Element, node: Element): boolean => {
+			let current: Node | null = node;
+
+			while (current) {
+				if (current === ancestor) {
+					return true;
+				}
+
+				const parent: Node | null = current.parentNode;
+
+				if (parent) {
+					current = parent;
+					continue;
+				}
+
+				if (current instanceof ShadowRoot) {
+					current = current.host;
+					continue;
+				}
+
+				break;
+			}
+
+			return false;
+		};
+
+		const same =
+			composedContains(intended, active) || composedContains(active, intended);
+
+		redirect = same ? "same-subtree" : "outside";
+		attributedHtml = openingHtml(intended);
+		intended.setAttribute(attributedAttr, "1");
+		hasAttributed = true;
+	}
+
+	return {
+		openedWindow,
+		submittedForm,
+		focusRemoved,
+		redirect,
+		softUrlChange,
+		navigation: false,
+		attributedHtml,
+		hasAttributed,
+	};
+}
+
+export function attributedHandleScript(): Element | null {
+	return document.querySelector("[data-a11y-ctx-attr]");
+}
+
+export function clearAttributedScript(): void {
+	for (const marked of Array.from(
+		document.querySelectorAll("[data-a11y-ctx-attr]"),
+	)) {
+		marked.removeAttribute("data-a11y-ctx-attr");
+	}
+}
+
+/**
+ * Drop focusin history accumulated after drain (e.g. pixel-diff blur/refocus)
+ * so the next tab stop does not mis-attribute F55 or redirects.
+ */
+export function clearContextFocusInsScript(): void {
+	const state = window.__a11yContextObserver;
+
+	if (state) {
+		state.focusIns = [];
+		state.openedWindow = false;
+		state.submittedForm = false;
+		state.softUrlChange = false;
+	}
+}
+
+/** Current location.href for navigation comparison in the host. */
+export function locationHrefScript(): string {
+	return location.href;
+}

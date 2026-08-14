@@ -2,16 +2,30 @@ import { getSelector, truncateHtml } from "@a11y-pulse/browser-adaptor/dom";
 import type { FocusAppearanceAuditAdaptor } from "./adaptor";
 import {
 	activeElementHandleScript,
+	attributedHandleScript,
 	baselineScript,
 	blurScript,
+	clearAttributedScript,
+	clearContextFocusInsScript,
 	clearMarkersScript,
+	clearObscurerScript,
+	drainContextObserverScript,
 	elementRectScript,
 	focusScript,
+	installContextObserverScript,
 	isCenterObscuredScript,
+	locationHrefScript,
+	measureObscuringScript,
+	obscurerHandleScript,
 	pageDimensionsScript,
 	probeActiveElementScript,
 	scrollToCenterScript,
 } from "./browser-scripts";
+import {
+	type ContextChangeFinding,
+	type ContextChangeSignals,
+	classifyContextSignals,
+} from "./context-change";
 import {
 	alignedRegionsDiffer,
 	bufferedClip,
@@ -20,6 +34,7 @@ import {
 	stylesIndicateFocus,
 } from "./detection";
 import { FOCUS_STYLE_PROPERTIES } from "./focus-style";
+import { classifyObscuring, type ObscuredMeasurement } from "./obscuring";
 import type {
 	DetectionMethod,
 	FocusAppearanceResult,
@@ -32,8 +47,10 @@ export const DEFAULT_SCREENSHOT_CLIP_BUFFER = 10;
 export const DEFAULT_SCREENSHOT_DIFF_THRESHOLD = 4;
 export const DEFAULT_FAILED_ELEMENT_LIMIT = 0; // 0 = never finish early
 export const DEFAULT_TIMEOUT = 0; // 0 = no timeout
+export const DEFAULT_OBSCURING_RECHECK_DELAY = 250;
 
 const MARKER_ATTR = "data-a11y-focus-idx";
+const OBSCURER_ATTR = "data-a11y-obscurer";
 
 export type FocusAppearanceOptions = {
 	/** Max focusable elements to tab through */
@@ -76,6 +93,24 @@ export type FocusAppearanceOptions = {
 	 * gathered so far.
 	 */
 	timeout?: number;
+
+	/**
+	 * Measure whether each focused element is entirely hidden by author-created
+	 * content (WCAG 2.4.11). Defaults to true.
+	 */
+	measureObscuring?: boolean;
+
+	/**
+	 * Watch for unexpected context changes caused by focus alone (WCAG 3.2.1).
+	 * Defaults to true.
+	 */
+	measureContextChange?: boolean;
+
+	/**
+	 * Delay (ms) before re-measuring a fully-obscured finding so transient
+	 * overlays (toasts, entrance animations) are not reported. Defaults to 250.
+	 */
+	obscuringRecheckDelay?: number;
 };
 
 type ResolvedOptions = Required<FocusAppearanceOptions>;
@@ -98,6 +133,16 @@ export type BaselineEntry = {
 	rect: Rect;
 };
 
+/** Drain result for one tab stop's context-change observer buffer. */
+export type ContextChangeDrain = {
+	signals: ContextChangeSignals;
+	/**
+	 * When focus was removed or redirected, the element that briefly received
+	 * focus this stop (from the focusin observer), used for attribution.
+	 */
+	attributed?: { selector: string; html: string } | null;
+};
+
 /** The browser-coupled seams the loop drives. Mocked in unit tests. */
 export type FocusProbe = {
 	captureBaseline(): Promise<Map<number, BaselineEntry>>;
@@ -105,6 +150,20 @@ export type FocusProbe = {
 	pressTab(): Promise<void>;
 	settle(): Promise<void>;
 	probeActiveElement(): Promise<ActiveElementInfo | null>;
+	/** Install page observers once before the tab loop (context-change). */
+	installContextObserver(): Promise<void>;
+	/**
+	 * Drain observer signals for the just-focused stop. Evaluated from the
+	 * post-Tab settle state only (never from pixel-diff blur/refocus).
+	 */
+	drainContextSignals(
+		info: ActiveElementInfo | null,
+	): Promise<ContextChangeDrain>;
+	/** Discard observer noise from pixel-diff blur/refocus. */
+	clearContextNoise(): Promise<void>;
+	measureObscuring(
+		info: ActiveElementInfo,
+	): Promise<ObscuredMeasurement | null>;
 	detectIndicator(
 		info: ActiveElementInfo,
 		baseline: Map<number, BaselineEntry>,
@@ -132,6 +191,21 @@ function resolveOptions(options: FocusAppearanceOptions): ResolvedOptions {
 		failedElementLimit:
 			options.failedElementLimit ?? DEFAULT_FAILED_ELEMENT_LIMIT,
 		timeout: options.timeout ?? DEFAULT_TIMEOUT,
+		measureObscuring: options.measureObscuring ?? true,
+		measureContextChange: options.measureContextChange ?? true,
+		obscuringRecheckDelay:
+			options.obscuringRecheckDelay ?? DEFAULT_OBSCURING_RECHECK_DELAY,
+	};
+}
+
+function emptyContextSignals(): ContextChangeSignals {
+	return {
+		openedWindow: false,
+		submittedForm: false,
+		focusRemoved: false,
+		redirect: null,
+		softUrlChange: false,
+		navigation: false,
 	};
 }
 
@@ -167,10 +241,15 @@ export async function runFocusLoop(
 	let reachedFailedElementLimit = false;
 	let timedOut = false;
 	let aborted = false;
+	let abortedForNavigation = false;
 
 	// Captured at the instant the timeout fires so the returned results can't be
 	// mutated by the loop still unwinding in the background.
 	let timedOutElements: FocusElementResult[] | null = null;
+
+	if (options.measureContextChange) {
+		await probe.installContextObserver();
+	}
 
 	async function tabThroughElements(): Promise<void> {
 		try {
@@ -182,9 +261,89 @@ export async function runFocusLoop(
 				await probe.pressTab();
 				await probe.settle();
 
-				const info = await probe.probeActiveElement();
+				let info: ActiveElementInfo | null;
+
+				try {
+					info = await probe.probeActiveElement();
+				} catch (error) {
+					if (!options.measureContextChange) {
+						throw error;
+					}
+
+					const message =
+						error instanceof Error ? error.message : String(error);
+					const destroyed =
+						/Execution context was destroyed|Target closed|frame was detached|navigat/i.test(
+							message,
+						);
+
+					if (!destroyed) {
+						throw error;
+					}
+
+					abortedForNavigation = true;
+					aborted = true;
+					elements.push({
+						selector: "",
+						html: "",
+						tabIndex: i + 1,
+						passed: true,
+						detectionMethod: null,
+						contextChange: [{ kind: "navigation", bucket: "violation" }],
+					});
+
+					break;
+				}
+
+				let contextFindings: ContextChangeFinding[] = [];
+				let attributed: { selector: string; html: string } | null | undefined;
+
+				if (options.measureContextChange) {
+					const drain = await probe.drainContextSignals(info);
+					contextFindings = classifyContextSignals(drain.signals);
+					attributed = drain.attributed;
+
+					if (drain.signals.navigation) {
+						abortedForNavigation = true;
+						aborted = true;
+
+						const target =
+							attributed ??
+							(info && !info.isBody
+								? { selector: info.selector, html: info.html }
+								: { selector: "", html: "" });
+
+						elements.push({
+							selector: target.selector,
+							html: target.html,
+							tabIndex: i + 1,
+							passed: true,
+							detectionMethod: null,
+							contextChange: contextFindings,
+						});
+
+						break;
+					}
+				}
 
 				if (info === null || info.isBody) {
+					// F55: element received focus then removed it. Attribute via the
+					// focusin observer, not via the pixel-diff blur path.
+					if (
+						options.measureContextChange &&
+						contextFindings.some((f) => f.kind === "focus-removed") &&
+						attributed
+					) {
+						elements.push({
+							selector: attributed.selector,
+							html: attributed.html,
+							tabIndex: i + 1,
+							passed: true,
+							detectionMethod: null,
+							contextChange: contextFindings,
+						});
+					}
+
 					break;
 				}
 
@@ -208,14 +367,38 @@ export async function runFocusLoop(
 					visited.add(info.index);
 				}
 
+				let obscured: ObscuredMeasurement | null = null;
+
+				if (options.measureObscuring) {
+					obscured = await probe.measureObscuring(info);
+				}
+
 				const method = await probe.detectIndicator(info, baseline);
 
+				// Pixel-diff blurs and re-focuses; discard those focusin events so
+				// the next stop does not treat them as F55 / focus theft.
+				if (options.measureContextChange) {
+					await probe.clearContextNoise();
+				}
+
+				const redirectOutside = contextFindings.some(
+					(f) => f.kind === "focus-redirected-outside",
+				);
+				const recordAs =
+					redirectOutside && attributed
+						? { selector: attributed.selector, html: attributed.html }
+						: { selector: info.selector, html: info.html };
+
 				elements.push({
-					selector: info.selector,
-					html: info.html,
+					selector: recordAs.selector,
+					html: recordAs.html,
 					tabIndex: i + 1,
 					passed: method !== null,
 					detectionMethod: method,
+					...(obscured !== null ? { obscured } : {}),
+					...(contextFindings.length > 0
+						? { contextChange: contextFindings }
+						: {}),
 				});
 
 				if (method === null) {
@@ -272,6 +455,38 @@ export async function runFocusLoop(
 	const finalElements = timedOutElements ?? elements;
 	const passed = finalElements.filter((e) => e.passed).length;
 
+	let obscuredChecked = 0;
+	let obscuredViolations = 0;
+	let obscuredIncomplete = 0;
+	let contextChecked = 0;
+	let contextViolations = 0;
+	let contextIncomplete = 0;
+
+	for (const el of finalElements) {
+		if (el.obscured) {
+			obscuredChecked++;
+			const bucket = classifyObscuring(el.obscured);
+
+			if (bucket === "violation") {
+				obscuredViolations++;
+			} else if (bucket === "incomplete") {
+				obscuredIncomplete++;
+			}
+		}
+
+		if (el.contextChange && el.contextChange.length > 0) {
+			contextChecked++;
+
+			for (const finding of el.contextChange) {
+				if (finding.bucket === "violation") {
+					contextViolations++;
+				} else {
+					contextIncomplete++;
+				}
+			}
+		}
+	}
+
 	return {
 		elements: finalElements,
 		summary: {
@@ -281,6 +496,17 @@ export async function runFocusLoop(
 			reachedLimit,
 			reachedFailedElementLimit,
 			timedOut,
+			abortedForNavigation,
+			obscured: {
+				checked: obscuredChecked,
+				violations: obscuredViolations,
+				incomplete: obscuredIncomplete,
+			},
+			contextChange: {
+				checked: contextChecked,
+				violations: contextViolations,
+				incomplete: contextIncomplete,
+			},
 		},
 	};
 }
@@ -289,6 +515,8 @@ function createAdaptorProbe(
 	adaptor: FocusAppearanceAuditAdaptor,
 	options: ResolvedOptions,
 ): FocusProbe {
+	let baselineHref = "";
+
 	return {
 		async captureBaseline() {
 			const payload = await adaptor.evaluate(
@@ -350,6 +578,189 @@ function createAdaptorProbe(
 				const selector = await adaptor.evaluate(getSelector, handle);
 
 				return { ...base, html, selector };
+			} finally {
+				await adaptor.disposeRef(handle);
+			}
+		},
+
+		async installContextObserver() {
+			baselineHref = await adaptor.evaluate(locationHrefScript);
+			await adaptor.evaluate(installContextObserverScript);
+		},
+
+		async drainContextSignals(info) {
+			try {
+				const href = await adaptor.evaluate(locationHrefScript);
+
+				if (baselineHref && href !== baselineHref) {
+					// Document navigated (or soft URL change). Prefer observer soft
+					// flags when the context survived; otherwise treat as navigation.
+					let soft = false;
+
+					try {
+						const raw = await adaptor.evaluate(
+							drainContextObserverScript,
+							MARKER_ATTR,
+						);
+						soft = raw.softUrlChange;
+					} catch {
+						soft = false;
+					}
+
+					if (!soft) {
+						return {
+							signals: {
+								...emptyContextSignals(),
+								navigation: true,
+							},
+							attributed:
+								info && !info.isBody
+									? { selector: info.selector, html: info.html }
+									: null,
+						};
+					}
+
+					return {
+						signals: {
+							...emptyContextSignals(),
+							softUrlChange: true,
+						},
+						attributed: null,
+					};
+				}
+
+				const raw = await adaptor.evaluate(
+					drainContextObserverScript,
+					MARKER_ATTR,
+				);
+
+				let attributed: { selector: string; html: string } | null = null;
+
+				if (raw.hasAttributed) {
+					const handle = await adaptor.evaluateHandle(attributedHandleScript);
+
+					try {
+						const selector = handle
+							? await adaptor.evaluate(getSelector, handle)
+							: "";
+
+						attributed = {
+							selector,
+							html: truncateHtml(raw.attributedHtml ?? ""),
+						};
+					} finally {
+						if (handle) {
+							await adaptor.disposeRef(handle);
+						}
+
+						await adaptor.evaluate(clearAttributedScript);
+					}
+				}
+
+				void info;
+
+				return {
+					signals: {
+						openedWindow: raw.openedWindow,
+						submittedForm: raw.submittedForm,
+						focusRemoved: raw.focusRemoved,
+						redirect: raw.redirect,
+						softUrlChange: raw.softUrlChange,
+						navigation: raw.navigation,
+					},
+					attributed,
+				};
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+				const destroyed =
+					/Execution context was destroyed|Target closed|frame was detached|navigat/i.test(
+						message,
+					);
+
+				if (!destroyed) {
+					throw error;
+				}
+
+				return {
+					signals: {
+						...emptyContextSignals(),
+						navigation: true,
+					},
+					attributed:
+						info && !info.isBody
+							? { selector: info.selector, html: info.html }
+							: null,
+				};
+			}
+		},
+
+		async clearContextNoise() {
+			try {
+				await adaptor.evaluate(clearContextFocusInsScript);
+			} catch {
+				// Page may have navigated; ignore.
+			}
+		},
+
+		async measureObscuring(info) {
+			void info;
+			const handle = await adaptor.evaluateHandle(activeElementHandleScript);
+
+			try {
+				const measureOnce = async () => {
+					const raw = await adaptor.evaluate(
+						measureObscuringScript,
+						handle,
+						OBSCURER_ATTR,
+					);
+
+					let obscuredBy: ObscuredMeasurement["obscuredBy"] = null;
+
+					if (raw.hasObscurer) {
+						const coverHandle =
+							await adaptor.evaluateHandle(obscurerHandleScript);
+
+						try {
+							const selector = coverHandle
+								? await adaptor.evaluate(getSelector, coverHandle)
+								: "";
+
+							obscuredBy = {
+								selector,
+								html: truncateHtml(raw.obscuredByHtml ?? ""),
+							};
+						} finally {
+							if (coverHandle) {
+								await adaptor.disposeRef(coverHandle);
+							}
+
+							await adaptor.evaluate(clearObscurerScript, OBSCURER_ATTR);
+						}
+					}
+
+					return {
+						coveredFraction: raw.coveredFraction,
+						fullyObscured: raw.fullyObscured,
+						offscreen: raw.offscreen,
+						opacity: raw.opacity,
+						obscuredBy,
+					} satisfies ObscuredMeasurement;
+				};
+
+				const first = await measureOnce();
+
+				if (
+					!(first.fullyObscured && first.opacity === "opaque") &&
+					!(first.fullyObscured && first.opacity === "unknown")
+				) {
+					return first;
+				}
+
+				await new Promise((resolve) =>
+					setTimeout(resolve, options.obscuringRecheckDelay),
+				);
+
+				return measureOnce();
 			} finally {
 				await adaptor.disposeRef(handle);
 			}

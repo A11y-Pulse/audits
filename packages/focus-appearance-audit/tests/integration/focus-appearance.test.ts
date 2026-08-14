@@ -173,3 +173,120 @@ describe("focus appearance audit (integration)", () => {
 		}
 	});
 });
+
+describe("focus not obscured (integration)", () => {
+	it("flags an element fully covered by a sticky footer", async () => {
+		const result = await runFixture("sticky-footer-obscures.html", {
+			obscuringRecheckDelay: 50,
+		});
+		expect(result.summary.obscured.violations).toBeGreaterThanOrEqual(1);
+
+		const obscured = result.elements.find(
+			(e) => e.obscured?.fullyObscured && e.obscured.opacity === "opaque",
+		);
+		expect(obscured?.obscured?.obscuredBy?.html).toMatch(/sticky-footer/);
+	});
+
+	it("passes a clean page with no overlays", async () => {
+		const result = await runFixture("obscuring-clean.html");
+		expect(result.summary.obscured.violations).toBe(0);
+		expect(result.summary.obscured.incomplete).toBe(0);
+		expect(result.summary.obscured.checked).toBeGreaterThanOrEqual(2);
+	});
+
+	it("does not violate for a semi-transparent full cover", async () => {
+		const result = await runFixture("semi-transparent-overlay.html", {
+			obscuringRecheckDelay: 50,
+		});
+		expect(result.summary.obscured.violations).toBe(0);
+
+		const covered = result.elements.find((e) => e.obscured?.fullyObscured);
+		expect(covered?.obscured?.opacity).toBe("semi-transparent");
+	});
+});
+
+describe("context change on focus (integration)", () => {
+	it("flags window.open on focus without opening a real window", async () => {
+		const page = await browser.newPage();
+		const popupPromise = new Promise<boolean>((resolve) => {
+			page.once("popup", () => resolve(true));
+			setTimeout(() => resolve(false), 500);
+		});
+
+		try {
+			await page.goto(`${server.url}/new-window-on-focus.html`, {
+				waitUntil: "load",
+			});
+			const result = await runFocusAppearanceAudit(new PuppeteerAdaptor(page));
+			const popupOpened = await popupPromise;
+
+			expect(popupOpened).toBe(false);
+			expect(result.summary.contextChange.violations).toBeGreaterThanOrEqual(1);
+			expect(
+				result.elements.some((e) =>
+					e.contextChange?.some((f) => f.kind === "new-window"),
+				),
+			).toBe(true);
+		} finally {
+			await page.close();
+		}
+	});
+
+	it("flags auto-submit on focus and keeps the page on the fixture", async () => {
+		const page = await browser.newPage();
+
+		try {
+			await page.goto(`${server.url}/auto-submit-on-focus.html`, {
+				waitUntil: "load",
+			});
+			const result = await runFocusAppearanceAudit(new PuppeteerAdaptor(page));
+
+			expect(
+				result.elements.some((e) =>
+					e.contextChange?.some((f) => f.kind === "auto-submit"),
+				),
+			).toBe(true);
+			expect(page.url()).toContain("auto-submit-on-focus.html");
+		} finally {
+			await page.close();
+		}
+	});
+
+	it("flags F55 focus removal", async () => {
+		const result = await runFixture("focus-removal.html");
+		expect(
+			result.elements.some((e) =>
+				e.contextChange?.some((f) => f.kind === "focus-removed"),
+			),
+		).toBe(true);
+	});
+
+	it("flags focus theft to an unrelated element", async () => {
+		const result = await runFixture("focus-theft.html");
+		expect(
+			result.elements.some((e) =>
+				e.contextChange?.some((f) => f.kind === "focus-redirected-outside"),
+			),
+		).toBe(true);
+	});
+
+	it("does not flag same-subtree focus delegation as a violation", async () => {
+		const result = await runFixture("focus-delegation.html");
+		expect(result.summary.contextChange.violations).toBe(0);
+		expect(
+			result.elements.some((e) =>
+				e.contextChange?.some((f) => f.kind === "focus-redirected-outside"),
+			),
+		).toBe(false);
+	});
+
+	it("aborts when focus triggers navigation", async () => {
+		const result = await runFixture("navigation-on-focus.html");
+		expect(result.summary.abortedForNavigation).toBe(true);
+		expect(
+			result.elements.some((e) =>
+				e.contextChange?.some((f) => f.kind === "navigation"),
+			),
+		).toBe(true);
+	});
+});

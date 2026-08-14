@@ -2,8 +2,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	baselineScript,
+	drainContextObserverScript,
 	elementRectScript,
+	installContextObserverScript,
 	isCenterObscuredScript,
+	measureObscuringScript,
 	probeActiveElementScript,
 	scrollToCenterScript,
 } from "./browser-scripts";
@@ -365,5 +368,171 @@ describe("scrollToCenterScript", () => {
 		expect(scrollIntoView).toHaveBeenCalledWith(
 			expect.objectContaining({ block: "center", behavior: "instant" }),
 		);
+	});
+});
+
+describe("measureObscuringScript", () => {
+	const ATTR = "data-test-obscurer";
+
+	afterEach(() => {
+		vi.restoreAllMocks();
+		document.body.innerHTML = "";
+	});
+
+	it("reports offscreen when the element has no viewport intersection", () => {
+		document.body.innerHTML = "<button>target</button>";
+		const el = document.querySelector("button") as HTMLElement;
+		el.getBoundingClientRect = () =>
+			({
+				left: -200,
+				top: -200,
+				right: -100,
+				bottom: -100,
+				width: 100,
+				height: 100,
+			}) as DOMRect;
+
+		const result = measureObscuringScript(el, ATTR);
+
+		expect(result.offscreen).toBe(true);
+		expect(result.fullyObscured).toBe(false);
+	});
+
+	it("reports not fully obscured when the element is the top hit", () => {
+		document.body.innerHTML = "<button>target</button>";
+		const el = document.querySelector("button") as HTMLElement;
+		el.getBoundingClientRect = () =>
+			({
+				left: 10,
+				top: 10,
+				right: 110,
+				bottom: 50,
+				width: 100,
+				height: 40,
+			}) as DOMRect;
+		document.elementsFromPoint = () => [el];
+
+		const result = measureObscuringScript(el, ATTR);
+
+		expect(result.fullyObscured).toBe(false);
+		expect(result.coveredFraction).toBe(0);
+	});
+
+	it("confirms opaque full cover when a container contains the element", () => {
+		document.body.innerHTML =
+			'<button>target</button><div id="banner" style="opacity:1;background:#000">banner</div>';
+		const el = document.querySelector("button") as HTMLElement;
+		const banner = document.querySelector("#banner") as HTMLElement;
+		el.getBoundingClientRect = () =>
+			({
+				left: 10,
+				top: 10,
+				right: 110,
+				bottom: 50,
+				width: 100,
+				height: 40,
+			}) as DOMRect;
+		banner.getBoundingClientRect = () =>
+			({
+				left: 0,
+				top: 0,
+				right: 200,
+				bottom: 100,
+				width: 200,
+				height: 100,
+			}) as DOMRect;
+		document.elementsFromPoint = () => [banner, el];
+		vi.spyOn(window, "getComputedStyle").mockReturnValue({
+			opacity: "1",
+			backgroundColor: "rgb(0, 0, 0)",
+			backgroundImage: "none",
+		} as CSSStyleDeclaration);
+
+		const result = measureObscuringScript(el, ATTR);
+
+		expect(result.fullyObscured).toBe(true);
+		expect(result.opacity).toBe("opaque");
+		expect(result.hasObscurer).toBe(true);
+		expect(banner.getAttribute(ATTR)).toBe("1");
+	});
+
+	it("classifies opacity below 1 as semi-transparent", () => {
+		document.body.innerHTML =
+			'<button>target</button><div id="veil">veil</div>';
+		const el = document.querySelector("button") as HTMLElement;
+		const veil = document.querySelector("#veil") as HTMLElement;
+		el.getBoundingClientRect = () =>
+			({
+				left: 10,
+				top: 10,
+				right: 110,
+				bottom: 50,
+				width: 100,
+				height: 40,
+			}) as DOMRect;
+		veil.getBoundingClientRect = () =>
+			({
+				left: 0,
+				top: 0,
+				right: 200,
+				bottom: 100,
+				width: 200,
+				height: 100,
+			}) as DOMRect;
+		document.elementsFromPoint = () => [veil, el];
+		vi.spyOn(window, "getComputedStyle").mockReturnValue({
+			opacity: "0.5",
+			backgroundColor: "rgb(0, 0, 0)",
+			backgroundImage: "none",
+		} as CSSStyleDeclaration);
+
+		const result = measureObscuringScript(el, ATTR);
+
+		expect(result.fullyObscured).toBe(true);
+		expect(result.opacity).toBe("semi-transparent");
+	});
+});
+
+describe("context observer scripts", () => {
+	afterEach(() => {
+		document.body.innerHTML = "";
+		delete window.__a11yContextObserver;
+	});
+
+	it("records window.open and returns an inert stub", () => {
+		installContextObserverScript();
+		const stub = window.open("https://example.com");
+
+		expect(stub).toBeTruthy();
+		expect(stub?.closed).toBe(true);
+
+		const drained = drainContextObserverScript("data-idx");
+		expect(drained.openedWindow).toBe(true);
+	});
+
+	it("records submit and prevents the default", () => {
+		document.body.innerHTML = '<form id="f"><input id="i"></form>';
+		installContextObserverScript();
+
+		const form = document.querySelector("#f") as HTMLFormElement;
+		const event = new Event("submit", { bubbles: true, cancelable: true });
+		form.dispatchEvent(event);
+
+		expect(event.defaultPrevented).toBe(true);
+
+		const drained = drainContextObserverScript("data-idx");
+		expect(drained.submittedForm).toBe(true);
+	});
+
+	it("classifies focus removal when settle lands on body", () => {
+		document.body.innerHTML = '<input id="a"><input id="b">';
+		installContextObserverScript();
+		const a = document.querySelector("#a") as HTMLInputElement;
+		a.dispatchEvent(new FocusEvent("focus", { bubbles: false }));
+		a.blur();
+
+		const drained = drainContextObserverScript("data-idx");
+		expect(drained.focusRemoved).toBe(true);
+		expect(drained.hasAttributed).toBe(true);
 	});
 });
