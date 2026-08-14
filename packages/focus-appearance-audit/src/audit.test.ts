@@ -951,7 +951,7 @@ describe("runFocusLoop - context change", () => {
 			if (polluted) {
 				return {
 					signals: { ...emptySignals(), focusRemoved: true },
-					attributed: { selector: "#ghost", html: "<button id=\"ghost\">" },
+					attributed: { selector: "#ghost", html: '<button id="ghost">' },
 				};
 			}
 
