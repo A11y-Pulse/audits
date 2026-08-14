@@ -1,77 +1,27 @@
 {
-	"name": "@a11y-pulse/focus-appearance-audit",
-	"version": "0.1.0",
-	"description": "WCAG 2.4.7 Focus Visible audit that tabs through a page and detects visible focus indicators via computed styles and pixel-diff fallback.",
+	"name": "@a11y-pulse/audits",
+	"private": true,
 	"type": "module",
-	"license": "SEE LICENSE IN LICENSE.md",
-	"author": "A11y Pulse Limited",
-	"homepage": "https://github.com/A11y-Pulse/focus-appearance-audit#readme",
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/A11y-Pulse/focus-appearance-audit.git"
-	},
-	"bugs": {
-		"url": "https://github.com/A11y-Pulse/focus-appearance-audit/issues"
-	},
-	"keywords": [
-		"accessibility",
-		"a11y",
-		"wcag",
-		"focus-visible",
-		"focus-appearance",
-		"puppeteer",
-		"audit"
-	],
 	"engines": {
 		"node": ">=22"
 	},
-	"exports": {
-		".": {
-			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js"
-		},
-		"./puppeteer": {
-			"types": "./dist/adaptors/puppeteer.d.ts",
-			"import": "./dist/adaptors/puppeteer.js"
-		}
-	},
-	"files": [
-		"dist",
-		"README.md",
-		"LICENSE.md"
+	"workspaces": [
+		"packages/*"
 	],
 	"scripts": {
-		"build": "tsup && tsc -p tsconfig.build.json",
-		"typecheck": "tsc --noEmit",
+		"build": "npm run build --workspaces --if-present",
+		"typecheck": "npm run typecheck --workspaces --if-present",
 		"lint": "biome check",
 		"lint:fix": "biome check --fix",
-		"test:unit": "vitest run",
-		"test:integration": "vitest run --config vitest.integration.config.ts",
+		"test:unit": "npm run test:unit --workspaces --if-present",
+		"test:integration": "npm run test:integration --workspaces --if-present",
 		"test": "npm run typecheck && npm run test:unit",
-		"prepublishOnly": "npm run build"
-	},
-	"publishConfig": {
-		"access": "public"
-	},
-	"dependencies": {
-		"pixelmatch": "^7.2.0",
-		"pngjs": "^7.0.0"
-	},
-	"peerDependencies": {
-		"puppeteer": "^25.3.0"
-	},
-	"peerDependenciesMeta": {
-		"puppeteer": {
-			"optional": true
-		}
+		"release": "changeset publish"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.4",
 		"@tsconfig/node22": "^22.0.2",
 		"@types/node": "^26.1.1",
-		"@types/pngjs": "^6.0.5",
-		"happy-dom": "^20.9.0",
-		"puppeteer": "^25.3.0",
 		"tsup": "^8.5.0",
 		"typescript": "^7.0.2",
 		"vitest": "^4.1.7"
