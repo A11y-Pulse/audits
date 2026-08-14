@@ -1,16 +1,13 @@
 export type {
 	BrowserAdaptor,
 	ElementRef,
+	FocusAppearanceAuditAdaptor,
 	Rect,
-} from "@a11y-pulse/tab-orchestrator";
+} from "./adaptor";
 export type { FocusAppearanceOptions } from "./audit";
-export { createFocusAppearanceAudit, runFocusAppearanceAudit } from "./audit";
-export type { StyleSnapshot } from "./detection";
-export { omitIdleStyleSnapshot } from "./detection";
+export { runFocusAppearanceAudit } from "./audit";
 export type {
 	DetectionMethod,
 	FocusAppearanceResult,
 	FocusElementResult,
-	FocusFailureEvidence,
-	IndicatorDetection,
 } from "./result";
