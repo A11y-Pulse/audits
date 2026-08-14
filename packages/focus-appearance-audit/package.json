@@ -68,7 +68,7 @@
 	},
 	"devDependencies": {
 		"@types/pngjs": "^6.0.5",
-		"happy-dom": "^20.9.0",
+		"happy-dom": "^20.11.2",
 		"puppeteer": "^25.5.0"
 	}
 }
