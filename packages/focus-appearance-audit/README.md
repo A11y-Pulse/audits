@@ -172,7 +172,7 @@ Use [`src/adaptors/puppeteer.ts`](./src/adaptors/puppeteer.ts) as a reference im
 
 ## Releasing
 
-Releases are managed in the [A11y-Pulse/audits](https://github.com/A11y-Pulse/audits) monorepo with [Changesets](https://github.com/changesets/changesets). Publishing uses [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/) (OIDC) — there is no long-lived `NPM_TOKEN`.
+Releases are managed in the [A11y-Pulse/audits](https://github.com/A11y-Pulse/audits) monorepo with [Changesets](https://github.com/changesets/changesets). Publishing uses [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/) (OIDC). There is no long-lived `NPM_TOKEN`.
 
 ### Ship a change
 
@@ -189,7 +189,7 @@ Trusted Publisher on npm must stay configured for:
 
 ### Consumers (e.g. the A11y Pulse runner)
 
-Bumping the published version in downstream apps is a separate change — update the dependency range / lockfile there after the npm release lands.
+Bumping the published version in downstream apps is a separate change. Update the dependency range / lockfile there after the npm release lands.
 
 ## License
 

@@ -13,7 +13,7 @@
 
 ## Non-goals
 
-- Extracting `@a11y-pulse/browser-adaptor` (second consumer — skip-link — extracts it).
+- Extracting `@a11y-pulse/browser-adaptor` (skip-link, the second consumer, extracts it).
 - Adding skip-link or any other audit in this conversion.
 - Moving private/static/platform work into this repo (Tier 0 statics, iframe injection, state explorer, Tier 3 site-level aggregation, Tier 4 AI). Those stay in `a11y-pulse`.
 - A mega-package (`@a11y-pulse/audits/focus-appearance`). Each audit remains its own npm package.
@@ -96,7 +96,7 @@ Changesets versions each package independently:
 
 1. A PR that should bump a published package includes a changeset (e.g. `"@a11y-pulse/focus-appearance-audit": patch`).
 2. `changesets/action` on push to `main` opens a Version PR when changesets exist.
-3. Merging the Version PR runs `.github/workflows/release.yml` (filename unchanged — Trusted Publisher is pinned to it), which builds and runs `changeset publish` via OIDC. `NPM_TOKEN` stays empty. Provenance is the npm trusted-publishing default.
+3. Merging the Version PR runs `.github/workflows/release.yml` (filename unchanged; Trusted Publisher is pinned to it), which builds and runs `changeset publish` via OIDC. `NPM_TOKEN` stays empty. Provenance is the npm trusted-publishing default.
 4. The action tags/releases per package (e.g. `@a11y-pulse/focus-appearance-audit@0.3.0`).
 
 Tooling-only Dependabot PRs (root TypeScript/Biome) do not need a changeset and must not publish. Dependabot PRs that bump a package's production dependencies (`pixelmatch`, `pngjs`) need a `patch` changeset on that package, added by the reviewer.
@@ -107,8 +107,8 @@ When a new package is first published, add a Trusted Publisher on that npm packa
 
 One workflow, unchanged Node 22/24 matrix, Puppeteer cache keyed on the root lockfile, Ubuntu AppArmor workaround. Root scripts fan out:
 
-- `lint` — Biome at repo root
-- `typecheck` / `test:unit` / `build` / `test:integration` — `npm run <script> --workspaces --if-present`
+- `lint`: Biome at repo root
+- `typecheck` / `test:unit` / `build` / `test:integration`: `npm run <script> --workspaces --if-present`
 
 Path filters wait until there are several packages.
 

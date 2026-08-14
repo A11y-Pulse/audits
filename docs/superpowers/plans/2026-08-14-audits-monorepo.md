@@ -28,22 +28,22 @@
 
 **Root (shared):**
 
-- Create: `package.json` — private workspace root, fan-out scripts, hoisted tooling + Changesets
-- Modify: `biome.json` — `files.includes` cover `packages/*`
+- Create: `package.json` (private workspace root, fan-out scripts, hoisted tooling + Changesets)
+- Modify: `biome.json` (`files.includes` cover `packages/*`)
 - Keep: `tsconfig.base.json`, `.gitignore`, `CODE_OF_CONDUCT.md`, `SECURITY.md`
 - Modify: `CONTRIBUTING.md`, `.github/PULL_REQUEST_TEMPLATE.md`, `.github/dependabot.yml`
 - Create: `README.md` (catalogue; current README moves with the package)
 - Create: `.changeset/config.json` (via `npx changeset init`, then edit)
-- Modify: `.github/workflows/ci.yml` — same matrix, workspace scripts
-- Modify: `.github/workflows/release.yml` — Changesets publish on push to `main`
+- Modify: `.github/workflows/ci.yml` (same matrix, workspace scripts)
+- Modify: `.github/workflows/release.yml` (Changesets publish on push to `main`)
 - Delete: `.github/workflows/release-drafter.yml`, `.github/release-drafter.yml`
 
 **Package (moved, not rewritten):**
 
-- `packages/focus-appearance-audit/` — `src/`, `tests/`, `examples/`, `docs/accuracy.md`, `docs/accuracy/`, `docs/detection-*.svg`, `docs/api/`, `LICENSE.md`, `README.md`, `CHANGELOG.md`, `tsup.config.ts`, `vitest*.config.ts`, `tsconfig.json`, `tsconfig.build.json`, `package.json`
-- Modify: `packages/focus-appearance-audit/package.json` — repository metadata; drop hoisted devDependencies
-- Modify: `packages/focus-appearance-audit/tsconfig.json` — extend `../../tsconfig.base.json`
-- Modify: `packages/focus-appearance-audit/README.md` — CI badge URLs + Releasing section
+- `packages/focus-appearance-audit/` (`src/`, `tests/`, `examples/`, `docs/accuracy.md`, `docs/accuracy/`, `docs/detection-*.svg`, `docs/api/`, `LICENSE.md`, `README.md`, `CHANGELOG.md`, `tsup.config.ts`, `vitest*.config.ts`, `tsconfig.json`, `tsconfig.build.json`, `package.json`)
+- Modify: `packages/focus-appearance-audit/package.json` (repository metadata; drop hoisted devDependencies)
+- Modify: `packages/focus-appearance-audit/tsconfig.json` (extend `../../tsconfig.base.json`)
+- Modify: `packages/focus-appearance-audit/README.md` (CI badge URLs + Releasing section)
 
 **Stay at repo root `docs/`:**
 
@@ -52,7 +52,7 @@
 
 **SaaS repo (separate git repo):**
 
-- Modify: `/Users/joseph/dev/a11y-pulse/a11y-pulse/docs/architecture/README.md` — npm row points at `A11y-Pulse/audits`
+- Modify: `/Users/joseph/dev/a11y-pulse/a11y-pulse/docs/architecture/README.md` (npm row points at `A11y-Pulse/audits`)
 
 ---
 
@@ -83,7 +83,7 @@ Expected: `origin` fetch/push URLs are `git@github.com:A11y-Pulse/audits.git`. F
 
 - [ ] **Step 2: Move the package with git mv so history is preserved**
 
-Do **not** `git mv docs` as a whole — `docs/superpowers/` must stay at the repo root.
+Do **not** `git mv docs` as a whole. `docs/superpowers/` must stay at the repo root.
 
 ```bash
 mkdir -p packages/focus-appearance-audit
@@ -139,7 +139,7 @@ Create `/Users/joseph/dev/a11y-pulse/focus-appearance-audit/package.json`:
 }
 ```
 
-Do not add Changesets yet (Task 2). Do not put `"release"` behind a missing binary — adding the script now is fine; `changeset` lands in Task 2.
+Do not add Changesets yet (Task 2). Do not put `"release"` behind a missing binary. Adding the script now is fine; `changeset` lands in Task 2.
 
 - [ ] **Step 4: Slim the package `package.json` and fix repository metadata**
 
@@ -149,7 +149,7 @@ Write `packages/focus-appearance-audit/package.json` as the old package file wit
 - add `"directory": "packages/focus-appearance-audit"` under `repository`
 - `devDependencies` keep only package-specific tools (`@types/pngjs`, `happy-dom`, `puppeteer`)
 - drop `@biomejs/biome`, `@tsconfig/node22`, `@types/node`, `tsup`, `typescript`, `vitest` (hoisted)
-- keep `version` exactly as it is (`0.1.0` today — do not “fix” it to match npm; that drift is out of scope)
+- keep `version` exactly as it is (`0.1.0` today; do not “fix” it to match npm; that drift is out of scope)
 - keep `exports`, `files`, `scripts`, `publishConfig`, `dependencies`, `peerDependencies`
 
 ```json
@@ -321,7 +321,7 @@ Do not commit `node_modules/`, `dist/`, or `*.tgz`.
 **Files:**
 
 - Create: `.changeset/config.json`, `.changeset/README.md` (from `npx changeset init`)
-- Modify: root `package.json` — add `@changesets/cli` and `@changesets/changelog-github`
+- Modify: root `package.json` (add `@changesets/cli` and `@changesets/changelog-github`)
 - Modify: `package-lock.json` (via npm install)
 
 **Interfaces:**
@@ -464,7 +464,7 @@ Write `.github/workflows/release.yml`:
 ```yaml
 name: Release
 
-# Keep this filename as release.yml — npm Trusted Publisher is configured for it.
+# Keep this filename as release.yml. npm Trusted Publisher is configured for it.
 on:
   push:
     branches: [main]
@@ -578,7 +578,7 @@ Write `/Users/joseph/dev/a11y-pulse/focus-appearance-audit/README.md` exactly as
 
 Source-available accessibility audits used by [A11y Pulse](https://www.a11ypulse.com/), published as separate npm packages from this repo.
 
-Each package is framework-agnostic (drive it through an adaptor) and released under the [PolyForm Shield License 1.0.0](./packages/focus-appearance-audit/LICENSE.md) — read, fork, and use them in non-competing products; do not use them to build a competing accessibility monitoring service.
+Each package is framework-agnostic (drive it through an adaptor) and released under the [PolyForm Shield License 1.0.0](./packages/focus-appearance-audit/LICENSE.md). Read, fork, and use them in non-competing products; do not use them to build a competing accessibility monitoring service.
 
 ## Packages
 
@@ -703,7 +703,7 @@ In `packages/focus-appearance-audit/README.md`:
 ```markdown
 ## Releasing
 
-Releases are managed in the [A11y-Pulse/audits](https://github.com/A11y-Pulse/audits) monorepo with [Changesets](https://github.com/changesets/changesets). Publishing uses [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/) (OIDC) — there is no long-lived `NPM_TOKEN`.
+Releases are managed in the [A11y-Pulse/audits](https://github.com/A11y-Pulse/audits) monorepo with [Changesets](https://github.com/changesets/changesets). Publishing uses [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/) (OIDC). There is no long-lived `NPM_TOKEN`.
 
 ### Ship a change
 
@@ -720,7 +720,7 @@ Trusted Publisher on npm must stay configured for:
 
 ### Consumers (e.g. the A11y Pulse runner)
 
-Bumping the published version in downstream apps is a separate change — update the dependency range / lockfile there after the npm release lands.
+Bumping the published version in downstream apps is a separate change. Update the dependency range / lockfile there after the npm release lands.
 ```
 
 Leave Install, Quickstart, Options, Detection methods, Adaptors, Limitations, and License as they are. Relative links (`./docs/accuracy.md`, `./examples/puppeteer`, `./src/adaptors/puppeteer.ts`, `./LICENSE.md`) stay valid because those files moved with the package.

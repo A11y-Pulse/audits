@@ -2,7 +2,7 @@
 
 Source-available accessibility audits used by [A11y Pulse](https://www.a11ypulse.com/), published as separate npm packages from this repo.
 
-Each package is framework-agnostic (drive it through an adaptor) and released under the [PolyForm Shield License 1.0.0](./packages/focus-appearance-audit/LICENSE.md) — read, fork, and use them in non-competing products; do not use them to build a competing accessibility monitoring service.
+Each package is framework-agnostic (drive it through an adaptor) and released under the [PolyForm Shield License 1.0.0](./packages/focus-appearance-audit/LICENSE.md). Read, fork, and use them in non-competing products; do not use them to build a competing accessibility monitoring service.
 
 ## Packages
 

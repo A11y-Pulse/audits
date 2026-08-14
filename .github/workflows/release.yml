@@ -1,6 +1,6 @@
 name: Release
 
-# Keep this filename as release.yml — npm Trusted Publisher is configured for it.
+# Keep this filename as release.yml. npm Trusted Publisher is configured for it.
 on:
   push:
     branches: [main]
