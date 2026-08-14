@@ -1,3 +1,4 @@
+import { truncateHtml } from "@a11y-pulse/browser-adaptor/dom";
 import type { TextSpacingAuditAdaptor } from "./adaptor";
 import {
 	collectBaselineScript,
@@ -12,7 +13,6 @@ import type {
 	TextSpacingElementResult,
 	TextSpacingResult,
 } from "./result";
-import { truncateHtml } from "./truncate-html";
 
 export type { CandidateSnapshot } from "./result";
 
