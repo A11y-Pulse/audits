@@ -13,6 +13,8 @@ const NARROW = { width: 320, height: 800 };
 const SETTLED: LayoutFingerprint = {
 	scrollWidth: 320,
 	clientWidth: 320,
+	bodyScrollWidth: 320,
+	bodyClientWidth: 320,
 	childCount: 1,
 };
 
@@ -208,10 +210,34 @@ describe("runReflowAudit buckets", () => {
 	it("returns incomplete when layout never settles", async () => {
 		const fake = createFake({
 			fingerprints: [
-				{ scrollWidth: 400, clientWidth: 320, childCount: 1 },
-				{ scrollWidth: 410, clientWidth: 320, childCount: 1 },
-				{ scrollWidth: 420, clientWidth: 320, childCount: 1 },
-				{ scrollWidth: 430, clientWidth: 320, childCount: 1 },
+				{
+					scrollWidth: 400,
+					clientWidth: 320,
+					bodyScrollWidth: 400,
+					bodyClientWidth: 320,
+					childCount: 1,
+				},
+				{
+					scrollWidth: 410,
+					clientWidth: 320,
+					bodyScrollWidth: 410,
+					bodyClientWidth: 320,
+					childCount: 1,
+				},
+				{
+					scrollWidth: 420,
+					clientWidth: 320,
+					bodyScrollWidth: 420,
+					bodyClientWidth: 320,
+					childCount: 1,
+				},
+				{
+					scrollWidth: 430,
+					clientWidth: 320,
+					bodyScrollWidth: 430,
+					bodyClientWidth: 320,
+					childCount: 1,
+				},
 			],
 		});
 

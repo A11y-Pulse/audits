@@ -5,6 +5,7 @@ import {
 	isExemptElement,
 	measureReflowScript,
 	ROUNDING_TOLERANCE,
+	readLayoutFingerprintScript,
 	SCROLLBAR_TOLERANCE,
 	scrollableDocumentOverflowPx,
 } from "./browser-scripts";
@@ -169,6 +170,20 @@ describe("isExemptElement", () => {
 	});
 });
 
+describe("readLayoutFingerprintScript", () => {
+	it("includes body scroll and client width so body-only overflow can settle", () => {
+		mockBox(document.documentElement, { scrollWidth: 320, clientWidth: 320 });
+		mockBox(document.body, { scrollWidth: 900, clientWidth: 320 });
+
+		expect(readLayoutFingerprintScript()).toMatchObject({
+			scrollWidth: 320,
+			clientWidth: 320,
+			bodyScrollWidth: 900,
+			bodyClientWidth: 320,
+		});
+	});
+});
+
 describe("measureReflowScript offenders", () => {
 	it("collects a visible element that extends past the viewport", () => {
 		mockInnerWidth(320);
@@ -214,6 +229,31 @@ describe("measureReflowScript offenders", () => {
 
 		expect(measure.offenders).toEqual([]);
 		expect(measure.explainedByExempt).toBe(true);
+	});
+
+	it("does not treat a small exempt overflow as explaining a much larger document overflow", () => {
+		mockInnerWidth(320);
+		mockBox(document.documentElement, { scrollWidth: 800, clientWidth: 320 });
+		mockBox(document.body, { scrollWidth: 800, clientWidth: 320 });
+		document.body.innerHTML = `
+			<table id="data">
+				<tr><td id="cell">narrow table</td></tr>
+			</table>
+		`;
+		mockRect(document.getElementById("data") as Element, {
+			width: 360,
+			height: 40,
+		});
+		mockRect(document.getElementById("cell") as Element, {
+			width: 360,
+			height: 40,
+		});
+
+		const measure = measureReflowScript();
+
+		expect(measure.documentOverflowPx).toBe(480);
+		expect(measure.offenders).toEqual([]);
+		expect(measure.explainedByExempt).toBe(false);
 	});
 
 	it("still records a layout table with role=presentation", () => {

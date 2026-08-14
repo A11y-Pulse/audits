@@ -13,6 +13,8 @@ export const SCROLLBAR_TOLERANCE = 20;
 export type LayoutFingerprint = {
 	scrollWidth: number;
 	clientWidth: number;
+	bodyScrollWidth: number;
+	bodyClientWidth: number;
 	childCount: number;
 };
 
@@ -124,11 +126,14 @@ export function isExemptElement(el: Element): boolean {
  */
 export function readLayoutFingerprintScript(): LayoutFingerprint {
 	const root = document.documentElement;
+	const body = document.body;
 
 	return {
 		scrollWidth: root.scrollWidth,
 		clientWidth: root.clientWidth,
-		childCount: document.body ? document.body.childElementCount : 0,
+		bodyScrollWidth: body ? body.scrollWidth : 0,
+		bodyClientWidth: body ? body.clientWidth : 0,
+		childCount: body ? body.childElementCount : 0,
 	};
 }
 
@@ -534,7 +539,7 @@ export function measureReflowScript(): ReflowMeasure {
 
 	const overflowOffenders: ReflowMeasureOffender[] = [];
 	const recorded = new Set<Element>();
-	let explainedByExempt = false;
+	let maxExemptOverflowPx = 0;
 
 	for (const el of elements) {
 		if (el === html || el === body) {
@@ -571,7 +576,7 @@ export function measureReflowScript(): ReflowMeasure {
 		}
 
 		if (isOrInsideExempt(el)) {
-			explainedByExempt = true;
+			maxExemptOverflowPx = Math.max(maxExemptOverflowPx, overflowPx);
 			continue;
 		}
 
@@ -636,7 +641,10 @@ export function measureReflowScript(): ReflowMeasure {
 
 	return {
 		documentOverflowPx,
-		explainedByExempt: explainedByExempt && overflowOffenders.length === 0,
+		explainedByExempt:
+			overflowOffenders.length === 0 &&
+			documentOverflowPx > roundingTolerance &&
+			maxExemptOverflowPx + roundingTolerance >= documentOverflowPx,
 		offenders,
 	};
 }

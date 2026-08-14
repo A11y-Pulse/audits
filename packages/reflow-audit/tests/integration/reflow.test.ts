@@ -67,7 +67,7 @@ describe("reflow audit (integration)", () => {
 	it("does not flag a wide data table", async () => {
 		const result = await runFixture("wide-data-table.html");
 
-		expect(result.bucket).not.toBe("violation");
+		expect(result.bucket).toBe("pass");
 	});
 
 	it("flags a layout table with role=presentation", async () => {

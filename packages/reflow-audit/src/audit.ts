@@ -39,6 +39,8 @@ function fingerprintsEqual(
 	return (
 		left.scrollWidth === right.scrollWidth &&
 		left.clientWidth === right.clientWidth &&
+		left.bodyScrollWidth === right.bodyScrollWidth &&
+		left.bodyClientWidth === right.bodyClientWidth &&
 		left.childCount === right.childCount
 	);
 }
