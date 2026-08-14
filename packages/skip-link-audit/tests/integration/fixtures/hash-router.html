@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>hash router skip link</title></head>
+<body>
+	<a href="#/home">Home</a>
+	<a href="#main">Skip to content</a>
+	<nav>
+		<a href="#/about">About</a>
+	</nav>
+	<main id="main" tabindex="-1">
+		<h1>Main content</h1>
+		<a href="#/inside">Inside</a>
+	</main>
+	<script>
+		document.addEventListener("click", (event) => {
+			const link = event.target instanceof Element ? event.target.closest("a") : null;
+			const href = link?.getAttribute("href") ?? "";
+
+			if (href.startsWith("#/")) {
+				event.preventDefault();
+				location.hash = href;
+			}
+		});
+	</script>
+</body>
+</html>

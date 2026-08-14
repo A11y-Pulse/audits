@@ -111,6 +111,18 @@ describe("skip link audit (integration)", () => {
 		expect(result.summary).toEqual({ found: 2, passed: 2, failed: 0 });
 	});
 
+	it("ignores hash-router nav and still checks a real skip link", async () => {
+		const result = await runFixture("hash-router.html");
+
+		expect(result.summary).toEqual({ found: 1, passed: 1, failed: 0 });
+		expect(result.skipLinks[0]).toMatchObject({
+			fragment: "#main",
+			tabIndex: 2,
+			passed: true,
+			failureReason: null,
+		});
+	});
+
 	it("passes when the target is focused asynchronously within 250ms", async () => {
 		const result = await runFixture("async-focus.html");
 

@@ -1,6 +1,6 @@
 {
 	"name": "@a11y-pulse/skip-link-audit",
-	"version": "0.1.0",
+	"version": "0.0.0",
 	"description": "WCAG 2.4.1 Bypass Blocks audit that finds skip-link-like in-page anchors in the first tab stops and verifies that activating them moves keyboard focus.",
 	"type": "module",
 	"license": "SEE LICENSE IN LICENSE.md",

@@ -27,6 +27,12 @@ describe("parseInPageFragment", () => {
 		expect(parseInPageFragment(null)).toBeNull();
 		expect(parseInPageFragment("")).toBeNull();
 	});
+
+	it("rejects hash-router and hashbang paths", () => {
+		expect(parseInPageFragment("#/home")).toBeNull();
+		expect(parseInPageFragment("#/about/team")).toBeNull();
+		expect(parseInPageFragment("#!/route")).toBeNull();
+	});
 });
 
 describe("resolveFragmentTargetScript", () => {
@@ -71,6 +77,12 @@ describe("probeActiveElementScript candidate detection", () => {
 		expect(probeActiveElementScript().fragment).toBeNull();
 
 		document.body.innerHTML = `<a href="#top">Top</a>`;
+		(document.querySelector("a") as HTMLElement).focus();
+		expect(probeActiveElementScript().fragment).toBeNull();
+	});
+
+	it("rejects hash-router paths so SPA nav is not treated as a skip link", () => {
+		document.body.innerHTML = `<a href="#/home">Home</a>`;
 		(document.querySelector("a") as HTMLElement).focus();
 		expect(probeActiveElementScript().fragment).toBeNull();
 	});

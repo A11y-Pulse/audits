@@ -144,6 +144,28 @@ describe("runSkipLinkLoop", () => {
 		expect(probe.disposed).toEqual([handle]);
 	});
 
+	it("passes when the follow-up Tab lands inside the target", async () => {
+		const handle = { id: "skip" };
+		const probe = scriptedProbe({
+			stops: [
+				stop({
+					identity: "skip",
+					candidate: candidate({ fragment: "#main", handle }),
+				}),
+			],
+			focusInside: [false, true],
+		});
+
+		const result = await runSkipLinkLoop(probe, OPTIONS);
+
+		expect(result.skipLinks[0]).toMatchObject({
+			passed: true,
+			failureReason: null,
+		});
+		expect(probe.enters).toBe(1);
+		expect(probe.disposed).toEqual([handle]);
+	});
+
 	it("records activation-no-effect when Enter does not move focus into the target", async () => {
 		const handle = { id: "noop" };
 		const probe = scriptedProbe({

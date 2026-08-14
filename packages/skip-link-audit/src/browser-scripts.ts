@@ -23,6 +23,11 @@ export function parseInPageFragment(href: string | null): string | null {
 		return null;
 	}
 
+	// Hash-router and hashbang paths are not element ids.
+	if (href.startsWith("#/") || href.startsWith("#!/")) {
+		return null;
+	}
+
 	return href;
 }
 
@@ -81,7 +86,13 @@ export function probeActiveElementScript(): SkipLinkActiveElementBase {
 
 	let fragment: string | null = null;
 
-	if (href?.startsWith("#") && href !== "#" && href !== "#top") {
+	if (
+		href?.startsWith("#") &&
+		href !== "#" &&
+		href !== "#top" &&
+		!href.startsWith("#/") &&
+		!href.startsWith("#!/")
+	) {
 		fragment = href;
 	}
 
