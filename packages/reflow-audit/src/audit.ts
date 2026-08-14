@@ -1,3 +1,4 @@
+import { truncateHtml } from "@a11y-pulse/browser-adaptor/dom";
 import type { ReflowAuditAdaptor } from "./adaptor";
 import {
 	type LayoutFingerprint,
@@ -10,7 +11,6 @@ import {
 	SCROLLBAR_TOLERANCE,
 } from "./browser-scripts";
 import type { ReflowBucket, ReflowOffender, ReflowResult } from "./result";
-import { truncateHtml } from "./truncate-html";
 
 export const DEFAULT_SETTLE_DELAY_MS = 50;
 export const DEFAULT_SETTLE_ATTEMPTS = 10;

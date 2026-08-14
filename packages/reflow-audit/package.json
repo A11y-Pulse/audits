@@ -53,8 +53,11 @@
 	"publishConfig": {
 		"access": "public"
 	},
+	"dependencies": {
+		"@a11y-pulse/browser-adaptor": "*"
+	},
 	"peerDependencies": {
-		"puppeteer": "^25.3.0"
+		"puppeteer": "^25.5.0"
 	},
 	"peerDependenciesMeta": {
 		"puppeteer": {
@@ -62,7 +65,7 @@
 		}
 	},
 	"devDependencies": {
-		"happy-dom": "^20.9.0",
-		"puppeteer": "^25.3.0"
+		"happy-dom": "^20.11.2",
+		"puppeteer": "^25.5.0"
 	}
 }
