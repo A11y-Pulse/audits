@@ -816,7 +816,7 @@ describe("runFocusLoop - context change", () => {
 		expect(result.summary.contextChange.violations).toBe(1);
 	});
 
-	it("records focus-removed from attributed element when settle lands on body", async () => {
+	it("records focus-removed without counting it as a focus-appearance pass", async () => {
 		const body: ActiveElementInfo = { ...info(0), isBody: true };
 		const result = await runFocusLoop(
 			scriptedProbe({
@@ -838,12 +838,18 @@ describe("runFocusLoop - context change", () => {
 
 		expect(result.elements).toHaveLength(1);
 		expect(result.elements[0]?.selector).toBe("#blurred");
+		expect(result.elements[0]?.passed).toBe(false);
+		expect(result.elements[0]?.appearanceMeasured).toBe(false);
 		expect(result.elements[0]?.contextChange).toEqual([
 			{ kind: "focus-removed", bucket: "violation" },
 		]);
+		expect(result.summary.passed).toBe(0);
+		expect(result.summary.checked).toBe(0);
+		expect(result.summary.failed).toBe(0);
+		expect(result.summary.contextChange.violations).toBe(1);
 	});
 
-	it("aborts the loop on navigation and sets abortedForNavigation", async () => {
+	it("aborts on navigation without counting it as a focus-appearance pass", async () => {
 		const result = await runFocusLoop(
 			scriptedProbe({
 				hasFocus: [true, true, true],
@@ -860,10 +866,110 @@ describe("runFocusLoop - context change", () => {
 		);
 
 		expect(result.summary.abortedForNavigation).toBe(true);
-		expect(result.summary.checked).toBe(1);
+		expect(result.elements).toHaveLength(1);
+		expect(result.elements[0]?.appearanceMeasured).toBe(false);
+		expect(result.elements[0]?.passed).toBe(false);
+		expect(result.summary.checked).toBe(0);
+		expect(result.summary.passed).toBe(0);
 		expect(result.elements[0]?.contextChange).toEqual([
 			{ kind: "navigation", bucket: "violation" },
 		]);
+	});
+
+	it("skips indicator and obscuring when focus is redirected outside", async () => {
+		let measured = 0;
+		let detected = 0;
+		const probe = scriptedProbe({
+			hasFocus: [true, false],
+			active: [info(1)],
+			indicator: ["style"],
+			obscured: [
+				{
+					coveredFraction: 1,
+					fullyObscured: true,
+					offscreen: false,
+					opacity: "opaque",
+					obscuredBy: { selector: "footer", html: "<footer>" },
+				},
+			],
+			context: [
+				{
+					signals: { ...emptySignals(), redirect: "outside" },
+					attributed: {
+						selector: "#thief",
+						html: '<input id="thief">',
+					},
+				},
+			],
+		});
+		const originalMeasure = probe.measureObscuring;
+		const originalDetect = probe.detectIndicator;
+		probe.measureObscuring = async (el) => {
+			measured++;
+			return originalMeasure(el);
+		};
+		probe.detectIndicator = async (el, baseline) => {
+			detected++;
+			return originalDetect(el, baseline);
+		};
+
+		const result = await runFocusLoop(probe, OPTIONS);
+
+		expect(measured).toBe(0);
+		expect(detected).toBe(0);
+		expect(result.elements).toHaveLength(1);
+		expect(result.elements[0]?.selector).toBe("#thief");
+		expect(result.elements[0]?.appearanceMeasured).toBe(false);
+		expect(result.elements[0]?.passed).toBe(false);
+		expect(result.elements[0]?.obscured).toBeUndefined();
+		expect(result.elements[0]?.contextChange).toEqual([
+			{ kind: "focus-redirected-outside", bucket: "violation" },
+		]);
+		expect(result.summary.checked).toBe(0);
+		expect(result.summary.passed).toBe(0);
+		expect(result.summary.obscured.violations).toBe(0);
+	});
+
+	it("does not treat pixel-diff blur/refocus as F55 on the next stop", async () => {
+		let polluted = false;
+		let activeCall = 0;
+		const probe = scriptedProbe({
+			hasFocus: [true, true, false],
+			active: [info(0), info(1)],
+			indicator: ["pixel-diff", "style"],
+		});
+
+		probe.detectIndicator = async () => {
+			// Model the pixel-diff path leaving focusin noise as if blur hit body.
+			polluted = true;
+			return "pixel-diff";
+		};
+		probe.clearContextNoise = async () => {
+			polluted = false;
+		};
+		probe.drainContextSignals = async () => {
+			if (polluted) {
+				return {
+					signals: { ...emptySignals(), focusRemoved: true },
+					attributed: { selector: "#ghost", html: "<button id=\"ghost\">" },
+				};
+			}
+
+			return { signals: emptySignals() };
+		};
+		probe.probeActiveElement = async () => {
+			const list = [info(0), info(1)];
+			return list[activeCall++] ?? null;
+		};
+
+		const result = await runFocusLoop(probe, OPTIONS);
+
+		expect(result.summary.checked).toBe(2);
+		expect(
+			result.elements.some((e) =>
+				e.contextChange?.some((f) => f.kind === "focus-removed"),
+			),
+		).toBe(false);
 	});
 
 	it("does not treat a clean settle as focus-removed", async () => {

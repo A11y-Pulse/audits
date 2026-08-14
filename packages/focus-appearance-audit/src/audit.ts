@@ -242,6 +242,8 @@ export async function runFocusLoop(
 	let timedOut = false;
 	let aborted = false;
 	let abortedForNavigation = false;
+	/** Last attributed element from a successful drain; used if navigation destroys context mid-probe. */
+	let lastContextAttributed: { selector: string; html: string } | null = null;
 
 	// Captured at the instant the timeout fires so the returned results can't be
 	// mutated by the loop still unwinding in the background.
@@ -249,6 +251,22 @@ export async function runFocusLoop(
 
 	if (options.measureContextChange) {
 		await probe.installContextObserver();
+	}
+
+	function pushContextOnlyRow(
+		target: { selector: string; html: string },
+		tabIndex: number,
+		findings: ContextChangeFinding[],
+	): void {
+		elements.push({
+			selector: target.selector,
+			html: target.html,
+			tabIndex,
+			passed: false,
+			detectionMethod: null,
+			appearanceMeasured: false,
+			contextChange: findings,
+		});
 	}
 
 	async function tabThroughElements(): Promise<void> {
@@ -283,14 +301,14 @@ export async function runFocusLoop(
 
 					abortedForNavigation = true;
 					aborted = true;
-					elements.push({
-						selector: "",
-						html: "",
-						tabIndex: i + 1,
-						passed: true,
-						detectionMethod: null,
-						contextChange: [{ kind: "navigation", bucket: "violation" }],
-					});
+					// Prefer the last attributed focus target from a prior drain when
+					// the probe never ran on this stop (selector may still be empty on
+					// the first-tab navigation case).
+					pushContextOnlyRow(
+						lastContextAttributed ?? { selector: "", html: "" },
+						i + 1,
+						[{ kind: "navigation", bucket: "violation" }],
+					);
 
 					break;
 				}
@@ -303,6 +321,15 @@ export async function runFocusLoop(
 					contextFindings = classifyContextSignals(drain.signals);
 					attributed = drain.attributed;
 
+					if (attributed) {
+						lastContextAttributed = attributed;
+					} else if (info && !info.isBody) {
+						lastContextAttributed = {
+							selector: info.selector,
+							html: info.html,
+						};
+					}
+
 					if (drain.signals.navigation) {
 						abortedForNavigation = true;
 						aborted = true;
@@ -311,16 +338,12 @@ export async function runFocusLoop(
 							attributed ??
 							(info && !info.isBody
 								? { selector: info.selector, html: info.html }
-								: { selector: "", html: "" });
+								: (lastContextAttributed ?? {
+										selector: "",
+										html: "",
+									}));
 
-						elements.push({
-							selector: target.selector,
-							html: target.html,
-							tabIndex: i + 1,
-							passed: true,
-							detectionMethod: null,
-							contextChange: contextFindings,
-						});
+						pushContextOnlyRow(target, i + 1, contextFindings);
 
 						break;
 					}
@@ -328,20 +351,13 @@ export async function runFocusLoop(
 
 				if (info === null || info.isBody) {
 					// F55: element received focus then removed it. Attribute via the
-					// focusin observer, not via the pixel-diff blur path.
+					// focus observer, not via the pixel-diff blur path.
 					if (
 						options.measureContextChange &&
 						contextFindings.some((f) => f.kind === "focus-removed") &&
 						attributed
 					) {
-						elements.push({
-							selector: attributed.selector,
-							html: attributed.html,
-							tabIndex: i + 1,
-							passed: true,
-							detectionMethod: null,
-							contextChange: contextFindings,
-						});
+						pushContextOnlyRow(attributed, i + 1, contextFindings);
 					}
 
 					break;
@@ -356,6 +372,18 @@ export async function runFocusLoop(
 					// same frame for every internal tab stop, so recording it would
 					// both raise false positives and log one duplicate per inner
 					// control. Keep tabbing so focus advances through and out of it.
+					continue;
+				}
+
+				const redirectOutside = contextFindings.some(
+					(f) => f.kind === "focus-redirected-outside",
+				);
+
+				// Focus theft: record against the source that redirected focus. Do
+				// not measure the destination's indicator or obscuring as if it were
+				// the intended tab stop.
+				if (redirectOutside && attributed) {
+					pushContextOnlyRow(attributed, i + 1, contextFindings);
 					continue;
 				}
 
@@ -375,26 +403,19 @@ export async function runFocusLoop(
 
 				const method = await probe.detectIndicator(info, baseline);
 
-				// Pixel-diff blurs and re-focuses; discard those focusin events so
+				// Pixel-diff blurs and re-focuses; discard those focus events so
 				// the next stop does not treat them as F55 / focus theft.
 				if (options.measureContextChange) {
 					await probe.clearContextNoise();
 				}
 
-				const redirectOutside = contextFindings.some(
-					(f) => f.kind === "focus-redirected-outside",
-				);
-				const recordAs =
-					redirectOutside && attributed
-						? { selector: attributed.selector, html: attributed.html }
-						: { selector: info.selector, html: info.html };
-
 				elements.push({
-					selector: recordAs.selector,
-					html: recordAs.html,
+					selector: info.selector,
+					html: info.html,
 					tabIndex: i + 1,
 					passed: method !== null,
 					detectionMethod: method,
+					appearanceMeasured: true,
 					...(obscured !== null ? { obscured } : {}),
 					...(contextFindings.length > 0
 						? { contextChange: contextFindings }
@@ -453,7 +474,8 @@ export async function runFocusLoop(
 	}
 
 	const finalElements = timedOutElements ?? elements;
-	const passed = finalElements.filter((e) => e.passed).length;
+	const appearanceElements = finalElements.filter((e) => e.appearanceMeasured);
+	const passed = appearanceElements.filter((e) => e.passed).length;
 
 	let obscuredChecked = 0;
 	let obscuredViolations = 0;
@@ -490,9 +512,9 @@ export async function runFocusLoop(
 	return {
 		elements: finalElements,
 		summary: {
-			checked: finalElements.length,
+			checked: appearanceElements.length,
 			passed,
-			failed: finalElements.length - passed,
+			failed: appearanceElements.length - passed,
 			reachedLimit,
 			reachedFailedElementLimit,
 			timedOut,

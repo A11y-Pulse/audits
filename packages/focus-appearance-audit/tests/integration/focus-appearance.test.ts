@@ -263,11 +263,15 @@ describe("context change on focus (integration)", () => {
 
 	it("flags focus theft to an unrelated element", async () => {
 		const result = await runFixture("focus-theft.html");
-		expect(
-			result.elements.some((e) =>
-				e.contextChange?.some((f) => f.kind === "focus-redirected-outside"),
-			),
-		).toBe(true);
+		const theft = result.elements.find((e) =>
+			e.contextChange?.some((f) => f.kind === "focus-redirected-outside"),
+		);
+		expect(theft).toBeDefined();
+		expect(theft?.appearanceMeasured).toBe(false);
+		expect(theft?.passed).toBe(false);
+		expect(result.summary.passed).toBe(
+			result.elements.filter((e) => e.appearanceMeasured && e.passed).length,
+		);
 	});
 
 	it("does not flag same-subtree focus delegation as a violation", async () => {

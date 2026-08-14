@@ -13,11 +13,21 @@ export type FocusElementResult = {
 	/** 1-based tab stop at which this element was reached. */
 	tabIndex: number;
 
-	/** Whether a visible focus indicator was detected. */
+	/**
+	 * Whether a visible focus indicator was detected. Only meaningful when
+	 * `appearanceMeasured` is true; context-only rows set this to false.
+	 */
 	passed: boolean;
 
-	/** How the indicator was detected, or null when the element failed. */
+	/** How the indicator was detected, or null when failed / not measured. */
 	detectionMethod: DetectionMethod | null;
+
+	/**
+	 * Whether focus-appearance (2.4.7) indicator detection ran for this stop.
+	 * False for context-only early exits (F55, navigation, focus theft) that
+	 * must not inflate `summary.checked` / `passed` / `failed`.
+	 */
+	appearanceMeasured: boolean;
 
 	/** Focus-not-obscured (2.4.11) measurement, when measured. */
 	obscured?: ObscuredMeasurement | null;
