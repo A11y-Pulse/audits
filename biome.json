@@ -11,10 +11,11 @@
 			"package.json",
 			"biome.json",
 			"tsconfig*.json",
-			"src/**/*",
-			"tests/**/*",
-			"!tests/integration/fixtures",
-			"examples/**/*"
+			"packages/*/package.json",
+			"packages/*/src/**/*",
+			"packages/*/tests/**/*",
+			"!packages/*/tests/integration/fixtures",
+			"packages/*/examples/**/*"
 		]
 	},
 	"formatter": {
