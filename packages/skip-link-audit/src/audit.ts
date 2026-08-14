@@ -1,3 +1,4 @@
+import { getSelector, truncateHtml } from "@a11y-pulse/browser-adaptor/dom";
 import type { ElementRef, SkipLinkAuditAdaptor } from "./adaptor";
 import {
 	activeElementHandleScript,
@@ -5,9 +6,7 @@ import {
 	isFocusInsideTargetScript,
 	probeActiveElementScript,
 } from "./browser-scripts";
-import { getSelector } from "./get-selector";
 import type { SkipLinkElementResult, SkipLinkResult } from "./result";
-import { truncateHtml } from "./truncate-html";
 
 export const DEFAULT_CANDIDATE_LIMIT = 3;
 export const DEFAULT_ACTIVATION_POLL_MS = 250;
