@@ -1,5 +1,5 @@
 {
-	"extends": ["@tsconfig/node22/tsconfig.json", "./tsconfig.base.json"],
+	"extends": ["@tsconfig/node22/tsconfig.json", "../../tsconfig.base.json"],
 	"compilerOptions": {
 		"types": ["node"],
 		"lib": ["ES2022", "DOM"]

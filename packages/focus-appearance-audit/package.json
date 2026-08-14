@@ -1,0 +1,74 @@
+{
+	"name": "@a11y-pulse/focus-appearance-audit",
+	"version": "0.1.0",
+	"description": "WCAG 2.4.7 Focus Visible audit that tabs through a page and detects visible focus indicators via computed styles and pixel-diff fallback.",
+	"type": "module",
+	"license": "SEE LICENSE IN LICENSE.md",
+	"author": "A11y Pulse Limited",
+	"homepage": "https://github.com/A11y-Pulse/audits/tree/main/packages/focus-appearance-audit#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/A11y-Pulse/audits.git",
+		"directory": "packages/focus-appearance-audit"
+	},
+	"bugs": {
+		"url": "https://github.com/A11y-Pulse/audits/issues"
+	},
+	"keywords": [
+		"accessibility",
+		"a11y",
+		"wcag",
+		"focus-visible",
+		"focus-appearance",
+		"puppeteer",
+		"audit"
+	],
+	"engines": {
+		"node": ">=22"
+	},
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		},
+		"./puppeteer": {
+			"types": "./dist/adaptors/puppeteer.d.ts",
+			"import": "./dist/adaptors/puppeteer.js"
+		}
+	},
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE.md"
+	],
+	"scripts": {
+		"build": "tsup && tsc -p tsconfig.build.json",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check",
+		"lint:fix": "biome check --fix",
+		"test:unit": "vitest run",
+		"test:integration": "vitest run --config vitest.integration.config.ts",
+		"test": "npm run typecheck && npm run test:unit",
+		"prepublishOnly": "npm run build"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"dependencies": {
+		"pixelmatch": "^7.2.0",
+		"pngjs": "^7.0.0"
+	},
+	"peerDependencies": {
+		"puppeteer": "^25.3.0"
+	},
+	"peerDependenciesMeta": {
+		"puppeteer": {
+			"optional": true
+		}
+	},
+	"devDependencies": {
+		"@types/pngjs": "^6.0.5",
+		"happy-dom": "^20.9.0",
+		"puppeteer": "^25.3.0"
+	}
+}
