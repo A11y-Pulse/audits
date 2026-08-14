@@ -1,0 +1,12 @@
+{
+	"name": "skip-link-audit-puppeteer-example",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"start": "node index.mjs"
+	},
+	"dependencies": {
+		"@a11y-pulse/skip-link-audit": "file:../..",
+		"puppeteer": "^24.15.0"
+	}
+}
