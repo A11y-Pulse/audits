@@ -1,3 +1,4 @@
+import { getSelector } from "@a11y-pulse/browser-adaptor/dom";
 import { PNG } from "pngjs";
 import { describe, expect, it } from "vitest";
 import type { FocusAppearanceAuditAdaptor } from "./adaptor";
@@ -19,7 +20,6 @@ import {
 	scrollToCenterScript,
 } from "./browser-scripts";
 import type { Rect, StyleSnapshot } from "./detection";
-import { getSelector } from "./get-selector";
 import type { DetectionMethod } from "./result";
 
 const EMPTY_STYLES: StyleSnapshot = { element: {}, before: {}, after: {} };
@@ -469,6 +469,7 @@ function fakeAdaptor(script: AdaptorScript = {}): {
 		},
 		async disposeRef() {},
 		async pressTab() {},
+		async pressEnter() {},
 		async screenshotClip(clip: Rect) {
 			record.clips.push(clip);
 

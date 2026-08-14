@@ -27,4 +27,28 @@ describe("PuppeteerAdaptor.ensureFocusReporting", () => {
 			new PuppeteerAdaptor(page).ensureFocusReporting(),
 		).resolves.toBeUndefined();
 	});
+
+	it("enables focus emulation only once per page", async () => {
+		const send = vi.fn(async () => {});
+		const createCDPSession = vi.fn(async () => ({ send }));
+		const page = { createCDPSession } as unknown as Page;
+
+		await new PuppeteerAdaptor(page).ensureFocusReporting();
+		await new PuppeteerAdaptor(page).ensureFocusReporting();
+
+		expect(createCDPSession).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe("PuppeteerAdaptor.pressEnter", () => {
+	it("presses Enter on the page keyboard", async () => {
+		const press = vi.fn(async () => {});
+		const page = {
+			keyboard: { press },
+		} as unknown as Page;
+
+		await new PuppeteerAdaptor(page).pressEnter();
+
+		expect(press).toHaveBeenCalledWith("Enter");
+	});
 });

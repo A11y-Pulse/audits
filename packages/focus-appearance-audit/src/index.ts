@@ -1,6 +1,7 @@
 export type {
+	BrowserAdaptor,
 	ElementRef,
-	FocusAppearanceAuditAdaptor as BrowserAdaptor,
+	FocusAppearanceAuditAdaptor,
 	Rect,
 } from "./adaptor";
 export type { FocusAppearanceOptions } from "./audit";

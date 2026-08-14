@@ -46,7 +46,7 @@ export function getSelector(root: Node | null): string {
 
 	// A candidate feature is only usable if it actually selects this element;
 	// an escaping or engine mismatch (e.g. CSS string escapes in an attribute
-	// value) could otherwise produce a selector that matches nothing — or a
+	// value) could otherwise produce a selector that matches nothing. Or a
 	// different element entirely.
 	const safeMatches = (element: Element, selector: string): boolean => {
 		try {
@@ -122,8 +122,8 @@ export function getSelector(root: Node | null): string {
 
 		// Skip hrefs with characters that change meaning inside a CSS string
 		// (quotes, backslashes), and query strings, which are too volatile
-		// across scans to pin a selector to. Fragments (#main) stay eligible —
-		// skip links make stable discriminators.
+		// across scans to pin a selector to. Fragments (#main) stay eligible.
+		// Skip links make stable discriminators.
 		if (href && href.length <= 100 && !/["\\?]/.test(href)) {
 			const feature = `[href="${href}"]`;
 
@@ -146,7 +146,7 @@ export function getSelector(root: Node | null): string {
 	// The element's 1-based position among same-tag siblings, and whether the
 	// chosen feature fails to discriminate it from them (so the segment needs
 	// an :nth-of-type pin). Siblings are absent on the serialisation test
-	// nodes — there we skip the pin.
+	// nodes. There we skip the pin.
 	const positionAmongSiblings = (
 		element: Element,
 		sharedBy: (sibling: Element) => boolean,
@@ -261,8 +261,8 @@ export function getSelector(root: Node | null): string {
 				break;
 			}
 
-			// Stop as soon as the selector already identifies a single element —
-			// this, not truncation, is what keeps selectors short.
+			// Stop as soon as the selector already identifies a single element.
+			// This, not truncation, is what keeps selectors short.
 			if (queryRoot && matchCount(queryRoot, segments.join(">")) === 1) {
 				break;
 			}

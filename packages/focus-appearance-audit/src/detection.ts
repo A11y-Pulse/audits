@@ -1,5 +1,8 @@
+import type { Rect } from "@a11y-pulse/browser-adaptor";
 import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
+
+export type { Rect };
 
 /** A snapshot of an element's focus-relevant computed styles, plus its pseudo-elements. */
 export type StyleSnapshot = {
@@ -7,8 +10,6 @@ export type StyleSnapshot = {
 	before: Record<string, string>;
 	after: Record<string, string>;
 };
-
-export type Rect = { x: number; y: number; width: number; height: number };
 
 /**
  * A screenshot clip framing `rect` with up to `buffer` pixels of padding on each side, shrunk

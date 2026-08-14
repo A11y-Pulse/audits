@@ -1,3 +1,4 @@
+import { getSelector, truncateHtml } from "@a11y-pulse/browser-adaptor/dom";
 import type { FocusAppearanceAuditAdaptor } from "./adaptor";
 import {
 	activeElementHandleScript,
@@ -19,13 +20,11 @@ import {
 	stylesIndicateFocus,
 } from "./detection";
 import { FOCUS_STYLE_PROPERTIES } from "./focus-style";
-import { getSelector } from "./get-selector";
 import type {
 	DetectionMethod,
 	FocusAppearanceResult,
 	FocusElementResult,
 } from "./result";
-import { truncateHtml } from "./truncate-html";
 
 export const DEFAULT_ELEMENT_LIMIT = 1024;
 export const DEFAULT_SCREENSHOT_SETTLE_DELAY = 33; // ~2 frames at 60fps
