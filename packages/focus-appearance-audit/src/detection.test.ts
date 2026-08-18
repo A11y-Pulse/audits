@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
 	alignedRegionsDiffer,
 	bufferedClip,
+	omitIdleStyleSnapshot,
 	type StyleSnapshot,
 	stylesIndicateFocus,
 } from "./detection";
@@ -136,6 +137,128 @@ describe("stylesIndicateFocus", () => {
 			"border-top-color": "rgb(37, 99, 235)",
 		});
 		expect(stylesIndicateFocus(baseline, focused)).toBe(true);
+	});
+});
+
+describe("omitIdleStyleSnapshot", () => {
+	it("drops none-like values and unused pseudo layers", () => {
+		expect(
+			omitIdleStyleSnapshot({
+				element: {
+					"background-color": "rgba(0, 0, 0, 0)",
+					"background-image": "none",
+					"border-bottom-style": "none",
+					"border-bottom-width": "0px",
+					"border-bottom-color": "rgb(255, 255, 255)",
+					"box-shadow": "none",
+					color: "rgb(255, 255, 255)",
+					"font-weight": "400",
+					"outline-style": "none",
+					"outline-width": "3px",
+					"outline-color": "rgb(255, 255, 255)",
+					"text-decoration": "none",
+				},
+				before: {
+					content: "none",
+					color: "rgb(255, 255, 255)",
+					"outline-width": "3px",
+				},
+				after: { content: "none" },
+			}),
+		).toEqual({
+			element: { color: "rgb(255, 255, 255)" },
+			before: {},
+			after: {},
+		});
+	});
+
+	it("keeps painted decorations and generated pseudo content", () => {
+		expect(
+			omitIdleStyleSnapshot({
+				element: {
+					"outline-style": "solid",
+					"outline-width": "2px",
+					"outline-color": "rgb(0, 10, 22)",
+					"font-weight": "700",
+				},
+				before: { content: '""', "background-color": "rgb(0, 0, 0)" },
+				after: {},
+			}),
+		).toEqual({
+			element: {
+				"outline-style": "solid",
+				"outline-width": "2px",
+				"outline-color": "rgb(0, 10, 22)",
+				"font-weight": "700",
+			},
+			before: { content: '""', "background-color": "rgb(0, 0, 0)" },
+			after: {},
+		});
+	});
+
+	it("collapses uniform border sides into shorthand", () => {
+		expect(
+			omitIdleStyleSnapshot({
+				element: {
+					"border-top-color": "rgb(0, 0, 0)",
+					"border-right-color": "rgb(0, 0, 0)",
+					"border-bottom-color": "rgb(0, 0, 0)",
+					"border-left-color": "rgb(0, 0, 0)",
+					"border-top-style": "solid",
+					"border-right-style": "solid",
+					"border-bottom-style": "solid",
+					"border-left-style": "solid",
+					"border-top-width": "1px",
+					"border-right-width": "1px",
+					"border-bottom-width": "1px",
+					"border-left-width": "1px",
+				},
+				before: {},
+				after: {},
+			}),
+		).toEqual({
+			element: {
+				"border-color": "rgb(0, 0, 0)",
+				"border-style": "solid",
+				"border-width": "1px",
+			},
+			before: {},
+			after: {},
+		});
+	});
+
+	it("keeps per-side border properties when a side differs", () => {
+		expect(
+			omitIdleStyleSnapshot({
+				element: {
+					"border-top-color": "rgb(255, 0, 0)",
+					"border-right-color": "rgb(0, 0, 0)",
+					"border-bottom-color": "rgb(0, 0, 0)",
+					"border-left-color": "rgb(0, 0, 0)",
+					"border-top-style": "solid",
+					"border-right-style": "solid",
+					"border-bottom-style": "solid",
+					"border-left-style": "solid",
+					"border-top-width": "1px",
+					"border-right-width": "1px",
+					"border-bottom-width": "1px",
+					"border-left-width": "1px",
+				},
+				before: {},
+				after: {},
+			}),
+		).toEqual({
+			element: {
+				"border-top-color": "rgb(255, 0, 0)",
+				"border-right-color": "rgb(0, 0, 0)",
+				"border-bottom-color": "rgb(0, 0, 0)",
+				"border-left-color": "rgb(0, 0, 0)",
+				"border-style": "solid",
+				"border-width": "1px",
+			},
+			before: {},
+			after: {},
+		});
 	});
 });
 
