@@ -20,7 +20,6 @@
 		"wcag",
 		"bypass-blocks",
 		"skip-link",
-		"puppeteer",
 		"audit"
 	],
 	"engines": {
@@ -30,10 +29,6 @@
 		".": {
 			"types": "./dist/index.d.ts",
 			"import": "./dist/index.js"
-		},
-		"./puppeteer": {
-			"types": "./dist/adaptors/puppeteer.d.ts",
-			"import": "./dist/adaptors/puppeteer.js"
 		}
 	},
 	"files": [
@@ -56,14 +51,6 @@
 	},
 	"dependencies": {
 		"@a11y-pulse/browser-adaptor": "*"
-	},
-	"peerDependencies": {
-		"puppeteer": "^25.5.0"
-	},
-	"peerDependenciesMeta": {
-		"puppeteer": {
-			"optional": true
-		}
 	},
 	"devDependencies": {
 		"happy-dom": "^20.11.2",

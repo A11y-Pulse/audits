@@ -1,8 +1,4 @@
-export type {
-	ElementRef,
-	SkipLinkAuditAdaptor,
-	SkipLinkAuditAdaptor as BrowserAdaptor,
-} from "./adaptor";
+export type { SkipLinkAuditAdaptor } from "./adaptor";
 export type { SkipLinkOptions } from "./audit";
 export { runSkipLinkAudit } from "./audit";
 export type {
