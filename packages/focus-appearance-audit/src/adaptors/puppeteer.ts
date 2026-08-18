@@ -11,6 +11,8 @@ const focusEmulationEnabled = new WeakSet<Page>();
 
 /** A BrowserAdaptor backed by a Puppeteer Page. */
 export class PuppeteerAdaptor implements FocusAppearanceAuditAdaptor {
+	readonly screenshotClipScale = 2;
+
 	constructor(private readonly page: Page) {}
 
 	evaluate<T>(
@@ -34,8 +36,15 @@ export class PuppeteerAdaptor implements FocusAppearanceAuditAdaptor {
 		await this.page.keyboard.press("Tab");
 	}
 
-	async screenshotClip(clip: Rect): Promise<Uint8Array> {
-		return (await this.page.screenshot({ type: "png", clip })) as Uint8Array;
+	async screenshotClip(clip: Rect, scale = 1): Promise<Uint8Array> {
+		return (await this.page.screenshot({
+			type: "png",
+			optimizeForSpeed: true,
+			clip: {
+				...clip,
+				scale,
+			},
+		})) as Uint8Array;
 	}
 
 	async ensureFocusReporting(): Promise<void> {

@@ -14,6 +14,7 @@ import {
 import {
 	alignedRegionsDiffer,
 	bufferedClip,
+	omitIdleStyleSnapshot,
 	type Rect,
 	type StyleSnapshot,
 	stylesIndicateFocus,
@@ -21,9 +22,9 @@ import {
 import { FOCUS_STYLE_PROPERTIES } from "./focus-style";
 import { getSelector } from "./get-selector";
 import type {
-	DetectionMethod,
 	FocusAppearanceResult,
 	FocusElementResult,
+	IndicatorDetection,
 } from "./result";
 import { truncateHtml } from "./truncate-html";
 
@@ -109,7 +110,7 @@ export type FocusProbe = {
 	detectIndicator(
 		info: ActiveElementInfo,
 		baseline: Map<number, BaselineEntry>,
-	): Promise<DetectionMethod | null>;
+	): Promise<IndicatorDetection>;
 	clearMarkers(): Promise<void>;
 };
 
@@ -209,17 +210,27 @@ export async function runFocusLoop(
 					visited.add(info.index);
 				}
 
-				const method = await probe.detectIndicator(info, baseline);
+				const detection = await probe.detectIndicator(info, baseline);
 
 				elements.push({
 					selector: info.selector,
 					html: info.html,
 					tabIndex: i + 1,
-					passed: method !== null,
-					detectionMethod: method,
+					passed: detection.method !== null,
+					detectionMethod: detection.method,
+					...(detection.method === null
+						? {
+								failureEvidence: {
+									focusedScreenshot: detection.focusedScreenshot,
+									unfocusedScreenshot: detection.unfocusedScreenshot,
+									focusedStyles: detection.focusedStyles,
+									unfocusedStyles: detection.unfocusedStyles,
+								},
+							}
+						: {}),
 				});
 
-				if (method === null) {
+				if (detection.method === null) {
 					failures++;
 				}
 
@@ -365,13 +376,29 @@ function createAdaptorProbe(
 					baselineEntry &&
 					stylesIndicateFocus(baselineEntry.styles, info.styles)
 				) {
-					return "style";
+					return { method: "style" };
 				}
 			}
 
-			const differs = await fallbackPixelDiff(adaptor, options);
+			const pixel = await fallbackPixelDiff(adaptor, options);
 
-			return differs ? "pixel-diff" : null;
+			if (pixel.method !== null) {
+				return pixel;
+			}
+
+			return {
+				method: null,
+				focusedScreenshot: pixel.focusedScreenshot,
+				unfocusedScreenshot: pixel.unfocusedScreenshot,
+				focusedStyles: omitIdleStyleSnapshot(info.styles),
+				unfocusedStyles: omitIdleStyleSnapshot(
+					baselineEntry?.styles ?? {
+						element: {},
+						before: {},
+						after: {},
+					},
+				),
+			};
 		},
 
 		async clearMarkers() {
@@ -380,10 +407,18 @@ function createAdaptorProbe(
 	};
 }
 
+type PixelDiffResult =
+	| { method: "pixel-diff" }
+	| {
+			method: null;
+			focusedScreenshot: Uint8Array;
+			unfocusedScreenshot: Uint8Array;
+	  };
+
 async function fallbackPixelDiff(
 	adaptor: FocusAppearanceAuditAdaptor,
 	options: ResolvedOptions,
-): Promise<boolean> {
+): Promise<PixelDiffResult> {
 	// Hold a handle so we can blur and re-focus the SAME element
 	// (document.activeElement becomes <body> after blur).
 	const handle = await adaptor.evaluateHandle(activeElementHandleScript);
@@ -413,11 +448,13 @@ async function fallbackPixelDiff(
 			options.screenshotClipBuffer,
 		);
 
+		const scale = adaptor.screenshotClipScale ?? 1;
+
 		// Capture the focused state first, while focus is genuine: re-focusing the
 		// element afterwards cannot always restore it (the host of a closed shadow
 		// root cannot push focus back inside), so the focused frame must be taken
 		// before blurring.
-		const focused = await adaptor.screenshotClip(focusedClip);
+		const focused = await adaptor.screenshotClip(focusedClip, scale);
 
 		await adaptor.evaluate(blurScript, handle);
 
@@ -432,25 +469,36 @@ async function fallbackPixelDiff(
 			options.screenshotClipBuffer,
 		);
 
-		const unfocused = await adaptor.screenshotClip(unfocusedClip);
+		const unfocused = await adaptor.screenshotClip(unfocusedClip, scale);
 
 		// Restore focus so the next Tab advances from this element rather than
 		// restarting traversal. (A closed-shadow host can't be re-focused into the
 		// root; the loop still progresses because Tab re-enters from there.)
 		await adaptor.evaluate(focusScript, handle);
 
-		// Each screenshot is framed around its own state's rect, so compare them
-		// aligned on where the element sits within each clip.
-		return alignedRegionsDiffer(
+		const differs = alignedRegionsDiffer(
 			Buffer.from(focused),
-			{ x: focusedRect.x - focusedClip.x, y: focusedRect.y - focusedClip.y },
+			{
+				x: (focusedRect.x - focusedClip.x) * scale,
+				y: (focusedRect.y - focusedClip.y) * scale,
+			},
 			Buffer.from(unfocused),
 			{
-				x: unfocusedRect.x - unfocusedClip.x,
-				y: unfocusedRect.y - unfocusedClip.y,
+				x: (unfocusedRect.x - unfocusedClip.x) * scale,
+				y: (unfocusedRect.y - unfocusedClip.y) * scale,
 			},
-			options.screenshotDiffThreshold,
+			options.screenshotDiffThreshold * scale * scale,
 		);
+
+		if (differs) {
+			return { method: "pixel-diff" };
+		}
+
+		return {
+			method: null,
+			focusedScreenshot: focused,
+			unfocusedScreenshot: unfocused,
+		};
 	} finally {
 		await adaptor.disposeRef(handle);
 	}

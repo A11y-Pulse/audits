@@ -20,7 +20,7 @@ import {
 } from "./browser-scripts";
 import type { Rect, StyleSnapshot } from "./detection";
 import { getSelector } from "./get-selector";
-import type { DetectionMethod } from "./result";
+import type { DetectionMethod, IndicatorDetection } from "./result";
 
 const EMPTY_STYLES: StyleSnapshot = { element: {}, before: {}, after: {} };
 const OPTIONS = {
@@ -33,6 +33,20 @@ const OPTIONS = {
 	failedElementLimit: 0,
 	timeout: 0,
 };
+
+const EMPTY_FAILURE_EVIDENCE = {
+	focusedScreenshot: new Uint8Array([1]),
+	unfocusedScreenshot: new Uint8Array([2]),
+	focusedStyles: EMPTY_STYLES,
+	unfocusedStyles: EMPTY_STYLES,
+};
+
+/** Convenience for scripted probes: `"style"` / `null` → `IndicatorDetection`. */
+function detection(method: DetectionMethod | null): IndicatorDetection {
+	return method === null
+		? { method: null, ...EMPTY_FAILURE_EVIDENCE }
+		: { method };
+}
 
 function info(index: number): ActiveElementInfo {
 	return {
@@ -61,7 +75,8 @@ function scriptedProbe(script: {
 		pressTab: async () => {},
 		settle: async () => {},
 		probeActiveElement: async () => script.active[activeCall++] ?? null,
-		detectIndicator: async () => script.indicator[indicatorCall++] ?? null,
+		detectIndicator: async () =>
+			detection(script.indicator[indicatorCall++] ?? null),
 		clearMarkers: async () => {},
 	};
 }
@@ -89,7 +104,8 @@ function hangingProbe(script: {
 				? Promise.resolve()
 				: new Promise<void>(() => {}),
 		probeActiveElement: async () => script.active[activeCall++] ?? null,
-		detectIndicator: async () => script.indicator[indicatorCall++] ?? null,
+		detectIndicator: async () =>
+			detection(script.indicator[indicatorCall++] ?? null),
 		clearMarkers: async () => {},
 	};
 }
@@ -193,6 +209,7 @@ describe("runFocusLoop", () => {
 		const failed = result.elements.filter((e) => !e.passed);
 		expect(failed).toHaveLength(1);
 		expect(failed[0]?.selector).toBe("#e1");
+		expect(failed[0]?.failureEvidence).toEqual(EMPTY_FAILURE_EVIDENCE);
 		expect(result.summary.failed).toBe(1);
 	});
 
@@ -207,6 +224,7 @@ describe("runFocusLoop", () => {
 		);
 
 		expect(result.elements[0]?.detectionMethod).toBe("pixel-diff");
+		expect(result.elements[0]?.failureEvidence).toBeUndefined();
 	});
 
 	it("processes untracked elements and is still bounded by elementLimit", async () => {
@@ -469,7 +487,7 @@ function fakeAdaptor(script: AdaptorScript = {}): {
 		},
 		async disposeRef() {},
 		async pressTab() {},
-		async screenshotClip(clip: Rect) {
+		async screenshotClip(clip: Rect, _scale?: number) {
 			record.clips.push(clip);
 
 			return solidPng(8, 8, [255, 255, 255]);
@@ -499,6 +517,62 @@ describe("runFocusAppearanceAudit", () => {
 		expect(result.summary.checked).toBe(3);
 		expect(result.summary.failed).toBe(3);
 		expect(result.summary.reachedFailedElementLimit).toBe(false);
+	});
+
+	it("attaches focused and unfocused screenshots and styles on failure", async () => {
+		const rect = { x: 100, y: 100, width: 40, height: 20 };
+		// Identical snapshots so the style stage does not short-circuit; the
+		// white-on-white pixel diff then fails and surfaces the evidence.
+		const styles: StyleSnapshot = {
+			element: { "outline-style": "none" },
+			before: {},
+			after: {},
+		};
+		const { adaptor } = fakeAdaptor({
+			tabStops: 1,
+			baseline: {
+				styles: [styles],
+				entries: [{ index: 0, styleIndex: 0, rect }],
+			},
+			active: {
+				index: 0,
+				isBody: false,
+				isIframe: false,
+				html: "<button>x</button>",
+				styles,
+				rect,
+			},
+		});
+
+		const result = await runFocusAppearanceAudit(adaptor, {
+			screenshotSettleDelay: 0,
+		});
+
+		const failed = result.elements[0];
+		expect(failed?.passed).toBe(false);
+		expect(failed?.detectionMethod).toBeNull();
+		expect(failed?.failureEvidence?.focusedScreenshot).toBeInstanceOf(
+			Uint8Array,
+		);
+		expect(failed?.failureEvidence?.unfocusedScreenshot).toBeInstanceOf(
+			Uint8Array,
+		);
+		expect(
+			failed?.failureEvidence?.focusedScreenshot.byteLength,
+		).toBeGreaterThan(0);
+		expect(
+			failed?.failureEvidence?.unfocusedScreenshot.byteLength,
+		).toBeGreaterThan(0);
+		expect(failed?.failureEvidence?.focusedStyles).toEqual({
+			element: {},
+			before: {},
+			after: {},
+		});
+		expect(failed?.failureEvidence?.unfocusedStyles).toEqual({
+			element: {},
+			before: {},
+			after: {},
+		});
 	});
 
 	it("does not time out by default", async () => {
@@ -589,6 +663,7 @@ describe("runFocusAppearanceAudit", () => {
 		});
 
 		expect(result.elements[0]?.detectionMethod).toBe("style");
+		expect(result.elements[0]?.failureEvidence).toBeUndefined();
 		expect(record.clips).toHaveLength(0);
 	});
 

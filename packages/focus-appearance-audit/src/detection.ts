@@ -75,6 +75,97 @@ function renderedStyles(
 	return out;
 }
 
+function isIdleComputedValue(property: string, value: string): boolean {
+	const v = value.trim().toLowerCase();
+
+	if (
+		v === "" ||
+		v === "none" ||
+		v === "hidden" ||
+		v === "normal" ||
+		v === "transparent" ||
+		v === "0px" ||
+		v === "0"
+	) {
+		return true;
+	}
+
+	if (v === "rgba(0, 0, 0, 0)" || v === "rgba(0,0,0,0)") {
+		return true;
+	}
+
+	if (property === "font-weight" && v === "400") {
+		return true;
+	}
+
+	if (property === "text-decoration" && v.startsWith("none")) {
+		return true;
+	}
+
+	return false;
+}
+
+function omitIdleComputedStyles(
+	record: Record<string, string>,
+	dropUnusedPseudo: boolean,
+): Record<string, string> {
+	if (
+		dropUnusedPseudo &&
+		isIdleComputedValue("content", record.content ?? "none")
+	) {
+		return {};
+	}
+
+	const out: Record<string, string> = {};
+
+	for (const [property, value] of Object.entries(renderedStyles(record))) {
+		if (!isIdleComputedValue(property, value)) {
+			out[property] = value;
+		}
+	}
+
+	return collapseUniformBorderSides(out);
+}
+
+const BORDER_SIDES = ["top", "right", "bottom", "left"] as const;
+const BORDER_FACETS = ["color", "style", "width"] as const;
+
+function collapseUniformBorderSides(
+	record: Record<string, string>,
+): Record<string, string> {
+	const out = { ...record };
+
+	for (const facet of BORDER_FACETS) {
+		const keys = BORDER_SIDES.map((side) => `border-${side}-${facet}`);
+		const values = keys.map((key) => out[key]);
+		const first = values[0];
+
+		if (first === undefined || values.some((value) => value !== first)) {
+			continue;
+		}
+
+		out[`border-${facet}`] = first;
+		for (const key of keys) {
+			delete out[key];
+		}
+	}
+
+	return out;
+}
+
+/**
+ * Drop computed values that do not paint, so evidence only keeps styles that
+ * could be a visible indicator. `getComputedStyle` cannot tell authored from
+ * initial; this is the used-value equivalent of "none".
+ */
+export function omitIdleStyleSnapshot(snapshot: StyleSnapshot): StyleSnapshot {
+	return {
+		element: omitIdleComputedStyles(snapshot.element, false),
+		before: omitIdleComputedStyles(snapshot.before, true),
+		after: omitIdleComputedStyles(snapshot.after, true),
+	};
+}
+
 /**
  * Determine whether style differences indicate a focus appearance
  */

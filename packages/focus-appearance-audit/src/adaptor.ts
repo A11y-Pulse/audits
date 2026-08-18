@@ -37,9 +37,13 @@ export interface FocusAppearanceAuditAdaptor {
 	pressTab(): Promise<void>;
 
 	/**
-	 * Screenshot a clipped region of the page defined by `clip`. This function must return PNG bytes.
+	 * Screenshot a clipped region of the page. `scale` is the device scale
+	 * factor (bitmap pixels per CSS pixel).
 	 */
-	screenshotClip(clip: Rect): Promise<Uint8Array>;
+	screenshotClip(clip: Rect, scale?: number): Promise<Uint8Array>;
+
+	/** Device scale factor for evidence screenshots stored on failure. */
+	readonly screenshotClipScale?: number;
 
 	/**
 	 * Ensure the page reports focus for its lifetime. In particular, `document.hasFocus()` must
