@@ -1,7 +1,7 @@
+import type { BrowserAdaptor } from "@a11y-pulse/browser-adaptor";
 import { getSelector } from "@a11y-pulse/browser-adaptor/dom";
 import { PNG } from "pngjs";
 import { describe, expect, it } from "vitest";
-import type { BrowserAdaptor } from "@a11y-pulse/browser-adaptor";
 import {
 	type ActiveElementInfo,
 	type FocusProbe,

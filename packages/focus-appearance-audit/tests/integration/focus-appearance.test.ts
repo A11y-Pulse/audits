@@ -1,6 +1,6 @@
+import { PuppeteerAdaptor } from "@a11y-pulse/browser-adaptor/puppeteer";
 import puppeteer, { type Browser, type Page } from "puppeteer";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { PuppeteerAdaptor } from "@a11y-pulse/browser-adaptor/puppeteer";
 import {
 	type FocusAppearanceOptions,
 	type FocusAppearanceResult,

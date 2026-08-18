@@ -1,5 +1,5 @@
-import { getSelector, truncateHtml } from "@a11y-pulse/browser-adaptor/dom";
 import type { BrowserAdaptor } from "@a11y-pulse/browser-adaptor";
+import { getSelector, truncateHtml } from "@a11y-pulse/browser-adaptor/dom";
 import {
 	activeElementHandleScript,
 	baselineScript,
