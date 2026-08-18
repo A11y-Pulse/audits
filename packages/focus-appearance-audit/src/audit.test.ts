@@ -1,7 +1,7 @@
 import { getSelector } from "@a11y-pulse/browser-adaptor/dom";
 import { PNG } from "pngjs";
 import { describe, expect, it } from "vitest";
-import type { FocusAppearanceAuditAdaptor } from "./adaptor";
+import type { BrowserAdaptor } from "@a11y-pulse/browser-adaptor";
 import {
 	type ActiveElementInfo,
 	type FocusProbe,
@@ -388,7 +388,7 @@ type AdaptorRecord = {
  * unknown function, so it lands in the fallthrough branch.
  */
 function fakeAdaptor(script: AdaptorScript = {}): {
-	adaptor: FocusAppearanceAuditAdaptor;
+	adaptor: BrowserAdaptor;
 	record: AdaptorRecord;
 } {
 	const record: AdaptorRecord = {
@@ -411,7 +411,7 @@ function fakeAdaptor(script: AdaptorScript = {}): {
 		rect: { x: 100, y: 100, width: 40, height: 20 },
 	};
 
-	const adaptor: FocusAppearanceAuditAdaptor = {
+	const adaptor: BrowserAdaptor = {
 		// biome-ignore lint/suspicious/noExplicitAny: dispatching on script identity needs loose types
 		async evaluate(fn: any, ...args: any[]): Promise<any> {
 			if (fn === baselineScript) {

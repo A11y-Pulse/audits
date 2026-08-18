@@ -1,5 +1,5 @@
 import { getSelector, truncateHtml } from "@a11y-pulse/browser-adaptor/dom";
-import type { FocusAppearanceAuditAdaptor } from "./adaptor";
+import type { BrowserAdaptor } from "@a11y-pulse/browser-adaptor";
 import {
 	activeElementHandleScript,
 	baselineScript,
@@ -140,7 +140,7 @@ function resolveOptions(options: FocusAppearanceOptions): ResolvedOptions {
  * indicator. Enables focus reporting up front, then drives the loop.
  */
 export async function runFocusAppearanceAudit(
-	adaptor: FocusAppearanceAuditAdaptor,
+	adaptor: BrowserAdaptor,
 	options: FocusAppearanceOptions = {},
 ): Promise<FocusAppearanceResult> {
 	const resolved = resolveOptions(options);
@@ -286,7 +286,7 @@ export async function runFocusLoop(
 }
 
 function createAdaptorProbe(
-	adaptor: FocusAppearanceAuditAdaptor,
+	adaptor: BrowserAdaptor,
 	options: ResolvedOptions,
 ): FocusProbe {
 	return {
@@ -380,7 +380,7 @@ function createAdaptorProbe(
 }
 
 async function fallbackPixelDiff(
-	adaptor: FocusAppearanceAuditAdaptor,
+	adaptor: BrowserAdaptor,
 	options: ResolvedOptions,
 ): Promise<boolean> {
 	// Hold a handle so we can blur and re-focus the SAME element
