@@ -384,12 +384,32 @@ export function createTabOrchestrator(
 									},
 								};
 
-								const recipients = [...attached];
-								for (const consumer of recipients) {
-									await consumer.onTabStop(snapshot, handleFor(consumer));
+								// This synthetic stop has no live focused element (it
+								// already blurred itself before this notification is
+								// built, by definition of F55), so capabilities that
+								// need one — `unfocusedPair`, `baselineStyles`,
+								// `obscuring` — have nothing to meaningfully act on.
+								// Only consumers that declared `contextSignals` (the
+								// capability this whole synthetic-stop mechanism exists
+								// to serve) are notified; unlike every other stop in
+								// this file, uniform notification is wrong here because
+								// there is no element for the other capabilities to
+								// read from.
+								const recipients = [...attached].filter((consumer) =>
+									consumer.capabilities.has("contextSignals"),
+								);
+								try {
+									for (const consumer of recipients) {
+										await consumer.onTabStop(snapshot, handleFor(consumer));
+									}
+								} finally {
+									// Guaranteed even if a recipient's onTabStop throws,
+									// so the `data-a11y-ctx-attr` DOM marker never survives
+									// past this stop (mirrors how `disposeRef` is
+									// guaranteed via `finally` in the main per-stop loop
+									// below).
+									await adaptor.evaluate(clearAttributedScript);
 								}
-
-								await adaptor.evaluate(clearAttributedScript);
 							}
 						}
 

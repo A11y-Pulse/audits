@@ -863,7 +863,7 @@ describe("tab loop", () => {
 			expect(ctx.sessionEnds).toEqual(["completed"]);
 		});
 
-		it("also notifies an attached consumer that did not declare contextSignals, consistent with normal stops", async () => {
+		it("does not notify an attached consumer that did not declare contextSignals, since there is no live element for it to act on", async () => {
 			const adaptor = loopAdaptor({
 				hasFocus: [true],
 				active: [],
@@ -910,8 +910,14 @@ describe("tab loop", () => {
 			orchestrator.attach(plain);
 			await orchestrator.run();
 
-			expect(plain.stops).toHaveLength(1);
-			expect(plain.stops[0]?.activeElement.selector).toBe("#blurred");
+			// The synthetic F55 snapshot has no live focused element (it already
+			// blurred itself), so only the contextSignals declarer — the
+			// capability this mechanism exists to serve — gets notified. A
+			// plain consumer with no contextSignals capability has nothing here
+			// it could act on, unlike a normal tab stop where every consumer's
+			// fields are meaningfully absent-or-present for a real element.
+			expect(plain.stops).toHaveLength(0);
+			expect(ctx.stops).toHaveLength(1);
 			expect(plain.sessionEnds).toEqual(["completed"]);
 		});
 
@@ -1002,6 +1008,149 @@ describe("tab loop", () => {
 
 			expect(ctx.stops).toHaveLength(0);
 			expect(ctx.sessionEnds).toEqual(["navigation"]);
+		});
+
+		/**
+		 * Builds a consumer that mirrors `@a11y-pulse/focus-appearance-audit`'s
+		 * real `onTabStop` closely enough to be a faithful regression test: it
+		 * declares `unfocusedPair` + `baselineStyles` and calls
+		 * `session.ensureUnfocusedPair()` whenever `snapshot.baselineStyles` is
+		 * absent (see `packages/focus-appearance-audit/src/audit.ts`). The
+		 * synthetic F55 snapshot never sets `baselineStyles`, so this consumer
+		 * would call `ensureUnfocusedPair()` for it if ever notified — which
+		 * throws synchronously ("unfocusedPair capture not implemented") since
+		 * there is no `activeHandle` for the synthetic stop to hold. Scoping
+		 * notification to `contextSignals` declarers (the fix under test) means
+		 * this consumer should never be handed the synthetic snapshot at all.
+		 */
+		function unfocusedPairConsumer(): TabConsumer & {
+			stops: TabStopSnapshot[];
+			ensureCalls: number;
+		} {
+			const record = {
+				stops: [] as TabStopSnapshot[],
+				ensureCalls: 0,
+				capabilities: new Set(["unfocusedPair", "baselineStyles"] as const),
+				async onTabStop(
+					snapshot: TabStopSnapshot,
+					session: { ensureUnfocusedPair(): Promise<unknown> },
+				) {
+					record.stops.push(snapshot);
+					if (!snapshot.baselineStyles) {
+						record.ensureCalls++;
+						await session.ensureUnfocusedPair();
+					}
+				},
+			};
+			return record;
+		}
+
+		function f55Adaptor(): BrowserAdaptor {
+			const adaptor = loopAdaptor({
+				hasFocus: [true],
+				active: [],
+			});
+			const attributedRef = { kind: "attributed" };
+			adaptor.evaluateHandle = (async (fn) => {
+				if (fn === attributedHandleScript) {
+					return attributedRef;
+				}
+				return {};
+			}) as BrowserAdaptor["evaluateHandle"];
+			const original = adaptor.evaluate.bind(adaptor);
+			adaptor.evaluate = (async (fn, ...args) => {
+				if (fn === drainContextObserverScript) {
+					return {
+						openedWindow: false,
+						submittedForm: false,
+						focusRemoved: true,
+						redirect: null,
+						softUrlChange: false,
+						navigation: false,
+						attributedHtml: '<input id="blurred">',
+						hasAttributed: true,
+					};
+				}
+				if (fn === getSelector && args[0] === attributedRef) {
+					return "#blurred";
+				}
+				if (
+					fn === installContextObserverScript ||
+					fn === clearAttributedScript
+				) {
+					return undefined;
+				}
+				return original(fn, ...args);
+			}) as BrowserAdaptor["evaluate"];
+			return adaptor;
+		}
+
+		it("does not crash a combined session when an unfocusedPair-declaring consumer (like focus-appearance-audit) is attached alongside contextSignals, and still rescues the contextSignals consumer (unfocusedPair-consumer attached first)", async () => {
+			const adaptor = f55Adaptor();
+			const pairConsumer = unfocusedPairConsumer();
+			const ctx = recordingConsumer(["contextSignals"]);
+			const orchestrator = createTabOrchestrator(adaptor, {
+				screenshotSettleDelay: 0,
+			});
+			orchestrator.attach(pairConsumer);
+			orchestrator.attach(ctx);
+
+			await expect(orchestrator.run()).resolves.toBeUndefined();
+
+			expect(ctx.sessionEnds).toEqual(["completed"]);
+			expect(ctx.stops).toHaveLength(1);
+			expect(ctx.stops[0]?.contextSignals?.signals.focusRemoved).toBe(true);
+			// Scoped out of notification entirely: no live element for it to
+			// act on, so ensureUnfocusedPair() (which would throw) is never
+			// reached.
+			expect(pairConsumer.stops).toHaveLength(0);
+			expect(pairConsumer.ensureCalls).toBe(0);
+		});
+
+		it("does not crash a combined session when an unfocusedPair-declaring consumer (like focus-appearance-audit) is attached alongside contextSignals, and still rescues the contextSignals consumer (contextSignals attached first)", async () => {
+			const adaptor = f55Adaptor();
+			const pairConsumer = unfocusedPairConsumer();
+			const ctx = recordingConsumer(["contextSignals"]);
+			const orchestrator = createTabOrchestrator(adaptor, {
+				screenshotSettleDelay: 0,
+			});
+			orchestrator.attach(ctx);
+			orchestrator.attach(pairConsumer);
+
+			await expect(orchestrator.run()).resolves.toBeUndefined();
+
+			expect(ctx.sessionEnds).toEqual(["completed"]);
+			expect(ctx.stops).toHaveLength(1);
+			expect(ctx.stops[0]?.contextSignals?.signals.focusRemoved).toBe(true);
+			expect(pairConsumer.stops).toHaveLength(0);
+			expect(pairConsumer.ensureCalls).toBe(0);
+		});
+
+		it("still clears the attributed marker when a contextSignals consumer's onTabStop throws", async () => {
+			const adaptor = f55Adaptor();
+			let clearCalls = 0;
+			const original = adaptor.evaluate.bind(adaptor);
+			adaptor.evaluate = (async (fn, ...args) => {
+				if (fn === clearAttributedScript) {
+					clearCalls++;
+					return undefined;
+				}
+				return original(fn, ...args);
+			}) as BrowserAdaptor["evaluate"];
+
+			const throwingCtx: TabConsumer = {
+				capabilities: new Set(["contextSignals"]),
+				onTabStop: async () => {
+					throw new Error("boom");
+				},
+			};
+			const orchestrator = createTabOrchestrator(adaptor, {
+				screenshotSettleDelay: 0,
+			});
+			orchestrator.attach(throwingCtx);
+
+			await expect(orchestrator.run()).rejects.toThrow("boom");
+			expect(clearCalls).toBe(1);
 		});
 	});
 });
