@@ -1,32 +1,15 @@
 import {
-	activeElementHandleScript,
-	baselineScript,
-	blurScript,
-	clearMarkersScript,
-	elementRectScript,
-	FOCUS_STYLE_PROPERTIES,
-	focusScript,
-	getSelector,
-	isCenterObscuredScript,
-	pageDimensionsScript,
-	probeActiveElementScript,
-	scrollToCenterScript,
-	truncateHtml,
+	type BrowserAdaptor,
+	createTabOrchestrator,
+	type TabConsumer,
+	type TabSessionHandle,
 } from "@a11y-pulse/tab-orchestrator";
-import type { FocusAppearanceAuditAdaptor } from "./adaptor";
 import {
 	alignedRegionsDiffer,
-	bufferedClip,
 	omitIdleStyleSnapshot,
-	type Rect,
-	type StyleSnapshot,
 	stylesIndicateFocus,
 } from "./detection";
-import type {
-	FocusAppearanceResult,
-	FocusElementResult,
-	IndicatorDetection,
-} from "./result";
+import type { FocusAppearanceResult, FocusElementResult } from "./result";
 
 export const DEFAULT_ELEMENT_LIMIT = 1024;
 export const DEFAULT_SCREENSHOT_SETTLE_DELAY = 33; // ~2 frames at 60fps
@@ -34,8 +17,6 @@ export const DEFAULT_SCREENSHOT_CLIP_BUFFER = 10;
 export const DEFAULT_SCREENSHOT_DIFF_THRESHOLD = 4;
 export const DEFAULT_FAILED_ELEMENT_LIMIT = 0; // 0 = never finish early
 export const DEFAULT_TIMEOUT = 0; // 0 = no timeout
-
-const MARKER_ATTR = "data-a11y-focus-idx";
 
 export type FocusAppearanceOptions = {
 	/** Max focusable elements to tab through */
@@ -82,38 +63,6 @@ export type FocusAppearanceOptions = {
 
 type ResolvedOptions = Required<FocusAppearanceOptions>;
 
-export type ActiveElementInfo = {
-	/** The element's marker index, or null if it was not in the baseline set. */
-	index: number | null;
-	isBody: boolean;
-	/** The focused element is an <iframe>; see ActiveElementBase. */
-	isIframe: boolean;
-	selector: string;
-	html: string;
-	styles: StyleSnapshot;
-	rect: Rect;
-};
-
-/** A focusable element's unfocused baseline: its styles and page-relative rect. */
-export type BaselineEntry = {
-	styles: StyleSnapshot;
-	rect: Rect;
-};
-
-/** The browser-coupled seams the loop drives. Mocked in unit tests. */
-export type FocusProbe = {
-	captureBaseline(): Promise<Map<number, BaselineEntry>>;
-	hasFocus(): Promise<boolean>;
-	pressTab(): Promise<void>;
-	settle(): Promise<void>;
-	probeActiveElement(): Promise<ActiveElementInfo | null>;
-	detectIndicator(
-		info: ActiveElementInfo,
-		baseline: Map<number, BaselineEntry>,
-	): Promise<IndicatorDetection>;
-	clearMarkers(): Promise<void>;
-};
-
 function resolveOptions(options: FocusAppearanceOptions): ResolvedOptions {
 	const elementLimit = options.elementLimit ?? DEFAULT_ELEMENT_LIMIT;
 
@@ -137,369 +86,168 @@ function resolveOptions(options: FocusAppearanceOptions): ResolvedOptions {
 	};
 }
 
+function emptyResult(): FocusAppearanceResult {
+	return {
+		elements: [],
+		summary: {
+			checked: 0,
+			passed: 0,
+			failed: 0,
+			reachedLimit: false,
+			reachedFailedElementLimit: false,
+			timedOut: false,
+			sessionEnd: null,
+		},
+	};
+}
+
+function recount(result: FocusAppearanceResult): void {
+	const passed = result.elements.filter((element) => element.passed).length;
+	result.summary.checked = result.elements.length;
+	result.summary.passed = passed;
+	result.summary.failed = result.elements.length - passed;
+}
+
+/**
+ * Tab through focusable elements and report whether each shows a visible focus
+ * indicator. Attach to a `createTabOrchestrator` session, or use
+ * `runFocusAppearanceAudit` to run as the sole consumer.
+ */
+export function createFocusAppearanceAudit(
+	options: FocusAppearanceOptions = {},
+): TabConsumer & { result: FocusAppearanceResult } {
+	const resolved = resolveOptions(options);
+	const result = emptyResult();
+	let checked = 0;
+	let failures = 0;
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	let disconnectedSelf = false;
+
+	const clearTimer = (): void => {
+		if (timer !== undefined) {
+			clearTimeout(timer);
+			timer = undefined;
+		}
+	};
+
+	const disconnectSelf = (session: TabSessionHandle): void => {
+		disconnectedSelf = true;
+		clearTimer();
+		session.disconnect();
+	};
+
+	return {
+		result,
+		capabilities: new Set(
+			resolved.skipStyleCheck
+				? (["unfocusedPair"] as const)
+				: (["baselineStyles", "unfocusedPair"] as const),
+		),
+		onSessionStart(session) {
+			if (resolved.timeout > 0) {
+				timer = setTimeout(() => {
+					timer = undefined;
+					result.summary.timedOut = true;
+					disconnectSelf(session);
+				}, resolved.timeout);
+			}
+		},
+		async onTabStop(snapshot, session) {
+			checked++;
+
+			const focused = snapshot.activeElement.styles;
+			let detection: FocusElementResult["detectionMethod"] = null;
+			let failureEvidence: FocusElementResult["failureEvidence"];
+
+			if (
+				!resolved.skipStyleCheck &&
+				snapshot.baselineStyles &&
+				stylesIndicateFocus(snapshot.baselineStyles, focused)
+			) {
+				detection = "style";
+			} else {
+				const pair = await session.ensureUnfocusedPair();
+				const differs = alignedRegionsDiffer(
+					Buffer.from(pair.focusedScreenshot),
+					{
+						x: (pair.focusedRect.x - pair.focusedClip.x) * pair.scale,
+						y: (pair.focusedRect.y - pair.focusedClip.y) * pair.scale,
+					},
+					Buffer.from(pair.unfocusedScreenshot),
+					{
+						x: (pair.unfocusedRect.x - pair.unfocusedClip.x) * pair.scale,
+						y: (pair.unfocusedRect.y - pair.unfocusedClip.y) * pair.scale,
+					},
+					resolved.screenshotDiffThreshold * pair.scale * pair.scale,
+				);
+
+				if (differs) {
+					detection = "pixel-diff";
+				} else {
+					failureEvidence = {
+						focusedScreenshot: pair.focusedScreenshot,
+						unfocusedScreenshot: pair.unfocusedScreenshot,
+						focusedStyles: omitIdleStyleSnapshot(focused),
+						unfocusedStyles: omitIdleStyleSnapshot(pair.unfocusedStyles),
+					};
+				}
+			}
+
+			result.elements.push({
+				selector: snapshot.activeElement.selector,
+				html: snapshot.activeElement.html,
+				tabIndex: snapshot.tabIndex,
+				passed: detection !== null,
+				detectionMethod: detection,
+				...(failureEvidence !== undefined ? { failureEvidence } : {}),
+			});
+
+			if (detection === null) {
+				failures++;
+			}
+
+			recount(result);
+
+			if (
+				resolved.failedElementLimit > 0 &&
+				failures >= resolved.failedElementLimit
+			) {
+				result.summary.reachedFailedElementLimit = true;
+				disconnectSelf(session);
+				return;
+			}
+
+			if (checked >= resolved.elementLimit) {
+				result.summary.reachedLimit = true;
+				disconnectSelf(session);
+			}
+		},
+		onSessionEnd(reason) {
+			clearTimer();
+			if (!disconnectedSelf) {
+				result.summary.sessionEnd = reason;
+			}
+		},
+	};
+}
+
 /**
  * Tab through focusable elements and report whether each shows a visible focus
  * indicator. Enables focus reporting up front, then drives the loop.
  */
 export async function runFocusAppearanceAudit(
-	adaptor: FocusAppearanceAuditAdaptor,
+	adaptor: BrowserAdaptor,
 	options: FocusAppearanceOptions = {},
 ): Promise<FocusAppearanceResult> {
 	const resolved = resolveOptions(options);
-
-	await adaptor.ensureFocusReporting();
-
-	const probe = createAdaptorProbe(adaptor, resolved);
-
-	return runFocusLoop(probe, resolved);
-}
-
-/** The engine-neutral tab loop. Exported for unit testing with a fake probe. */
-export async function runFocusLoop(
-	probe: FocusProbe,
-	options: ResolvedOptions,
-): Promise<FocusAppearanceResult> {
-	const baseline = await probe.captureBaseline();
-	const elements: FocusElementResult[] = [];
-	const visited = new Set<number>();
-
-	let i = 0;
-	let failures = 0;
-	let reachedLimit = false;
-	let reachedFailedElementLimit = false;
-	let timedOut = false;
-	let aborted = false;
-
-	// Captured at the instant the timeout fires so the returned results can't be
-	// mutated by the loop still unwinding in the background.
-	let timedOutElements: FocusElementResult[] | null = null;
-
-	async function tabThroughElements(): Promise<void> {
-		try {
-			for (; i < options.elementLimit; i++) {
-				if (aborted || !(await probe.hasFocus())) {
-					break;
-				}
-
-				await probe.pressTab();
-				await probe.settle();
-
-				const info = await probe.probeActiveElement();
-
-				if (info === null || info.isBody) {
-					break;
-				}
-
-				if (info.isIframe) {
-					// Tab moved focus into an embedded document. An <iframe> is a
-					// container, not a control: WCAG attaches the focus-appearance
-					// requirement to the focusable controls inside the frame (a
-					// separate document, audited as its own page), not to the frame
-					// itself. The parent's document.activeElement also reports the
-					// same frame for every internal tab stop, so recording it would
-					// both raise false positives and log one duplicate per inner
-					// control. Keep tabbing so focus advances through and out of it.
-					continue;
-				}
-
-				if (info.index !== null) {
-					if (visited.has(info.index)) {
-						break;
-					}
-
-					visited.add(info.index);
-				}
-
-				const detection = await probe.detectIndicator(info, baseline);
-
-				elements.push({
-					selector: info.selector,
-					html: info.html,
-					tabIndex: i + 1,
-					passed: detection.method !== null,
-					detectionMethod: detection.method,
-					...(detection.method === null
-						? {
-								failureEvidence: {
-									focusedScreenshot: detection.focusedScreenshot,
-									unfocusedScreenshot: detection.unfocusedScreenshot,
-									focusedStyles: detection.focusedStyles,
-									unfocusedStyles: detection.unfocusedStyles,
-								},
-							}
-						: {}),
-				});
-
-				if (detection.method === null) {
-					failures++;
-				}
-
-				if (
-					options.failedElementLimit > 0 &&
-					failures >= options.failedElementLimit
-				) {
-					reachedFailedElementLimit = true;
-
-					break;
-				}
-			}
-
-			reachedLimit = i === options.elementLimit;
-		} finally {
-			await probe.clearMarkers();
-		}
-	}
-
-	if (options.timeout > 0) {
-		const loop = tabThroughElements();
-		let timer: ReturnType<typeof setTimeout> | undefined;
-
-		try {
-			await Promise.race([
-				loop,
-				new Promise<void>((resolve) => {
-					timer = setTimeout(() => {
-						aborted = true;
-						timedOut = true;
-						timedOutElements = [...elements];
-
-						resolve();
-					}, options.timeout);
-				}),
-			]);
-		} finally {
-			clearTimeout(timer);
-		}
-
-		if (timedOut) {
-			// The loop keeps unwinding in the background after we return (it breaks
-			// at the next iteration); swallow any late failure so it can't surface
-			// as an unhandled rejection.
-			loop.catch(() => {});
-		}
-	} else {
-		await tabThroughElements();
-	}
-
-	const finalElements = timedOutElements ?? elements;
-	const passed = finalElements.filter((e) => e.passed).length;
-
-	return {
-		elements: finalElements,
-		summary: {
-			checked: finalElements.length,
-			passed,
-			failed: finalElements.length - passed,
-			reachedLimit,
-			reachedFailedElementLimit,
-			timedOut,
-		},
-	};
-}
-
-function createAdaptorProbe(
-	adaptor: FocusAppearanceAuditAdaptor,
-	options: ResolvedOptions,
-): FocusProbe {
-	return {
-		async captureBaseline() {
-			const payload = await adaptor.evaluate(
-				baselineScript,
-				FOCUS_STYLE_PROPERTIES as unknown as string[],
-				MARKER_ATTR,
-				Math.max(options.elementLimit, options.baselineElementLimit),
-			);
-
-			// Entries reference interned snapshots by index; the Map values share
-			// the snapshot objects, which are only ever read.
-			return new Map(
-				payload.entries.map((e) => {
-					const styles = payload.styles[e.styleIndex];
-
-					if (!styles) {
-						// A dangling index means the payload violated its own invariant;
-						// degrading to the pixel diff here would silently hide the bug.
-						throw new Error(
-							`Baseline entry ${e.index} references missing style index ${e.styleIndex}`,
-						);
-					}
-
-					return [e.index, { styles, rect: e.rect }] as const;
-				}),
-			);
-		},
-
-		hasFocus() {
-			return adaptor.evaluate(() => document.hasFocus());
-		},
-
-		pressTab() {
-			return adaptor.pressTab();
-		},
-
-		settle() {
-			return new Promise((resolve) =>
-				setTimeout(resolve, options.screenshotSettleDelay),
-			);
-		},
-
-		async probeActiveElement() {
-			const base = await adaptor.evaluate(
-				probeActiveElementScript,
-				FOCUS_STYLE_PROPERTIES as unknown as string[],
-				MARKER_ATTR,
-			);
-
-			const html = truncateHtml(base.html);
-
-			if (base.isBody) {
-				return { ...base, html, selector: "" };
-			}
-
-			const handle = await adaptor.evaluateHandle(activeElementHandleScript);
-
-			try {
-				const selector = await adaptor.evaluate(getSelector, handle);
-
-				return { ...base, html, selector };
-			} finally {
-				await adaptor.disposeRef(handle);
-			}
-		},
-
-		async detectIndicator(info, baseline) {
-			const baselineEntry =
-				info.index !== null ? baseline.get(info.index) : undefined;
-
-			if (!options.skipStyleCheck) {
-				if (
-					baselineEntry &&
-					stylesIndicateFocus(baselineEntry.styles, info.styles)
-				) {
-					return { method: "style" };
-				}
-			}
-
-			const pixel = await fallbackPixelDiff(adaptor, options);
-
-			if (pixel.method !== null) {
-				return pixel;
-			}
-
-			return {
-				method: null,
-				focusedScreenshot: pixel.focusedScreenshot,
-				unfocusedScreenshot: pixel.unfocusedScreenshot,
-				focusedStyles: omitIdleStyleSnapshot(info.styles),
-				unfocusedStyles: omitIdleStyleSnapshot(
-					baselineEntry?.styles ?? {
-						element: {},
-						before: {},
-						after: {},
-					},
-				),
-			};
-		},
-
-		async clearMarkers() {
-			await adaptor.evaluate(clearMarkersScript, MARKER_ATTR);
-		},
-	};
-}
-
-type PixelDiffResult =
-	| { method: "pixel-diff" }
-	| {
-			method: null;
-			focusedScreenshot: Uint8Array;
-			unfocusedScreenshot: Uint8Array;
-	  };
-
-async function fallbackPixelDiff(
-	adaptor: FocusAppearanceAuditAdaptor,
-	options: ResolvedOptions,
-): Promise<PixelDiffResult> {
-	// Hold a handle so we can blur and re-focus the SAME element
-	// (document.activeElement becomes <body> after blur).
-	const handle = await adaptor.evaluateHandle(activeElementHandleScript);
-
-	try {
-		// Tab scrolls an element just barely into view at the viewport edge, which
-		// is exactly where fixed overlays (cookie banners, sticky footers) sit. If
-		// something covers the element there, both screenshots would show the
-		// overlay and no indicator could ever be detected — centre the element in
-		// the viewport first, then give the scroll a moment to settle.
-		if (await adaptor.evaluate(isCenterObscuredScript, handle)) {
-			await adaptor.evaluate(scrollToCenterScript, handle);
-
-			await new Promise((resolve) =>
-				setTimeout(resolve, options.screenshotSettleDelay),
-			);
-		}
-
-		const { width: pageWidth, height: pageHeight } =
-			await adaptor.evaluate(pageDimensionsScript);
-
-		const focusedRect = await adaptor.evaluate(elementRectScript, handle);
-		const focusedClip = bufferedClip(
-			focusedRect,
-			pageWidth,
-			pageHeight,
-			options.screenshotClipBuffer,
-		);
-
-		const scale = adaptor.screenshotClipScale ?? 1;
-
-		// Capture the focused state first, while focus is genuine: re-focusing the
-		// element afterwards cannot always restore it (the host of a closed shadow
-		// root cannot push focus back inside), so the focused frame must be taken
-		// before blurring.
-		const focused = await adaptor.screenshotClip(focusedClip, scale);
-
-		await adaptor.evaluate(blurScript, handle);
-
-		// Measure the unfocused rect after blurring rather than reusing a stale
-		// baseline rect: a :focus rule may have moved the element, and a
-		// fixed-position element's page-relative rect changes with every scroll.
-		const unfocusedRect = await adaptor.evaluate(elementRectScript, handle);
-		const unfocusedClip = bufferedClip(
-			unfocusedRect,
-			pageWidth,
-			pageHeight,
-			options.screenshotClipBuffer,
-		);
-
-		const unfocused = await adaptor.screenshotClip(unfocusedClip, scale);
-
-		// Restore focus so the next Tab advances from this element rather than
-		// restarting traversal. (A closed-shadow host can't be re-focused into the
-		// root; the loop still progresses because Tab re-enters from there.)
-		await adaptor.evaluate(focusScript, handle);
-
-		const differs = alignedRegionsDiffer(
-			Buffer.from(focused),
-			{
-				x: (focusedRect.x - focusedClip.x) * scale,
-				y: (focusedRect.y - focusedClip.y) * scale,
-			},
-			Buffer.from(unfocused),
-			{
-				x: (unfocusedRect.x - unfocusedClip.x) * scale,
-				y: (unfocusedRect.y - unfocusedClip.y) * scale,
-			},
-			options.screenshotDiffThreshold * scale * scale,
-		);
-
-		if (differs) {
-			return { method: "pixel-diff" };
-		}
-
-		return {
-			method: null,
-			focusedScreenshot: focused,
-			unfocusedScreenshot: unfocused,
-		};
-	} finally {
-		await adaptor.disposeRef(handle);
-	}
+	const orchestrator = createTabOrchestrator(adaptor, {
+		screenshotSettleDelay: options.screenshotSettleDelay,
+		screenshotClipBuffer: options.screenshotClipBuffer,
+		markerLimit: resolved.elementLimit,
+		baselineElementLimit: resolved.baselineElementLimit,
+	});
+	const audit = createFocusAppearanceAudit(options);
+	orchestrator.attach(audit);
+	await orchestrator.run();
+	return audit.result;
 }

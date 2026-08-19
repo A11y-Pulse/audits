@@ -4,7 +4,7 @@ export type {
 	Rect,
 } from "@a11y-pulse/tab-orchestrator";
 export type { FocusAppearanceOptions } from "./audit";
-export { runFocusAppearanceAudit } from "./audit";
+export { createFocusAppearanceAudit, runFocusAppearanceAudit } from "./audit";
 export type { StyleSnapshot } from "./detection";
 export { omitIdleStyleSnapshot } from "./detection";
 export type {

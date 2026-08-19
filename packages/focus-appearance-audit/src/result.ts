@@ -1,3 +1,5 @@
+import type { SessionEndReason } from "@a11y-pulse/tab-orchestrator";
+
 import type { StyleSnapshot } from "./detection";
 
 export type DetectionMethod = "style" | "pixel-diff";
@@ -65,5 +67,10 @@ export type FocusAppearanceResult = {
 		 * are whatever had been gathered when the deadline hit.
 		 */
 		timedOut: boolean;
+		/**
+		 * Why the tab session ended, or `null` when this consumer disconnected
+		 * itself (element limit, failed-element limit, or timeout).
+		 */
+		sessionEnd: SessionEndReason | null;
 	};
 };
