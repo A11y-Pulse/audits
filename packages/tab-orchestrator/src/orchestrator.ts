@@ -69,9 +69,18 @@ export function createTabOrchestrator(
 			);
 			const styleProps = [...FOCUS_STYLE_PROPERTIES];
 
+			let settleTimer: ReturnType<typeof setTimeout> | undefined;
+			let resolveSettle: (() => void) | undefined;
+
 			const handleFor = (consumer: TabConsumer): TabSessionHandle => ({
 				disconnect() {
 					attached.delete(consumer);
+					if (attached.size === 0 && settleTimer !== undefined) {
+						clearTimeout(settleTimer);
+						settleTimer = undefined;
+						resolveSettle?.();
+						resolveSettle = undefined;
+					}
 				},
 				async ensureUnfocusedPair() {
 					if (!consumer.capabilities.has("unfocusedPair")) {
@@ -122,7 +131,12 @@ export function createTabOrchestrator(
 
 					await adaptor.pressTab();
 					await new Promise<void>((resolve) => {
-						setTimeout(resolve, screenshotSettleDelay);
+						resolveSettle = resolve;
+						settleTimer = setTimeout(() => {
+							settleTimer = undefined;
+							resolveSettle = undefined;
+							resolve();
+						}, screenshotSettleDelay);
 					});
 
 					if (attached.size === 0) {
@@ -188,7 +202,11 @@ export function createTabOrchestrator(
 			} catch (error) {
 				failure = error;
 			} finally {
-				await adaptor.evaluate(clearMarkersScript, MARKER_ATTR);
+				try {
+					await adaptor.evaluate(clearMarkersScript, MARKER_ATTR);
+				} catch {
+					// Isolate teardown so a marker-clear throw cannot replace the loop error.
+				}
 			}
 
 			if (failure !== undefined) {

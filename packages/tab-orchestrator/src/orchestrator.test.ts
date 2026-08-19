@@ -292,4 +292,78 @@ describe("tab loop", () => {
 		await orchestrator.run();
 		expect(thrown?.message).toBe("unfocusedPair capture not implemented");
 	});
+
+	it("aborts in-flight settle when the last consumer disconnects", async () => {
+		const settleDelay = 500;
+		let disconnect: (() => void) | undefined;
+		const a = recordingConsumer();
+		a.onSessionStart = (session) => {
+			disconnect = () => session.disconnect();
+		};
+
+		const adaptor = loopAdaptor({
+			hasFocus: [true],
+			active: [info(0)],
+		});
+		let probeCalls = 0;
+		const evaluate = adaptor.evaluate;
+		adaptor.evaluate = (async (fn, ...args) => {
+			if (fn === probeActiveElementScript) {
+				probeCalls += 1;
+			}
+			return evaluate(fn, ...args);
+		}) as BrowserAdaptor["evaluate"];
+
+		let releasePressTab!: () => void;
+		adaptor.pressTab = () =>
+			new Promise<void>((resolve) => {
+				releasePressTab = resolve;
+			});
+
+		const orchestrator = createTabOrchestrator(adaptor, {
+			screenshotSettleDelay: settleDelay,
+		});
+		orchestrator.attach(a);
+		const running = orchestrator.run();
+
+		await vi.waitFor(() => {
+			expect(releasePressTab).toBeTypeOf("function");
+			expect(disconnect).toBeDefined();
+		});
+		releasePressTab();
+		await Promise.resolve();
+		await Promise.resolve();
+
+		const started = Date.now();
+		disconnect?.();
+		await running;
+		expect(Date.now() - started).toBeLessThan(settleDelay / 2);
+		expect(probeCalls).toBe(0);
+		expect(a.stops).toHaveLength(0);
+	});
+
+	it("notifies remaining consumers with failed and rethrows when pressTab throws", async () => {
+		const a = recordingConsumer();
+		const adaptor = loopAdaptor({
+			hasFocus: [true],
+			active: [info(0)],
+		});
+		adaptor.pressTab = async () => {
+			throw new Error("tab failed");
+		};
+		const evaluate = adaptor.evaluate;
+		adaptor.evaluate = (async (fn, ...args) => {
+			if (fn === clearMarkersScript) {
+				throw new Error("teardown failed");
+			}
+			return evaluate(fn, ...args);
+		}) as BrowserAdaptor["evaluate"];
+
+		const orchestrator = createTabOrchestrator(adaptor, {
+			screenshotSettleDelay: 0,
+		});
+		orchestrator.attach(a);
+		await expect(orchestrator.run()).rejects.toThrow("tab failed");
+		expect(a.sessionEnds).toEqual(["failed"]);
+	});
 });
