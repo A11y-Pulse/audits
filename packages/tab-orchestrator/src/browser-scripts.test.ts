@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	baselineScript,
 	elementRectScript,
+	elementStylesScript,
 	isCenterObscuredScript,
 	probeActiveElementScript,
 	scrollToCenterScript,
@@ -346,6 +347,21 @@ describe("isCenterObscuredScript", () => {
 		document.elementFromPoint = () => null;
 
 		expect(isCenterObscuredScript(el)).toBe(false);
+	});
+});
+
+describe("elementStylesScript", () => {
+	it("reads computed styles from a given element after blur", () => {
+		document.body.innerHTML = `<button style="outline-width: 3px">x</button>`;
+		const el = document.querySelector("button") as HTMLElement;
+		el.focus();
+		el.blur();
+
+		const styles = elementStylesScript(el, ["outline-width"]);
+
+		expect(styles.element["outline-width"]).toBe("3px");
+		expect(styles.before).toEqual(expect.any(Object));
+		expect(styles.after).toEqual(expect.any(Object));
 	});
 });
 

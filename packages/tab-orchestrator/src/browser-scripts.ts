@@ -383,6 +383,58 @@ export function focusScript(el: Element | null): void {
 }
 
 /**
+ * Read focus-relevant computed styles from a given element. Unlike
+ * `probeActiveElementScript`, this does not use `document.activeElement`, so it
+ * still works after the node has been blurred.
+ */
+export function elementStylesScript(
+	el: Element | null,
+	props: string[],
+): StyleSnapshot {
+	if (!el) {
+		return { element: {}, before: {}, after: {} };
+	}
+
+	// Must be byte-identical to the copies in baselineScript and
+	// probeActiveElementScript: snapshots from the scripts are compared for
+	// equality, so they have to truncate oversized values the same way.
+	const truncateValue = (value: string): string => {
+		if (value.length <= 512) {
+			return value;
+		}
+
+		let hash = 5381;
+
+		for (let i = 0; i < value.length; i++) {
+			hash = ((hash * 33) ^ value.charCodeAt(i)) >>> 0;
+		}
+
+		return `${value.slice(0, 512)}#len=${value.length}#h=${hash.toString(36)}`;
+	};
+
+	const read = (pseudo: string | undefined): Record<string, string> => {
+		const cs = getComputedStyle(el, pseudo);
+		const out: Record<string, string> = {};
+
+		for (const prop of props) {
+			out[prop] = truncateValue(cs.getPropertyValue(prop));
+		}
+
+		if (pseudo) {
+			out.content = truncateValue(cs.getPropertyValue("content"));
+		}
+
+		return out;
+	};
+
+	return {
+		element: read(undefined),
+		before: read("::before"),
+		after: read("::after"),
+	};
+}
+
+/**
  * Remove the marker attribute from all elements and blur the active element. This is a best-effort
  * attempt to reset state between audits.
  */

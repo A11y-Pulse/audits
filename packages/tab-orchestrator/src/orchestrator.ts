@@ -1,4 +1,4 @@
-import type { BrowserAdaptor } from "./adaptor";
+import type { BrowserAdaptor, ElementRef } from "./adaptor";
 import {
 	activeElementHandleScript,
 	baselineScript,
@@ -15,7 +15,9 @@ import type {
 	TabConsumer,
 	TabSessionHandle,
 	TabStopSnapshot,
+	UnfocusedPair,
 } from "./types";
+import { captureUnfocusedPair } from "./unfocused-pair";
 
 export const DEFAULT_SCREENSHOT_SETTLE_DELAY = 33;
 export const DEFAULT_SCREENSHOT_CLIP_BUFFER = 10;
@@ -63,14 +65,26 @@ export function createTabOrchestrator(
 			const attached = new Set(consumers);
 			const screenshotSettleDelay =
 				options.screenshotSettleDelay ?? DEFAULT_SCREENSHOT_SETTLE_DELAY;
+			const screenshotClipBuffer =
+				options.screenshotClipBuffer ?? DEFAULT_SCREENSHOT_CLIP_BUFFER;
 			const markerLimit = Math.max(
 				options.markerLimit ?? DEFAULT_MARKER_LIMIT,
 				options.baselineElementLimit ?? 0,
 			);
 			const styleProps = [...FOCUS_STYLE_PROPERTIES];
+			const resolved = {
+				screenshotSettleDelay,
+				screenshotClipBuffer,
+				styleProps,
+			};
 
 			let settleTimer: ReturnType<typeof setTimeout> | undefined;
 			let resolveSettle: (() => void) | undefined;
+			const pairByStop = { current: null as Promise<UnfocusedPair> | null };
+			let activeHandle: ElementRef | undefined;
+
+			const remainingDeclarers = (): boolean =>
+				[...attached].some((c) => c.capabilities.has("unfocusedPair"));
 
 			const handleFor = (consumer: TabConsumer): TabSessionHandle => ({
 				disconnect() {
@@ -82,11 +96,22 @@ export function createTabOrchestrator(
 						resolveSettle = undefined;
 					}
 				},
-				async ensureUnfocusedPair() {
+				ensureUnfocusedPair: () => {
 					if (!consumer.capabilities.has("unfocusedPair")) {
 						throw new Error("Consumer did not declare unfocusedPair");
 					}
-					throw new Error("unfocusedPair capture not implemented");
+					if (!remainingDeclarers()) {
+						throw new Error("Consumer did not declare unfocusedPair");
+					}
+					if (activeHandle === undefined) {
+						throw new Error("unfocusedPair capture not implemented");
+					}
+					pairByStop.current ??= captureUnfocusedPair(
+						adaptor,
+						resolved,
+						activeHandle,
+					);
+					return pairByStop.current;
 				},
 			});
 
@@ -123,6 +148,8 @@ export function createTabOrchestrator(
 				let tabIndex = 0;
 
 				while (attached.size > 0) {
+					pairByStop.current = null;
+
 					const hasFocus = await adaptor.evaluate(() => document.hasFocus());
 					if (!hasFocus) {
 						end("lostFocus");
@@ -166,37 +193,46 @@ export function createTabOrchestrator(
 					}
 
 					const ref = await adaptor.evaluateHandle(activeElementHandleScript);
-					let selector = "";
+					activeHandle = ref;
 					try {
-						selector = await adaptor.evaluate(getSelector, ref);
-					} finally {
-						await adaptor.disposeRef(ref);
-					}
+						const selector = await adaptor.evaluate(getSelector, ref);
 
-					const activeElement: ActiveElementInfo = {
-						...base,
-						html: truncateHtml(base.html),
-						selector,
-					};
+						const activeElement: ActiveElementInfo = {
+							...base,
+							html: truncateHtml(base.html),
+							selector,
+						};
 
-					const snapshot: TabStopSnapshot = {
-						tabIndex: ++tabIndex,
-						activeElement,
-					};
+						const snapshot: TabStopSnapshot = {
+							tabIndex: ++tabIndex,
+							activeElement,
+						};
 
-					const wantsBaseline = [...attached].some((consumer) =>
-						consumer.capabilities.has("baselineStyles"),
-					);
-					if (wantsBaseline && activeElement.index !== null) {
-						const baselineStyles = interned.get(activeElement.index);
-						if (baselineStyles !== undefined) {
-							snapshot.baselineStyles = baselineStyles;
+						const wantsBaseline = [...attached].some((consumer) =>
+							consumer.capabilities.has("baselineStyles"),
+						);
+						if (wantsBaseline && activeElement.index !== null) {
+							const baselineStyles = interned.get(activeElement.index);
+							if (baselineStyles !== undefined) {
+								snapshot.baselineStyles = baselineStyles;
+							}
 						}
-					}
 
-					const recipients = [...attached];
-					for (const consumer of recipients) {
-						await consumer.onTabStop(snapshot, handleFor(consumer));
+						const recipients = [...attached];
+						for (const consumer of recipients) {
+							await consumer.onTabStop(snapshot, handleFor(consumer));
+						}
+					} finally {
+						try {
+							if (pairByStop.current !== null) {
+								await pairByStop.current;
+							}
+						} catch {
+							// Capture errors already surface through the consumer that
+							// awaited; still dispose the handle below.
+						}
+						activeHandle = undefined;
+						await adaptor.disposeRef(ref);
 					}
 				}
 			} catch (error) {

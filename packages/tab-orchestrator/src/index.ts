@@ -6,6 +6,7 @@ export {
 	blurScript,
 	clearMarkersScript,
 	elementRectScript,
+	elementStylesScript,
 	focusScript,
 	isCenterObscuredScript,
 	pageDimensionsScript,

@@ -3,8 +3,15 @@ import type { BrowserAdaptor } from "./adaptor";
 import {
 	activeElementHandleScript,
 	baselineScript,
+	blurScript,
 	clearMarkersScript,
+	elementRectScript,
+	elementStylesScript,
+	focusScript,
+	isCenterObscuredScript,
+	pageDimensionsScript,
 	probeActiveElementScript,
+	scrollToCenterScript,
 } from "./browser-scripts";
 import { getSelector } from "./get-selector";
 import { createTabOrchestrator } from "./orchestrator";
@@ -124,6 +131,9 @@ function loopAdaptor(script: {
 			}
 			if (fn === getSelector) {
 				return "#fake";
+			}
+			if (fn === elementStylesScript) {
+				return EMPTY_STYLES;
 			}
 			if (fn === clearMarkersScript) {
 				return undefined;
@@ -272,25 +282,97 @@ describe("tab loop", () => {
 		expect(thrown?.message).toMatch(/did not declare unfocusedPair/i);
 	});
 
-	it("throws from ensureUnfocusedPair when the consumer declared it", async () => {
-		let thrown: Error | undefined;
-		const wrapped: TabConsumer = {
+	it("captures unfocusedPair once per stop when a declarer calls ensureUnfocusedPair", async () => {
+		const clips: unknown[] = [];
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			active: [info(0)],
+		});
+		const originalEvaluate = adaptor.evaluate.bind(adaptor);
+		adaptor.evaluate = (async (fn, ...args) => {
+			if (fn === pageDimensionsScript) {
+				return { width: 2000, height: 4000 };
+			}
+			if (fn === isCenterObscuredScript) {
+				return false;
+			}
+			if (fn === elementRectScript) {
+				return { x: 10, y: 20, width: 30, height: 40 };
+			}
+			if (
+				fn === blurScript ||
+				fn === focusScript ||
+				fn === scrollToCenterScript
+			) {
+				return undefined;
+			}
+			return originalEvaluate(fn, ...args);
+		}) as BrowserAdaptor["evaluate"];
+		adaptor.screenshotClip = async (clip) => {
+			clips.push(clip);
+			return new Uint8Array([clips.length]);
+		};
+
+		const a: TabConsumer = {
 			capabilities: new Set(["unfocusedPair"]),
 			async onTabStop(_snapshot, session) {
-				try {
-					await session.ensureUnfocusedPair();
-				} catch (error) {
-					thrown = error as Error;
-				}
+				const first = await session.ensureUnfocusedPair();
+				const second = await session.ensureUnfocusedPair();
+				expect(first).toBe(second);
+				expect(first.focusedScreenshot).toEqual(new Uint8Array([1]));
+				expect(first.unfocusedScreenshot).toEqual(new Uint8Array([2]));
 			},
 		};
-		const orchestrator = createTabOrchestrator(
-			loopAdaptor({ hasFocus: [true, true], active: [info(0)] }),
-			{ screenshotSettleDelay: 0 },
-		);
-		orchestrator.attach(wrapped);
+
+		const orchestrator = createTabOrchestrator(adaptor, {
+			screenshotSettleDelay: 0,
+			screenshotClipBuffer: 10,
+		});
+		orchestrator.attach(a);
 		await orchestrator.run();
-		expect(thrown?.message).toBe("unfocusedPair capture not implemented");
+		expect(clips).toHaveLength(2);
+	});
+
+	it("scrolls to center before capture when the element centre is covered", async () => {
+		let scrolls = 0;
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			active: [info(0)],
+		});
+		const originalEvaluate = adaptor.evaluate.bind(adaptor);
+		adaptor.evaluate = (async (fn, ...args) => {
+			if (fn === isCenterObscuredScript) {
+				return true;
+			}
+			if (fn === scrollToCenterScript) {
+				scrolls++;
+				return undefined;
+			}
+			if (fn === pageDimensionsScript) {
+				return { width: 2000, height: 4000 };
+			}
+			if (fn === elementRectScript) {
+				return { x: 10, y: 20, width: 30, height: 40 };
+			}
+			if (fn === blurScript || fn === focusScript) {
+				return undefined;
+			}
+			return originalEvaluate(fn, ...args);
+		}) as BrowserAdaptor["evaluate"];
+		adaptor.screenshotClip = async () => new Uint8Array([1]);
+
+		const a: TabConsumer = {
+			capabilities: new Set(["unfocusedPair"]),
+			async onTabStop(_snapshot, session) {
+				await session.ensureUnfocusedPair();
+			},
+		};
+		const orchestrator = createTabOrchestrator(adaptor, {
+			screenshotSettleDelay: 0,
+		});
+		orchestrator.attach(a);
+		await orchestrator.run();
+		expect(scrolls).toBe(1);
 	});
 
 	it("aborts in-flight settle when the last consumer disconnects", async () => {
