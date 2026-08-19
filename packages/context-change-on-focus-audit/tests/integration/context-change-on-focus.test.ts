@@ -99,22 +99,13 @@ describe("context change on focus audit (integration)", () => {
 		}
 	});
 
-	// KNOWN GAP (see task-11-report.md): `focus-removal.html`'s only
-	// focusable element blurs itself back to `document.body` on focus. The
-	// tab-orchestrator's "done tabbing" exit
-	// (`if (base === null || base.isBody) { end("completed"); ... }` in
-	// packages/tab-orchestrator/src/orchestrator.ts, currently ~line 321)
-	// runs *before* context signals are drained for a stop, so it cannot
-	// distinguish "we've genuinely run out of focusable elements" from "the
-	// element we just focused blurred itself away." The stop is never
-	// delivered to any consumer at all: `result.elements` comes back empty
-	// and `summary.sessionEnd` is `"completed"`, not a `focus-removed`
-	// violation. This is a real, unaddressed tab-orchestrator gap outside
-	// this package's (and this task's) permitted scope — flagged loudly
-	// rather than silently accepted; `it.fails` keeps this test suite green
-	// while ensuring a future orchestrator fix causes a loud failure here
-	// that forces this test to be un-skipped.
-	it.fails("flags focus being removed (blurred) on focus", async () => {
+	// Previously a KNOWN GAP: the tab-orchestrator's "done tabbing" exit
+	// used to run before context signals were drained for a stop, so
+	// `focus-removal.html`'s self-blurring element was indistinguishable
+	// from genuinely running out of focusable elements. Fixed by
+	// 08867a8 and 02bbefe, which notify consumers of F55 focus-removal
+	// before the isBody session-end exit.
+	it("flags focus being removed (blurred) on focus", async () => {
 		const { result, page } = await runFixture("focus-removal.html");
 
 		try {
