@@ -1,3 +1,4 @@
+import { FOCUS_STYLE_PROPERTIES } from "@a11y-pulse/tab-orchestrator";
 import { PNG } from "pngjs";
 import { describe, expect, it } from "vitest";
 import {
@@ -6,7 +7,6 @@ import {
 	type StyleSnapshot,
 	stylesIndicateFocus,
 } from "./detection";
-import { FOCUS_STYLE_PROPERTIES } from "./focus-style";
 
 function snapshot(
 	overrides: Partial<Record<string, string>> = {},

@@ -1,3 +1,15 @@
+import {
+	baselineScript,
+	blurScript,
+	clearMarkersScript,
+	elementRectScript,
+	focusScript,
+	getSelector,
+	isCenterObscuredScript,
+	pageDimensionsScript,
+	probeActiveElementScript,
+	scrollToCenterScript,
+} from "@a11y-pulse/tab-orchestrator";
 import { PNG } from "pngjs";
 import { describe, expect, it } from "vitest";
 import type { FocusAppearanceAuditAdaptor } from "./adaptor";
@@ -7,19 +19,7 @@ import {
 	runFocusAppearanceAudit,
 	runFocusLoop,
 } from "./audit";
-import {
-	baselineScript,
-	blurScript,
-	clearMarkersScript,
-	elementRectScript,
-	focusScript,
-	isCenterObscuredScript,
-	pageDimensionsScript,
-	probeActiveElementScript,
-	scrollToCenterScript,
-} from "./browser-scripts";
 import type { Rect, StyleSnapshot } from "./detection";
-import { getSelector } from "./get-selector";
 import type { DetectionMethod, IndicatorDetection } from "./result";
 
 const EMPTY_STYLES: StyleSnapshot = { element: {}, before: {}, after: {} };

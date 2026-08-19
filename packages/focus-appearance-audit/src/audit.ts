@@ -1,16 +1,19 @@
-import type { FocusAppearanceAuditAdaptor } from "./adaptor";
 import {
 	activeElementHandleScript,
 	baselineScript,
 	blurScript,
 	clearMarkersScript,
 	elementRectScript,
+	FOCUS_STYLE_PROPERTIES,
 	focusScript,
+	getSelector,
 	isCenterObscuredScript,
 	pageDimensionsScript,
 	probeActiveElementScript,
 	scrollToCenterScript,
-} from "./browser-scripts";
+	truncateHtml,
+} from "@a11y-pulse/tab-orchestrator";
+import type { FocusAppearanceAuditAdaptor } from "./adaptor";
 import {
 	alignedRegionsDiffer,
 	bufferedClip,
@@ -19,14 +22,11 @@ import {
 	type StyleSnapshot,
 	stylesIndicateFocus,
 } from "./detection";
-import { FOCUS_STYLE_PROPERTIES } from "./focus-style";
-import { getSelector } from "./get-selector";
 import type {
 	FocusAppearanceResult,
 	FocusElementResult,
 	IndicatorDetection,
 } from "./result";
-import { truncateHtml } from "./truncate-html";
 
 export const DEFAULT_ELEMENT_LIMIT = 1024;
 export const DEFAULT_SCREENSHOT_SETTLE_DELAY = 33; // ~2 frames at 60fps

@@ -4,7 +4,8 @@
  * so any common logic (like descending into shadow roots) must be duplicated.
  */
 
-import type { Rect, StyleSnapshot } from "./detection";
+import type { Rect } from "./adaptor";
+import type { StyleSnapshot } from "./types";
 
 type BaselineElementEntry = {
 	index: number;
