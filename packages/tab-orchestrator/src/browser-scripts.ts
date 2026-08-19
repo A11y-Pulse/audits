@@ -689,3 +689,268 @@ export function clearObscurerScript(obscurerAttr: string): void {
 		marked.removeAttribute(obscurerAttr);
 	}
 }
+
+type ContextObserverState = {
+	baselineHref: string;
+	openedWindow: boolean;
+	submittedForm: boolean;
+	/** Elements that received focusin since the last drain. */
+	focusIns: Element[];
+	softUrlChange: boolean;
+	installed: boolean;
+};
+
+declare global {
+	interface Window {
+		__a11yContextObserver?: ContextObserverState;
+	}
+}
+
+/**
+ * Install once: wrap window.open (record + inert stub), capture-phase submit
+ * (record + preventDefault), track focusin and soft URL changes.
+ */
+export function installContextObserverScript(): void {
+	if (window.__a11yContextObserver?.installed) {
+		return;
+	}
+
+	const state: ContextObserverState = {
+		baselineHref: location.href,
+		openedWindow: false,
+		submittedForm: false,
+		focusIns: [],
+		softUrlChange: false,
+		installed: true,
+	};
+
+	window.__a11yContextObserver = state;
+
+	const originalOpen = window.open.bind(window);
+
+	window.open = (..._args: Parameters<typeof window.open>) => {
+		state.openedWindow = true;
+
+		return {
+			closed: true,
+			close() {},
+			focus() {},
+			blur() {},
+			opener: null,
+			location: { href: "" },
+		} as unknown as Window;
+	};
+
+	// Keep a reference so tooling does not tree-shake the bind as unused.
+	void originalOpen;
+
+	document.addEventListener(
+		"submit",
+		(event) => {
+			state.submittedForm = true;
+			event.preventDefault();
+			event.stopPropagation();
+		},
+		true,
+	);
+
+	document.addEventListener(
+		"focus",
+		(event) => {
+			const target = event.target;
+
+			// Prefer nodeType: instanceof can be brittle across some embeddings.
+			if (target && (target as Node).nodeType === 1) {
+				state.focusIns.push(target as Element);
+			}
+		},
+		true,
+	);
+
+	const noteSoftNav = (): void => {
+		if (location.href !== state.baselineHref) {
+			state.softUrlChange = true;
+		}
+	};
+
+	window.addEventListener("hashchange", noteSoftNav);
+	window.addEventListener("popstate", noteSoftNav);
+
+	const wrapHistory = (method: "pushState" | "replaceState"): void => {
+		const original = history[method].bind(history);
+
+		history[method] = ((...args: Parameters<History["pushState"]>) => {
+			const result = original(...args);
+			noteSoftNav();
+
+			return result;
+		}) as History["pushState"];
+	};
+
+	wrapHistory("pushState");
+	wrapHistory("replaceState");
+}
+
+export type DrainContextObserverResult = {
+	openedWindow: boolean;
+	submittedForm: boolean;
+	focusRemoved: boolean;
+	redirect: "outside" | "same-subtree" | null;
+	softUrlChange: boolean;
+	navigation: boolean;
+	attributedHtml: string | null;
+	/** True when an attributed element was marked for selector resolution. */
+	hasAttributed: boolean;
+};
+
+/**
+ * Drain observer signals for the current tab stop and reset per-stop flags.
+ * Classification of focus removal / redirection uses the post-Tab settle
+ * activeElement and the focusin history from this stop only.
+ */
+export function drainContextObserverScript(
+	markerAttr: string,
+): DrainContextObserverResult {
+	// Must be a string literal inside this function: it is serialized into the page.
+	const attributedAttr = "data-a11y-ctx-attr";
+
+	const empty: DrainContextObserverResult = {
+		openedWindow: false,
+		submittedForm: false,
+		focusRemoved: false,
+		redirect: null,
+		softUrlChange: false,
+		navigation: false,
+		attributedHtml: null,
+		hasAttributed: false,
+	};
+
+	const state = window.__a11yContextObserver;
+
+	if (!state) {
+		return empty;
+	}
+
+	for (const marked of Array.from(
+		document.querySelectorAll(`[${attributedAttr}]`),
+	)) {
+		marked.removeAttribute(attributedAttr);
+	}
+
+	const openedWindow = state.openedWindow;
+	const submittedForm = state.submittedForm;
+	const softUrlChange = state.softUrlChange;
+	const focusIns = state.focusIns.slice();
+
+	state.openedWindow = false;
+	state.submittedForm = false;
+	state.softUrlChange = false;
+	state.focusIns = [];
+
+	let active = document.activeElement;
+
+	while (active?.shadowRoot?.activeElement) {
+		active = active.shadowRoot.activeElement;
+	}
+
+	const intended =
+		focusIns.find(
+			(el) => el !== document.body && el !== document.documentElement,
+		) ?? null;
+
+	const openingHtml = (node: Element): string => {
+		const clone = node.cloneNode(false) as Element;
+		clone.removeAttribute(markerAttr);
+		clone.removeAttribute(attributedAttr);
+
+		return clone.outerHTML;
+	};
+
+	let focusRemoved = false;
+	let redirect: "outside" | "same-subtree" | null = null;
+	let attributedHtml: string | null = null;
+	let hasAttributed = false;
+
+	const bodyOrNone =
+		!active || active === document.body || active === document.documentElement;
+
+	if (intended && bodyOrNone) {
+		focusRemoved = true;
+		attributedHtml = openingHtml(intended);
+		intended.setAttribute(attributedAttr, "1");
+		hasAttributed = true;
+	} else if (intended && active && intended !== active) {
+		const composedContains = (ancestor: Element, node: Element): boolean => {
+			let current: Node | null = node;
+
+			while (current) {
+				if (current === ancestor) {
+					return true;
+				}
+
+				const parent: Node | null = current.parentNode;
+
+				if (parent) {
+					current = parent;
+					continue;
+				}
+
+				if (current instanceof ShadowRoot) {
+					current = current.host;
+					continue;
+				}
+
+				break;
+			}
+
+			return false;
+		};
+
+		const same =
+			composedContains(intended, active) || composedContains(active, intended);
+
+		redirect = same ? "same-subtree" : "outside";
+		attributedHtml = openingHtml(intended);
+		intended.setAttribute(attributedAttr, "1");
+		hasAttributed = true;
+	}
+
+	return {
+		openedWindow,
+		submittedForm,
+		focusRemoved,
+		redirect,
+		softUrlChange,
+		navigation: false,
+		attributedHtml,
+		hasAttributed,
+	};
+}
+
+export function clearAttributedScript(): void {
+	for (const marked of Array.from(
+		document.querySelectorAll("[data-a11y-ctx-attr]"),
+	)) {
+		marked.removeAttribute("data-a11y-ctx-attr");
+	}
+}
+
+/**
+ * Drop focusin history accumulated after drain (e.g. pixel-diff blur/refocus)
+ * so the next tab stop does not mis-attribute F55 or redirects.
+ */
+export function clearContextFocusInsScript(): void {
+	const state = window.__a11yContextObserver;
+
+	if (state) {
+		state.focusIns = [];
+		state.openedWindow = false;
+		state.submittedForm = false;
+		state.softUrlChange = false;
+	}
+}
+
+/** Current location.href for navigation comparison in the host. */
+export function locationHrefScript(): string {
+	return location.href;
+}

@@ -2,8 +2,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	baselineScript,
+	drainContextObserverScript,
 	elementRectScript,
 	elementStylesScript,
+	installContextObserverScript,
 	isCenterObscuredScript,
 	measureObscuringScript,
 	probeActiveElementScript,
@@ -485,6 +487,50 @@ describe("measureObscuringScript", () => {
 
 		expect(result.fullyObscured).toBe(true);
 		expect(result.opacity).toBe("semi-transparent");
+	});
+});
+
+describe("context observer scripts", () => {
+	afterEach(() => {
+		document.body.innerHTML = "";
+		delete window.__a11yContextObserver;
+	});
+
+	it("records window.open and returns an inert stub", () => {
+		installContextObserverScript();
+		const stub = window.open("https://example.com");
+
+		expect(stub).toBeTruthy();
+		expect(stub?.closed).toBe(true);
+
+		const drained = drainContextObserverScript("data-idx");
+		expect(drained.openedWindow).toBe(true);
+	});
+
+	it("records submit and prevents the default", () => {
+		document.body.innerHTML = '<form id="f"><input id="i"></form>';
+		installContextObserverScript();
+
+		const form = document.querySelector("#f") as HTMLFormElement;
+		const event = new Event("submit", { bubbles: true, cancelable: true });
+		form.dispatchEvent(event);
+
+		expect(event.defaultPrevented).toBe(true);
+
+		const drained = drainContextObserverScript("data-idx");
+		expect(drained.submittedForm).toBe(true);
+	});
+
+	it("classifies focus removal when settle lands on body", () => {
+		document.body.innerHTML = '<input id="a"><input id="b">';
+		installContextObserverScript();
+		const a = document.querySelector("#a") as HTMLInputElement;
+		a.dispatchEvent(new FocusEvent("focus", { bubbles: false }));
+		a.blur();
+
+		const drained = drainContextObserverScript("data-idx");
+		expect(drained.focusRemoved).toBe(true);
+		expect(drained.hasAttributed).toBe(true);
 	});
 });
 

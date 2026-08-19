@@ -4,11 +4,15 @@ import {
 	activeElementHandleScript,
 	baselineScript,
 	blurScript,
+	clearAttributedScript,
+	clearContextFocusInsScript,
 	clearMarkersScript,
 	clearObscurerScript,
+	drainContextObserverScript,
 	elementRectScript,
 	elementStylesScript,
 	focusScript,
+	installContextObserverScript,
 	isCenterObscuredScript,
 	measureObscuringScript,
 	obscurerHandleScript,
@@ -493,5 +497,192 @@ describe("tab loop", () => {
 		orchestrator.attach(a);
 		await expect(orchestrator.run()).rejects.toThrow("tab failed");
 		expect(a.sessionEnds).toEqual(["failed"]);
+	});
+
+	it("drains context signals before measuring obscuring", async () => {
+		const order: string[] = [];
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			active: [info(0)],
+		});
+		const original = adaptor.evaluate.bind(adaptor);
+		adaptor.evaluate = (async (fn, ...args) => {
+			if (fn === installContextObserverScript) {
+				order.push("install");
+				return undefined;
+			}
+			if (fn === drainContextObserverScript) {
+				order.push("drain");
+				return {
+					openedWindow: false,
+					submittedForm: false,
+					focusRemoved: false,
+					redirect: null,
+					softUrlChange: false,
+					navigation: false,
+					attributedHtml: null,
+					hasAttributed: false,
+				};
+			}
+			if (fn === measureObscuringScript) {
+				order.push("obscure");
+				return {
+					coveredFraction: 0,
+					fullyObscured: false,
+					offscreen: false,
+					opacity: "opaque",
+					obscuredByHtml: null,
+					hasObscurer: false,
+				};
+			}
+			return original(fn, ...args);
+		}) as BrowserAdaptor["evaluate"];
+		const orchestrator = createTabOrchestrator(adaptor, {
+			screenshotSettleDelay: 0,
+		});
+		orchestrator.attach(recordingConsumer(["contextSignals", "obscuring"]));
+		await orchestrator.run();
+		expect(order.slice(0, 3)).toEqual(["install", "drain", "obscure"]);
+	});
+
+	it("does not drain after the last contextSignals consumer disconnects", async () => {
+		let drains = 0;
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true, true],
+			active: [info(0), info(1)],
+		});
+		const original = adaptor.evaluate.bind(adaptor);
+		adaptor.evaluate = (async (fn, ...args) => {
+			if (fn === drainContextObserverScript) {
+				drains++;
+				return {
+					openedWindow: false,
+					submittedForm: false,
+					focusRemoved: false,
+					redirect: null,
+					softUrlChange: false,
+					navigation: false,
+					attributedHtml: null,
+					hasAttributed: false,
+				};
+			}
+			if (fn === installContextObserverScript) {
+				return undefined;
+			}
+			return original(fn, ...args);
+		}) as BrowserAdaptor["evaluate"];
+		const ctx = recordingConsumer(
+			["contextSignals"],
+			async (_s, disconnect) => {
+				disconnect();
+			},
+		);
+		const other = recordingConsumer();
+		const orchestrator = createTabOrchestrator(adaptor, {
+			screenshotSettleDelay: 0,
+		});
+		orchestrator.attach(ctx);
+		orchestrator.attach(other);
+		await orchestrator.run();
+		expect(drains).toBe(1);
+	});
+
+	it("aborts the session after notifying a navigation drain", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true, true],
+			active: [info(0), info(1)],
+		});
+		const original = adaptor.evaluate.bind(adaptor);
+		adaptor.evaluate = (async (fn, ...args) => {
+			if (fn === drainContextObserverScript) {
+				return {
+					openedWindow: false,
+					submittedForm: false,
+					focusRemoved: false,
+					redirect: null,
+					softUrlChange: false,
+					navigation: true,
+					attributedHtml: null,
+					hasAttributed: false,
+				};
+			}
+			if (fn === installContextObserverScript) {
+				return undefined;
+			}
+			return original(fn, ...args);
+		}) as BrowserAdaptor["evaluate"];
+		const ctx = recordingConsumer(["contextSignals"]);
+		const orchestrator = createTabOrchestrator(adaptor, {
+			screenshotSettleDelay: 0,
+		});
+		orchestrator.attach(ctx);
+		await orchestrator.run();
+		expect(ctx.stops).toHaveLength(1);
+		expect(ctx.stops[0]?.contextSignals?.signals.navigation).toBe(true);
+		expect(ctx.sessionEnds).toEqual(["navigation"]);
+	});
+
+	it("clears context observer noise after ensureUnfocusedPair blur", async () => {
+		const order: string[] = [];
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			active: [info(0)],
+		});
+		const original = adaptor.evaluate.bind(adaptor);
+		adaptor.evaluate = (async (fn, ...args) => {
+			if (fn === drainContextObserverScript) {
+				order.push("drain");
+				return {
+					openedWindow: false,
+					submittedForm: false,
+					focusRemoved: false,
+					redirect: null,
+					softUrlChange: false,
+					navigation: false,
+					attributedHtml: null,
+					hasAttributed: false,
+				};
+			}
+			if (fn === clearContextFocusInsScript || fn === clearAttributedScript) {
+				order.push("clear");
+				return undefined;
+			}
+			if (fn === installContextObserverScript) {
+				return undefined;
+			}
+			if (
+				fn === pageDimensionsScript ||
+				fn === isCenterObscuredScript ||
+				fn === elementRectScript ||
+				fn === blurScript ||
+				fn === focusScript
+			) {
+				if (fn === pageDimensionsScript) {
+					return { width: 100, height: 100 };
+				}
+				if (fn === isCenterObscuredScript) {
+					return false;
+				}
+				if (fn === elementRectScript) {
+					return { x: 0, y: 0, width: 10, height: 10 };
+				}
+				return undefined;
+			}
+			return original(fn, ...args);
+		}) as BrowserAdaptor["evaluate"];
+		adaptor.screenshotClip = async () => new Uint8Array([1]);
+		const a: TabConsumer = {
+			capabilities: new Set(["contextSignals", "unfocusedPair"]),
+			async onTabStop(_s, session) {
+				order.push("pair");
+				await session.ensureUnfocusedPair();
+			},
+		};
+		const orchestrator = createTabOrchestrator(adaptor, {
+			screenshotSettleDelay: 0,
+		});
+		orchestrator.attach(a);
+		await orchestrator.run();
+		expect(order).toEqual(["drain", "pair", "clear"]);
 	});
 });
