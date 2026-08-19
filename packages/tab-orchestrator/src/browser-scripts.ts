@@ -39,7 +39,9 @@ export function baselineScript(
 	// byte-identical to the copy in probeActiveElementScript, or every oversized value would
 	// "change" on focus and produce a false style-check pass.
 	const truncateValue = (value: string): string => {
-		if (value.length <= 512) {
+		const MAX_STYLE_VALUE_LENGTH = 512;
+
+		if (value.length <= MAX_STYLE_VALUE_LENGTH) {
 			return value;
 		}
 
@@ -49,7 +51,7 @@ export function baselineScript(
 			hash = ((hash * 33) ^ value.charCodeAt(i)) >>> 0;
 		}
 
-		return `${value.slice(0, 512)}#len=${value.length}#h=${hash.toString(36)}`;
+		return `${value.slice(0, MAX_STYLE_VALUE_LENGTH)}#len=${value.length}#h=${hash.toString(36)}`;
 	};
 
 	const snapshot = (el: Element): StyleSnapshot => {
@@ -221,7 +223,9 @@ export function probeActiveElementScript(
 	// Must be byte-identical to the copy in baselineScript: snapshots from the two scripts are
 	// compared for equality, so they have to truncate oversized values the same way.
 	const truncateValue = (value: string): string => {
-		if (value.length <= 512) {
+		const MAX_STYLE_VALUE_LENGTH = 512;
+
+		if (value.length <= MAX_STYLE_VALUE_LENGTH) {
 			return value;
 		}
 
@@ -231,7 +235,7 @@ export function probeActiveElementScript(
 			hash = ((hash * 33) ^ value.charCodeAt(i)) >>> 0;
 		}
 
-		return `${value.slice(0, 512)}#len=${value.length}#h=${hash.toString(36)}`;
+		return `${value.slice(0, MAX_STYLE_VALUE_LENGTH)}#len=${value.length}#h=${hash.toString(36)}`;
 	};
 
 	const read = (pseudo: string | undefined): Record<string, string> => {
@@ -276,9 +280,6 @@ export function probeActiveElementScript(
 	};
 }
 
-/**
- * Return the focused element
- */
 export function activeElementHandleScript(): Element | null {
 	let el = document.activeElement;
 
@@ -289,9 +290,6 @@ export function activeElementHandleScript(): Element | null {
 	return el;
 }
 
-/**
- * Get the page scroll dimensions
- */
 export function pageDimensionsScript(): { width: number; height: number } {
 	return {
 		width: document.documentElement.scrollWidth,
@@ -299,9 +297,6 @@ export function pageDimensionsScript(): { width: number; height: number } {
 	};
 }
 
-/**
- * The element's page-relative bounding rect
- */
 export function elementRectScript(el: Element | null): Rect {
 	if (!el) {
 		return { x: 0, y: 0, width: 0, height: 0 };
@@ -399,7 +394,9 @@ export function elementStylesScript(
 	// probeActiveElementScript: snapshots from the scripts are compared for
 	// equality, so they have to truncate oversized values the same way.
 	const truncateValue = (value: string): string => {
-		if (value.length <= 512) {
+		const MAX_STYLE_VALUE_LENGTH = 512;
+
+		if (value.length <= MAX_STYLE_VALUE_LENGTH) {
 			return value;
 		}
 
@@ -409,7 +406,7 @@ export function elementStylesScript(
 			hash = ((hash * 33) ^ value.charCodeAt(i)) >>> 0;
 		}
 
-		return `${value.slice(0, 512)}#len=${value.length}#h=${hash.toString(36)}`;
+		return `${value.slice(0, MAX_STYLE_VALUE_LENGTH)}#len=${value.length}#h=${hash.toString(36)}`;
 	};
 
 	const read = (pseudo: string | undefined): Record<string, string> => {
@@ -507,6 +504,7 @@ export function measureObscuringScript(
 
 	const width = right - left;
 	const height = bottom - top;
+	const LARGE_ELEMENT_THRESHOLD_PX = 80;
 
 	const points: Array<{ x: number; y: number }> = [
 		{ x: left, y: top },
@@ -520,7 +518,10 @@ export function measureObscuringScript(
 		{ x: left + width / 2, y: top + height / 2 },
 	];
 
-	if (width > 80 || height > 80) {
+	if (
+		width > LARGE_ELEMENT_THRESHOLD_PX ||
+		height > LARGE_ELEMENT_THRESHOLD_PX
+	) {
 		points.push(
 			{ x: left + width * 0.25, y: top + height * 0.25 },
 			{ x: left + width * 0.75, y: top + height * 0.25 },

@@ -31,7 +31,7 @@ export async function captureUnfocusedPair(
 	// Tab scrolls an element just barely into view at the viewport edge, which
 	// is exactly where fixed overlays (cookie banners, sticky footers) sit. If
 	// something covers the element there, both screenshots would show the
-	// overlay and no indicator could ever be detected — centre the element in
+	// overlay and no indicator could ever be detected. Centre the element in
 	// the viewport first, then give the scroll a moment to settle.
 	if (await adaptor.evaluate(isCenterObscuredScript, handle)) {
 		await adaptor.evaluate(scrollToCenterScript, handle);

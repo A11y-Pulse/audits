@@ -64,6 +64,7 @@ export const DEFAULT_SCREENSHOT_CLIP_BUFFER = 10;
 export const DEFAULT_MARKER_LIMIT = 1024;
 export const MARKER_ATTR = "data-a11y-focus-idx";
 export const OBSCURER_ATTR = "data-a11y-obscurer";
+export const OBSCURING_RECHECK_DELAY_MS = 250;
 
 export type TabSessionOptions = {
 	screenshotSettleDelay?: number;
@@ -387,8 +388,8 @@ export function createTabOrchestrator(
 								// This synthetic stop has no live focused element (it
 								// already blurred itself before this notification is
 								// built, by definition of F55), so capabilities that
-								// need one — `unfocusedPair`, `baselineStyles`,
-								// `obscuring` — have nothing to meaningfully act on.
+								// need one (`unfocusedPair`, `baselineStyles`,
+								// `obscuring`) have nothing to meaningfully act on.
 								// Only consumers that declared `contextSignals` (the
 								// capability this whole synthetic-stop mechanism exists
 								// to serve) are notified; unlike every other stop in
@@ -509,7 +510,9 @@ export function createTabOrchestrator(
 								OBSCURER_ATTR,
 							);
 							if (raw.fullyObscured) {
-								await new Promise((resolve) => setTimeout(resolve, 250));
+								await new Promise((resolve) =>
+									setTimeout(resolve, OBSCURING_RECHECK_DELAY_MS),
+								);
 								raw = await adaptor.evaluate(
 									measureObscuringScript,
 									ref,

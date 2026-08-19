@@ -47,7 +47,6 @@ export type TabStopSnapshot = {
 	obscuring?: ObscuredMeasurement;
 };
 
-/** Filled in Task 10. Optional on the snapshot until then. */
 export type ContextChangeDrain = {
 	signals: ContextChangeSignals;
 };
@@ -61,7 +60,6 @@ export type ContextChangeSignals = {
 	navigation: boolean;
 };
 
-/** Filled in Task 8. Optional on the snapshot until then. */
 export type ObscuredMeasurement = {
 	coveredFraction: number;
 	fullyObscured: boolean;
