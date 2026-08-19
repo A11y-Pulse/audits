@@ -19,7 +19,6 @@
 		"a11y",
 		"wcag",
 		"focus-not-obscured",
-		"focus-visible",
 		"puppeteer",
 		"audit"
 	],

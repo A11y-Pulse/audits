@@ -79,9 +79,7 @@ describe("shared session across three audits (integration)", () => {
 		// something this fixture can tune away: `orchestrator.test.ts`'s
 		// `loopAdaptor` helper encodes the same contract by defaulting its
 		// (N+1)th `probeActiveElementScript` response to `isBody: true` after
-		// N scripted real elements. See task-12-report.md for the RED-run
-		// evidence (tabs=4, obscured.result.elements.length=3) that surfaced
-		// this off-by-one against the brief's literal `toBe(...)`.
+		// N scripted real elements.
 		expect(tabs).toBe(obscured.result.elements.length + 1);
 		await page.close();
 	});
