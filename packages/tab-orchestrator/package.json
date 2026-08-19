@@ -1,37 +1,30 @@
 {
-	"name": "@a11y-pulse/focus-appearance-audit",
+	"name": "@a11y-pulse/tab-orchestrator",
 	"version": "0.1.0",
-	"description": "WCAG 2.4.7 Focus Visible audit that tabs through a page and detects visible focus indicators via computed styles and pixel-diff fallback.",
+	"description": "Shared Tab-session runner for A11y Pulse keyboard audits.",
 	"type": "module",
 	"license": "SEE LICENSE IN LICENSE.md",
 	"author": "A11y Pulse Limited",
-	"homepage": "https://github.com/A11y-Pulse/audits/tree/main/packages/focus-appearance-audit#readme",
+	"homepage": "https://github.com/A11y-Pulse/audits/tree/main/packages/tab-orchestrator#readme",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/A11y-Pulse/audits.git",
-		"directory": "packages/focus-appearance-audit"
+		"directory": "packages/tab-orchestrator"
 	},
 	"bugs": {
 		"url": "https://github.com/A11y-Pulse/audits/issues"
 	},
-	"keywords": [
-		"accessibility",
-		"a11y",
-		"wcag",
-		"focus-visible",
-		"focus-appearance",
-		"puppeteer",
-		"audit"
-	],
 	"engines": {
 		"node": ">=22"
 	},
 	"exports": {
 		".": {
+			"source": "./src/index.ts",
 			"types": "./dist/index.d.ts",
 			"import": "./dist/index.js"
 		},
 		"./puppeteer": {
+			"source": "./src/adaptors/puppeteer.ts",
 			"types": "./dist/adaptors/puppeteer.d.ts",
 			"import": "./dist/adaptors/puppeteer.js"
 		}
@@ -44,8 +37,6 @@
 	"scripts": {
 		"build": "tsup && tsc -p tsconfig.build.json",
 		"typecheck": "tsc --noEmit",
-		"lint": "biome check",
-		"lint:fix": "biome check --fix",
 		"test:unit": "vitest run",
 		"test:integration": "vitest run --config vitest.integration.config.ts",
 		"test": "npm run typecheck && npm run test:unit",
@@ -53,11 +44,6 @@
 	},
 	"publishConfig": {
 		"access": "public"
-	},
-	"dependencies": {
-		"@a11y-pulse/tab-orchestrator": "*",
-		"pixelmatch": "^7.2.0",
-		"pngjs": "^7.0.0"
 	},
 	"peerDependencies": {
 		"puppeteer": "^25.5.0"
@@ -68,7 +54,6 @@
 		}
 	},
 	"devDependencies": {
-		"@types/pngjs": "^6.0.5",
 		"happy-dom": "^20.11.2",
 		"puppeteer": "^25.5.0"
 	}
