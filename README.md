@@ -11,6 +11,7 @@ These audits are released under the [PolyForm Shield License 1.0.0](./packages/f
 | Package | npm | What it checks |
 | --- | --- | --- |
 | [`@a11y-pulse/focus-appearance-audit`](./packages/focus-appearance-audit) | [@a11y-pulse/focus-appearance-audit](https://www.npmjs.com/package/@a11y-pulse/focus-appearance-audit) | [WCAG 2.4.7 Focus Visible](https://www.w3.org/WAI/WCAG22/Understanding/focus-visible): tabs through a page and detects a visible focus indicator |
+| [`@a11y-pulse/tab-orchestrator`](./packages/tab-orchestrator) | [@a11y-pulse/tab-orchestrator](https://www.npmjs.com/package/@a11y-pulse/tab-orchestrator) | Not an audit — shared Tab-session runner that drives a page once so multiple tab-driven audits can share a single tab loop |
 
 ## Development
 

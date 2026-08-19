@@ -11,16 +11,16 @@ This audit was developed by [A11y Pulse](https://www.a11ypulse.com/) for its acc
 ## Install
 
 ```bash
-npm install @a11y-pulse/focus-appearance-audit puppeteer
+npm install @a11y-pulse/focus-appearance-audit @a11y-pulse/tab-orchestrator puppeteer
 ```
 
-`puppeteer` is an optional peer dependency — it's only required if you use the bundled [Puppeteer adaptor](#adaptors). Other frameworks can supply their own adaptor without installing Puppeteer at all.
+`@a11y-pulse/tab-orchestrator` drives the page (tabbing, markers, screenshots) and ships the bundled [Puppeteer adaptor](#adaptors); `puppeteer` itself is only required if you use that adaptor. Other frameworks can supply their own adaptor without installing Puppeteer at all.
 
 ## Quickstart
 
 ```js
 import { runFocusAppearanceAudit } from "@a11y-pulse/focus-appearance-audit";
-import { PuppeteerAdaptor } from "@a11y-pulse/focus-appearance-audit/puppeteer";
+import { PuppeteerAdaptor } from "@a11y-pulse/tab-orchestrator/puppeteer";
 import puppeteer from "puppeteer";
 
 const browser = await puppeteer.launch();
@@ -56,6 +56,27 @@ await browser.close();
 ```
 
 See [`examples/puppeteer`](./examples/puppeteer) for a complete, runnable example.
+
+## Shared tab session
+
+`runFocusAppearanceAudit` is a convenience wrapper: it builds a private `@a11y-pulse/tab-orchestrator` session, attaches one consumer, runs it, and hands back that consumer's result. If you're running more than one tab-driven audit against the same page, drive a single shared orchestrator instead so the page is only tabbed through once. Use `createFocusAppearanceAudit` to get a `TabConsumer` you can `attach()` yourself:
+
+```ts
+import { createTabOrchestrator } from "@a11y-pulse/tab-orchestrator";
+import { createFocusAppearanceAudit } from "@a11y-pulse/focus-appearance-audit";
+import { PuppeteerAdaptor } from "@a11y-pulse/tab-orchestrator/puppeteer";
+
+const orchestrator = createTabOrchestrator(new PuppeteerAdaptor(page));
+
+const focus = createFocusAppearanceAudit({ elementLimit: 50 });
+orchestrator.attach(focus);
+
+await orchestrator.run();
+
+console.log(focus.result);
+```
+
+`focus.result` is only complete once `focus` has disconnected (by hitting one of its own limits) or the session has ended — reading it before then is undefined. See [`@a11y-pulse/tab-orchestrator`](../tab-orchestrator) for the full session lifecycle and capability model.
 
 ## Options
 
@@ -136,7 +157,7 @@ At the time of writing this audit only checks for 2.4.7. Experimental support fo
 
 The audit itself is framework-agnostic: it drives a page through an **adaptor**, a small interface of primitives (evaluate JS in the page, press Tab, take a clipped screenshot, etc.) that the audit calls without knowing which browser automation library is behind it.
 
-The package ships one implementation, `PuppeteerAdaptor`, backed by a Puppeteer `Page`. Other environments (Playwright, Selenium, WebDriver) can be supported by implementing the same interface, exported as `FocusAppearanceAuditAdaptor` (aliased as `BrowserAdaptor` from the package root).
+The `BrowserAdaptor` interface itself lives in [`@a11y-pulse/tab-orchestrator`](../tab-orchestrator), which also ships the bundled `PuppeteerAdaptor`, backed by a Puppeteer `Page`. This package re-exports the type (aliased here as `FocusAppearanceAuditAdaptor`) so `runFocusAppearanceAudit`'s argument type is available without a separate import. Other environments (Playwright, Selenium, WebDriver) can be supported by implementing the same interface.
 
 ### `FocusAppearanceAuditAdaptor` / `BrowserAdaptor`
 
@@ -162,7 +183,7 @@ class MyFrameworkAdaptor implements BrowserAdaptor {
 }
 ```
 
-Use [`src/adaptors/puppeteer.ts`](./src/adaptors/puppeteer.ts) as a reference implementation — it's a small, self-contained example of every method the audit needs.
+Use [`@a11y-pulse/tab-orchestrator`'s `src/adaptors/puppeteer.ts`](../tab-orchestrator/src/adaptors/puppeteer.ts) as a reference implementation — it's a small, self-contained example of every method the audit needs.
 
 ## Limitations
 
