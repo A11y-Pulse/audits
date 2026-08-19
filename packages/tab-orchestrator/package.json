@@ -54,6 +54,9 @@
 		}
 	},
 	"devDependencies": {
+		"@a11y-pulse/context-change-on-focus-audit": "*",
+		"@a11y-pulse/focus-appearance-audit": "*",
+		"@a11y-pulse/focus-not-obscured-audit": "*",
 		"happy-dom": "^20.11.2",
 		"puppeteer": "^25.5.0"
 	}
