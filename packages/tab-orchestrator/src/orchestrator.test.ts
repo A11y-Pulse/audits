@@ -14,6 +14,7 @@ import {
 	focusScript,
 	installContextObserverScript,
 	isCenterObscuredScript,
+	locationHrefScript,
 	measureObscuringScript,
 	obscurerHandleScript,
 	pageDimensionsScript,
@@ -113,6 +114,14 @@ function recordingConsumer(
 	return record;
 }
 
+/**
+ * Fixed `location.href` returned by `loopAdaptor`'s default handling of
+ * `locationHrefScript` so tests that don't care about navigation-via-href
+ * never see a diff against the baseline captured at session start (which
+ * uses the same default).
+ */
+const STABLE_HREF = "https://example.test/";
+
 function loopAdaptor(script: {
 	hasFocus?: boolean[];
 	active?: Array<Omit<ActiveElementInfo, "selector"> | null>;
@@ -144,6 +153,9 @@ function loopAdaptor(script: {
 			}
 			if (fn === clearMarkersScript) {
 				return undefined;
+			}
+			if (fn === locationHrefScript) {
+				return STABLE_HREF;
 			}
 			return script.hasFocus?.[focusCall++] ?? false;
 		}) as BrowserAdaptor["evaluate"],
@@ -620,6 +632,110 @@ describe("tab loop", () => {
 		expect(ctx.stops).toHaveLength(1);
 		expect(ctx.stops[0]?.contextSignals?.signals.navigation).toBe(true);
 		expect(ctx.sessionEnds).toEqual(["navigation"]);
+	});
+
+	it("detects navigation via href diff even when the post-navigation probe would otherwise report isBody", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true],
+			active: [],
+		});
+		const original = adaptor.evaluate.bind(adaptor);
+		let hrefCalls = 0;
+		adaptor.evaluate = (async (fn, ...args) => {
+			if (fn === locationHrefScript) {
+				hrefCalls++;
+				return hrefCalls === 1 ? STABLE_HREF : "https://example.test/other";
+			}
+			if (fn === drainContextObserverScript) {
+				// Soft-nav flag is false: the observer's execution context
+				// survived long enough to answer, but this was a hard nav, not a
+				// pushState/hashchange, so the href-diff layer must still treat
+				// it as a full navigation rather than trusting a stale soft flag.
+				return {
+					openedWindow: false,
+					submittedForm: false,
+					focusRemoved: false,
+					redirect: null,
+					softUrlChange: false,
+					navigation: false,
+					attributedHtml: null,
+					hasAttributed: false,
+				};
+			}
+			if (fn === installContextObserverScript) {
+				return undefined;
+			}
+			return original(fn, ...args);
+		}) as BrowserAdaptor["evaluate"];
+		const ctx = recordingConsumer(["contextSignals"]);
+		const orchestrator = createTabOrchestrator(adaptor, {
+			screenshotSettleDelay: 0,
+		});
+		orchestrator.attach(ctx);
+		await orchestrator.run();
+		expect(ctx.sessionEnds).toEqual(["navigation"]);
+		expect(ctx.stops).toHaveLength(0);
+	});
+
+	it("classifies navigation when the active-element probe itself throws a destroyed-context error", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true],
+			active: [info(0)],
+		});
+		const original = adaptor.evaluate.bind(adaptor);
+		adaptor.evaluate = (async (fn, ...args) => {
+			if (fn === probeActiveElementScript) {
+				throw new Error("Execution context was destroyed");
+			}
+			if (fn === installContextObserverScript) {
+				return undefined;
+			}
+			return original(fn, ...args);
+		}) as BrowserAdaptor["evaluate"];
+		const ctx = recordingConsumer(["contextSignals"]);
+		const orchestrator = createTabOrchestrator(adaptor, {
+			screenshotSettleDelay: 0,
+		});
+		orchestrator.attach(ctx);
+		await orchestrator.run();
+		expect(ctx.sessionEnds).toEqual(["navigation"]);
+		expect(ctx.stops).toHaveLength(0);
+	});
+
+	it("classifies navigation when the context drain call throws a destroyed-context error", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true],
+			active: [info(0)],
+		});
+		const original = adaptor.evaluate.bind(adaptor);
+		let drains = 0;
+		adaptor.evaluate = (async (fn, ...args) => {
+			if (fn === drainContextObserverScript) {
+				drains++;
+				throw new Error("Execution context was destroyed");
+			}
+			if (fn === installContextObserverScript) {
+				return undefined;
+			}
+			return original(fn, ...args);
+		}) as BrowserAdaptor["evaluate"];
+		const ctx = recordingConsumer(["contextSignals"]);
+		const orchestrator = createTabOrchestrator(adaptor, {
+			screenshotSettleDelay: 0,
+		});
+		orchestrator.attach(ctx);
+		await orchestrator.run();
+		// href is unchanged (loopAdaptor's default), so the primary href-diff
+		// layer sees no change and this stop reaches the full-mapping drain
+		// call with a resolved active element already in hand: the stop is
+		// still notified (matching "aborts the session after notifying a
+		// navigation drain" above) before the session ends, since a thrown
+		// destroyed-context error here is just an alternate way of learning
+		// the same thing a non-throwing `navigation: true` drain reports.
+		expect(ctx.stops).toHaveLength(1);
+		expect(ctx.stops[0]?.contextSignals?.signals.navigation).toBe(true);
+		expect(ctx.sessionEnds).toEqual(["navigation"]);
+		expect(drains).toBe(1);
 	});
 
 	it("clears context observer noise after ensureUnfocusedPair blur", async () => {

@@ -1,13 +1,16 @@
 import type { BrowserAdaptor, ElementRef } from "./adaptor";
 import {
+	type ActiveElementBase,
 	activeElementHandleScript,
 	baselineScript,
 	clearAttributedScript,
 	clearContextFocusInsScript,
 	clearMarkersScript,
 	clearObscurerScript,
+	type DrainContextObserverResult,
 	drainContextObserverScript,
 	installContextObserverScript,
+	locationHrefScript,
 	measureObscuringScript,
 	obscurerHandleScript,
 	probeActiveElementScript,
@@ -28,15 +31,6 @@ import type {
 } from "./types";
 import { captureUnfocusedPair } from "./unfocused-pair";
 
-const EMPTY_CONTEXT_SIGNALS: ContextChangeSignals = {
-	openedWindow: false,
-	submittedForm: false,
-	focusRemoved: false,
-	redirect: null,
-	softUrlChange: false,
-	navigation: false,
-};
-
 /**
  * Whether an `evaluate()` rejection looks like the page navigated out from
  * under it (execution context destroyed) rather than an unexpected failure.
@@ -50,6 +44,19 @@ function isContextDestroyedError(error: unknown): boolean {
 		message,
 	);
 }
+
+/**
+ * Outcome of the early, pre-isBody navigation check. `navigation: true`
+ * means a full navigation was detected (via href diff or a destroyed-context
+ * error) and the caller must end the session without proceeding any
+ * further. Otherwise `raw` carries a drain payload already fetched while
+ * resolving a soft URL change (so the later full drain can reuse it instead
+ * of reading back state the first call already reset), or `null` when the
+ * href was unchanged and nothing has been drained yet for this stop.
+ */
+type ContextNavigationOutcome =
+	| { navigation: true }
+	| { navigation: false; raw: DrainContextObserverResult | null };
 
 export const DEFAULT_SCREENSHOT_SETTLE_DELAY = 33;
 export const DEFAULT_SCREENSHOT_CLIP_BUFFER = 10;
@@ -116,6 +123,10 @@ export function createTabOrchestrator(
 			const pairByStop = { current: null as Promise<UnfocusedPair> | null };
 			let activeHandle: ElementRef | undefined;
 			let lastHasAttributed = false;
+			// Captured when observers are installed and re-armed after every
+			// detected soft URL change, so repeated soft navigations across stops
+			// compare against the most recent href rather than the original load.
+			let baselineHref: string | null = null;
 
 			const remainingHas = (capability: Capability): boolean =>
 				[...attached].some((c) => c.capabilities.has(capability));
@@ -161,6 +172,60 @@ export function createTabOrchestrator(
 				attached.clear();
 			};
 
+			/**
+			 * Primary navigation detection layer: compares `location.href` against
+			 * `baselineHref` on every stop, since a full navigation destroys the
+			 * in-page observer's execution context before it can self-report
+			 * anything (`drainContextObserverScript`'s own `navigation` field is
+			 * always `false`). A destroyed context can also simply throw instead
+			 * of returning a changed href (e.g. the navigation completes between
+			 * the href read and the drain read), which is treated the same way.
+			 *
+			 * Must run before the caller's `isBody`/"done tabbing" exit check: a
+			 * freshly-navigated page's `document.activeElement` defaults to
+			 * `document.body` unless the new page autofocuses something, so
+			 * without this proactive check a silent navigation would otherwise be
+			 * misclassified as `"completed"`.
+			 *
+			 * Deliberately cheap on the common (non-navigating) path: it only
+			 * reads `location.href` and does not call `drainContextObserverScript`
+			 * unless the href actually changed, so a stop that ends the session
+			 * via the isBody exit right after this check still drains at most
+			 * once overall (at the later, full-mapping call site).
+			 */
+			async function checkContextNavigation(): Promise<ContextNavigationOutcome> {
+				let href: string;
+				try {
+					href = await adaptor.evaluate(locationHrefScript);
+				} catch (error) {
+					if (!isContextDestroyedError(error)) {
+						throw error;
+					}
+					return { navigation: true };
+				}
+
+				if (baselineHref === null || href === baselineHref) {
+					return { navigation: false, raw: null };
+				}
+
+				// Document navigated (or soft URL change). Prefer the observer's
+				// own soft-nav flag when the execution context survived;
+				// otherwise treat it as a full navigation.
+				let raw: DrainContextObserverResult | null = null;
+				try {
+					raw = await adaptor.evaluate(drainContextObserverScript, MARKER_ATTR);
+				} catch {
+					raw = null;
+				}
+
+				if (raw === null || !raw.softUrlChange) {
+					return { navigation: true };
+				}
+
+				baselineHref = href;
+				return { navigation: false, raw };
+			}
+
 			let failure: unknown;
 			try {
 				await adaptor.ensureFocusReporting();
@@ -180,6 +245,7 @@ export function createTabOrchestrator(
 				}
 
 				if (contextSignalsWanted) {
+					baselineHref = await adaptor.evaluate(locationHrefScript);
 					await adaptor.evaluate(installContextObserverScript);
 				}
 
@@ -214,11 +280,44 @@ export function createTabOrchestrator(
 						break;
 					}
 
-					const base = await adaptor.evaluate(
-						probeActiveElementScript,
-						styleProps,
-						MARKER_ATTR,
-					);
+					let base: ActiveElementBase | null;
+					try {
+						base = await adaptor.evaluate(
+							probeActiveElementScript,
+							styleProps,
+							MARKER_ATTR,
+						);
+					} catch (error) {
+						if (
+							remainingHas("contextSignals") &&
+							isContextDestroyedError(error)
+						) {
+							// Mid-flight navigation destroyed the execution context
+							// before the probe could even run: there is no active
+							// element to report, so end directly (mirrors the
+							// isBody/"done tabbing" exit below, which also ends
+							// without a snapshot when there is nothing to notify).
+							end("navigation");
+							break;
+						}
+						throw error;
+					}
+
+					// Primary navigation detection layer, run before the isBody exit:
+					// a silently-navigated page's evaluate() calls succeed against the
+					// new document (Puppeteer/CDP targets whichever context is live at
+					// call time), so a hard nav can surface as an ordinary `isBody: true`
+					// probe result with no thrown error at all.
+					let contextNav: ContextNavigationOutcome | null = null;
+					if (remainingHas("contextSignals")) {
+						const outcome = await checkContextNavigation();
+						if (outcome.navigation) {
+							end("navigation");
+							break;
+						}
+						contextNav = outcome;
+					}
+
 					if (base === null || base.isBody) {
 						end("completed");
 						break;
@@ -265,10 +364,19 @@ export function createTabOrchestrator(
 						if (remainingHas("contextSignals")) {
 							let signals: ContextChangeSignals;
 							try {
-								const raw = await adaptor.evaluate(
-									drainContextObserverScript,
-									MARKER_ATTR,
-								);
+								// Reuse the drain already fetched above while resolving
+								// a soft URL change (checkContextNavigation), if any;
+								// re-draining here would read back state that call
+								// already reset (focusIns, softUrlChange, etc.) and
+								// silently lose whatever it was reporting. Otherwise
+								// (the common case: href unchanged, nothing drained
+								// yet) do the one drain this stop needs.
+								const raw =
+									contextNav?.raw ??
+									(await adaptor.evaluate(
+										drainContextObserverScript,
+										MARKER_ATTR,
+									));
 								signals = {
 									openedWindow: raw.openedWindow,
 									submittedForm: raw.submittedForm,
@@ -286,7 +394,14 @@ export function createTabOrchestrator(
 								// in-page observer's own state (and any DOM markers it
 								// set) went with it, so there is nothing left to report
 								// besides the navigation itself.
-								signals = { ...EMPTY_CONTEXT_SIGNALS, navigation: true };
+								signals = {
+									openedWindow: false,
+									submittedForm: false,
+									focusRemoved: false,
+									redirect: null,
+									softUrlChange: false,
+									navigation: true,
+								};
 								lastHasAttributed = false;
 							}
 
