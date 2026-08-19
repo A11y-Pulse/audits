@@ -1,8 +1,10 @@
-# A11y Pulse audits
+# A11y Pulse accessibility audits
+
+These accessibility audits have been developed by [A11y Pulse](https://www.a11ypulse.com/) to compliment and extend other accessibility testing frameworks like [axe-core](https://github.com/dequelabs/axe-core). The audits come with Puppeteer adaptors, but are written to be framework-agnostic.
 
 Source-available accessibility audits used by [A11y Pulse](https://www.a11ypulse.com/), published as separate npm packages from this repo.
 
-Each package is framework-agnostic (drive it through an adaptor) and released under the [PolyForm Shield License 1.0.0](./packages/focus-appearance-audit/LICENSE.md). Read, fork, and use them in non-competing products; do not use them to build a competing accessibility monitoring service.
+These audits are released under the [PolyForm Shield License 1.0.0](./packages/focus-appearance-audit/LICENSE.md). This means they are source-available and free to use in non-competing products. In other words, you are free to use these audits in your own internal monitoring but cannot use them as part of any monitoring service that competes with A11y Pulse.
 
 ## Packages
 
