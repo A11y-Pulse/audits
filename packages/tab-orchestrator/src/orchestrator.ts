@@ -3,6 +3,9 @@ import {
 	activeElementHandleScript,
 	baselineScript,
 	clearMarkersScript,
+	clearObscurerScript,
+	measureObscuringScript,
+	obscurerHandleScript,
 	probeActiveElementScript,
 } from "./browser-scripts";
 import { FOCUS_STYLE_PROPERTIES } from "./focus-style";
@@ -10,6 +13,7 @@ import { getSelector } from "./get-selector";
 import { truncateHtml } from "./truncate-html";
 import type {
 	ActiveElementInfo,
+	Capability,
 	SessionEndReason,
 	StyleSnapshot,
 	TabConsumer,
@@ -23,6 +27,7 @@ export const DEFAULT_SCREENSHOT_SETTLE_DELAY = 33;
 export const DEFAULT_SCREENSHOT_CLIP_BUFFER = 10;
 export const DEFAULT_MARKER_LIMIT = 1024;
 export const MARKER_ATTR = "data-a11y-focus-idx";
+export const OBSCURER_ATTR = "data-a11y-obscurer";
 
 export type TabSessionOptions = {
 	screenshotSettleDelay?: number;
@@ -83,8 +88,8 @@ export function createTabOrchestrator(
 			const pairByStop = { current: null as Promise<UnfocusedPair> | null };
 			let activeHandle: ElementRef | undefined;
 
-			const remainingDeclarers = (): boolean =>
-				[...attached].some((c) => c.capabilities.has("unfocusedPair"));
+			const remainingHas = (capability: Capability): boolean =>
+				[...attached].some((c) => c.capabilities.has(capability));
 
 			const handleFor = (consumer: TabConsumer): TabSessionHandle => ({
 				disconnect() {
@@ -100,7 +105,7 @@ export function createTabOrchestrator(
 					if (!consumer.capabilities.has("unfocusedPair")) {
 						throw new Error("Consumer did not declare unfocusedPair");
 					}
-					if (!remainingDeclarers()) {
+					if (!remainingHas("unfocusedPair")) {
 						throw new Error("Consumer did not declare unfocusedPair");
 					}
 					if (activeHandle === undefined) {
@@ -208,14 +213,58 @@ export function createTabOrchestrator(
 							activeElement,
 						};
 
-						const wantsBaseline = [...attached].some((consumer) =>
-							consumer.capabilities.has("baselineStyles"),
-						);
-						if (wantsBaseline && activeElement.index !== null) {
+						if (
+							remainingHas("baselineStyles") &&
+							activeElement.index !== null
+						) {
 							const baselineStyles = interned.get(activeElement.index);
 							if (baselineStyles !== undefined) {
 								snapshot.baselineStyles = baselineStyles;
 							}
+						}
+
+						if (remainingHas("obscuring")) {
+							let raw = await adaptor.evaluate(
+								measureObscuringScript,
+								ref,
+								OBSCURER_ATTR,
+							);
+							if (raw.fullyObscured) {
+								await new Promise((resolve) => setTimeout(resolve, 250));
+								raw = await adaptor.evaluate(
+									measureObscuringScript,
+									ref,
+									OBSCURER_ATTR,
+								);
+							}
+
+							let obscuredBy: { selector: string; html: string } | null = null;
+							if (raw.hasObscurer) {
+								const obscurer =
+									await adaptor.evaluateHandle(obscurerHandleScript);
+								try {
+									const obscurerSelector = await adaptor.evaluate(
+										getSelector,
+										obscurer,
+									);
+									obscuredBy = {
+										selector: obscurerSelector,
+										html: truncateHtml(raw.obscuredByHtml ?? ""),
+									};
+								} finally {
+									await adaptor.disposeRef(obscurer);
+								}
+							}
+
+							snapshot.obscuring = {
+								coveredFraction: raw.coveredFraction,
+								fullyObscured: raw.fullyObscured,
+								offscreen: raw.offscreen,
+								opacity: raw.opacity,
+								obscuredBy,
+							};
+
+							await adaptor.evaluate(clearObscurerScript, OBSCURER_ATTR);
 						}
 
 						const recipients = [...attached];

@@ -456,3 +456,236 @@ export function clearMarkersScript(markerAttr: string): void {
 
 	(document.activeElement as HTMLElement | null)?.blur();
 }
+
+export type MeasureObscuringResult = {
+	coveredFraction: number;
+	fullyObscured: boolean;
+	offscreen: boolean;
+	opacity: "opaque" | "semi-transparent" | "unknown";
+	obscuredByHtml: string | null;
+	/** True when a covering element was marked for selector resolution. */
+	hasObscurer: boolean;
+};
+
+/**
+ * Hit-test whether author-created content entirely hides the focused element.
+ * Marks a single covering element with `obscurerAttr` when containment confirms
+ * a full cover, so the host can resolve its selector via getSelector.
+ */
+export function measureObscuringScript(
+	el: Element | null,
+	obscurerAttr: string,
+): MeasureObscuringResult {
+	const empty: MeasureObscuringResult = {
+		coveredFraction: 0,
+		fullyObscured: false,
+		offscreen: false,
+		opacity: "opaque",
+		obscuredByHtml: null,
+		hasObscurer: false,
+	};
+
+	if (!el) {
+		return empty;
+	}
+
+	for (const marked of Array.from(
+		document.querySelectorAll(`[${obscurerAttr}]`),
+	)) {
+		marked.removeAttribute(obscurerAttr);
+	}
+
+	const rect = el.getBoundingClientRect();
+	const left = Math.max(rect.left, 0);
+	const top = Math.max(rect.top, 0);
+	const right = Math.min(rect.right, window.innerWidth);
+	const bottom = Math.min(rect.bottom, window.innerHeight);
+
+	if (right <= left || bottom <= top) {
+		return { ...empty, offscreen: true };
+	}
+
+	const width = right - left;
+	const height = bottom - top;
+
+	const points: Array<{ x: number; y: number }> = [
+		{ x: left, y: top },
+		{ x: right - 0.5, y: top },
+		{ x: left, y: bottom - 0.5 },
+		{ x: right - 0.5, y: bottom - 0.5 },
+		{ x: left + width / 2, y: top },
+		{ x: left + width / 2, y: bottom - 0.5 },
+		{ x: left, y: top + height / 2 },
+		{ x: right - 0.5, y: top + height / 2 },
+		{ x: left + width / 2, y: top + height / 2 },
+	];
+
+	if (width > 80 || height > 80) {
+		points.push(
+			{ x: left + width * 0.25, y: top + height * 0.25 },
+			{ x: left + width * 0.75, y: top + height * 0.25 },
+			{ x: left + width * 0.25, y: top + height * 0.75 },
+			{ x: left + width * 0.75, y: top + height * 0.75 },
+		);
+	}
+
+	const hitAt = (x: number, y: number): Element | null => {
+		const px = Math.min(Math.max(x, 0), window.innerWidth - 1);
+		const py = Math.min(Math.max(y, 0), window.innerHeight - 1);
+		const stack =
+			typeof document.elementsFromPoint === "function"
+				? document.elementsFromPoint(px, py)
+				: [document.elementFromPoint(px, py)].filter(Boolean);
+
+		for (let candidate of stack as Element[]) {
+			while (candidate?.shadowRoot) {
+				const inner = candidate.shadowRoot.elementFromPoint(px, py);
+
+				if (!inner || inner === candidate) {
+					break;
+				}
+
+				candidate = inner;
+			}
+
+			if (!candidate) {
+				continue;
+			}
+
+			if (
+				candidate === el ||
+				el.contains(candidate) ||
+				candidate.contains(el)
+			) {
+				return null;
+			}
+
+			return candidate;
+		}
+
+		return null;
+	};
+
+	let covered = 0;
+	const coverCounts = new Map<Element, number>();
+
+	for (const point of points) {
+		const cover = hitAt(point.x, point.y);
+
+		if (cover) {
+			covered++;
+			coverCounts.set(cover, (coverCounts.get(cover) ?? 0) + 1);
+		}
+	}
+
+	const coveredFraction = points.length === 0 ? 0 : covered / points.length;
+
+	if (coveredFraction < 1) {
+		return {
+			...empty,
+			coveredFraction,
+			fullyObscured: false,
+		};
+	}
+
+	let topCover: Element | null = null;
+	let topCount = 0;
+
+	for (const [candidate, count] of coverCounts) {
+		if (count > topCount) {
+			topCover = candidate;
+			topCount = count;
+		}
+	}
+
+	if (!topCover) {
+		return {
+			...empty,
+			coveredFraction: 1,
+			fullyObscured: false,
+			opacity: "unknown",
+		};
+	}
+
+	const coverRect = topCover.getBoundingClientRect();
+	const containsFully =
+		coverRect.left <= rect.left &&
+		coverRect.top <= rect.top &&
+		coverRect.right >= rect.right &&
+		coverRect.bottom >= rect.bottom;
+
+	if (!containsFully) {
+		// Joint multi-element cover: cannot confirm a single opaque container.
+		return {
+			coveredFraction: 1,
+			fullyObscured: true,
+			offscreen: false,
+			opacity: "unknown",
+			obscuredByHtml: null,
+			hasObscurer: false,
+		};
+	}
+
+	const classifyOpacity = (
+		node: Element,
+	): "opaque" | "semi-transparent" | "unknown" => {
+		const cs = getComputedStyle(node);
+		const opacity = Number.parseFloat(cs.opacity);
+
+		if (!Number.isFinite(opacity)) {
+			return "unknown";
+		}
+
+		if (opacity < 1) {
+			return "semi-transparent";
+		}
+
+		const bg = cs.backgroundColor;
+		const rgba = bg.match(
+			/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)(?:\s*,\s*([\d.]+))?\s*\)/,
+		);
+
+		if (rgba) {
+			const alpha = rgba[4] === undefined ? 1 : Number.parseFloat(rgba[4]);
+
+			if (alpha < 1) {
+				return alpha <= 0 ? "semi-transparent" : "semi-transparent";
+			}
+
+			return "opaque";
+		}
+
+		if (cs.backgroundImage && cs.backgroundImage !== "none") {
+			return "unknown";
+		}
+
+		return "unknown";
+	};
+
+	const opacity = classifyOpacity(topCover);
+	const openingTag = topCover.cloneNode(false) as Element;
+	openingTag.removeAttribute(obscurerAttr);
+	topCover.setAttribute(obscurerAttr, "1");
+
+	return {
+		coveredFraction: 1,
+		fullyObscured: true,
+		offscreen: false,
+		opacity,
+		obscuredByHtml: openingTag.outerHTML,
+		hasObscurer: true,
+	};
+}
+
+/** Return the element marked as the obscurer, if any. */
+export function obscurerHandleScript(): Element | null {
+	return document.querySelector("[data-a11y-obscurer]");
+}
+
+export function clearObscurerScript(obscurerAttr: string): void {
+	for (const marked of Array.from(
+		document.querySelectorAll(`[${obscurerAttr}]`),
+	)) {
+		marked.removeAttribute(obscurerAttr);
+	}
+}

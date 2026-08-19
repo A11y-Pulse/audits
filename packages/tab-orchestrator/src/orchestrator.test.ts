@@ -5,10 +5,13 @@ import {
 	baselineScript,
 	blurScript,
 	clearMarkersScript,
+	clearObscurerScript,
 	elementRectScript,
 	elementStylesScript,
 	focusScript,
 	isCenterObscuredScript,
+	measureObscuringScript,
+	obscurerHandleScript,
 	pageDimensionsScript,
 	probeActiveElementScript,
 	scrollToCenterScript,
@@ -422,6 +425,49 @@ describe("tab loop", () => {
 		expect(Date.now() - started).toBeLessThan(settleDelay / 2);
 		expect(probeCalls).toBe(0);
 		expect(a.stops).toHaveLength(0);
+	});
+
+	it("measures obscuring only while a remaining consumer declared it", async () => {
+		const measures: number[] = [];
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true, true],
+			active: [info(0), info(1)],
+		});
+		const original = adaptor.evaluate.bind(adaptor);
+		adaptor.evaluate = (async (fn, ...args) => {
+			if (fn === measureObscuringScript) {
+				measures.push(1);
+				return {
+					coveredFraction: 0,
+					fullyObscured: false,
+					offscreen: false,
+					opacity: "opaque",
+					obscuredByHtml: null,
+					hasObscurer: false,
+				};
+			}
+			if (fn === clearObscurerScript || fn === obscurerHandleScript) {
+				return fn === obscurerHandleScript ? null : undefined;
+			}
+			return original(fn, ...args);
+		}) as BrowserAdaptor["evaluate"];
+
+		const obscuring = recordingConsumer(
+			["obscuring"],
+			async (_s, disconnect) => {
+				disconnect();
+			},
+		);
+		const other = recordingConsumer();
+		const orchestrator = createTabOrchestrator(adaptor, {
+			screenshotSettleDelay: 0,
+		});
+		orchestrator.attach(obscuring);
+		orchestrator.attach(other);
+		await orchestrator.run();
+		expect(measures).toHaveLength(1);
+		expect(obscuring.stops[0]?.obscuring?.fullyObscured).toBe(false);
+		expect(other.stops[1]?.obscuring).toBeUndefined();
 	});
 
 	it("notifies remaining consumers with failed and rethrows when pressTab throws", async () => {

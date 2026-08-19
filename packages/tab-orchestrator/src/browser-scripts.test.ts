@@ -5,6 +5,7 @@ import {
 	elementRectScript,
 	elementStylesScript,
 	isCenterObscuredScript,
+	measureObscuringScript,
 	probeActiveElementScript,
 	scrollToCenterScript,
 } from "./browser-scripts";
@@ -362,6 +363,128 @@ describe("elementStylesScript", () => {
 		expect(styles.element["outline-width"]).toBe("3px");
 		expect(styles.before).toEqual(expect.any(Object));
 		expect(styles.after).toEqual(expect.any(Object));
+	});
+});
+
+describe("measureObscuringScript", () => {
+	const ATTR = "data-test-obscurer";
+
+	afterEach(() => {
+		vi.restoreAllMocks();
+		document.body.innerHTML = "";
+	});
+
+	it("reports offscreen when the element has no viewport intersection", () => {
+		document.body.innerHTML = "<button>target</button>";
+		const el = document.querySelector("button") as HTMLElement;
+		el.getBoundingClientRect = () =>
+			({
+				left: -200,
+				top: -200,
+				right: -100,
+				bottom: -100,
+				width: 100,
+				height: 100,
+			}) as DOMRect;
+
+		const result = measureObscuringScript(el, ATTR);
+
+		expect(result.offscreen).toBe(true);
+		expect(result.fullyObscured).toBe(false);
+	});
+
+	it("reports not fully obscured when the element is the top hit", () => {
+		document.body.innerHTML = "<button>target</button>";
+		const el = document.querySelector("button") as HTMLElement;
+		el.getBoundingClientRect = () =>
+			({
+				left: 10,
+				top: 10,
+				right: 110,
+				bottom: 50,
+				width: 100,
+				height: 40,
+			}) as DOMRect;
+		document.elementsFromPoint = () => [el];
+
+		const result = measureObscuringScript(el, ATTR);
+
+		expect(result.fullyObscured).toBe(false);
+		expect(result.coveredFraction).toBe(0);
+	});
+
+	it("confirms opaque full cover when a container contains the element", () => {
+		document.body.innerHTML =
+			'<button>target</button><div id="banner" style="opacity:1;background:#000">banner</div>';
+		const el = document.querySelector("button") as HTMLElement;
+		const banner = document.querySelector("#banner") as HTMLElement;
+		el.getBoundingClientRect = () =>
+			({
+				left: 10,
+				top: 10,
+				right: 110,
+				bottom: 50,
+				width: 100,
+				height: 40,
+			}) as DOMRect;
+		banner.getBoundingClientRect = () =>
+			({
+				left: 0,
+				top: 0,
+				right: 200,
+				bottom: 100,
+				width: 200,
+				height: 100,
+			}) as DOMRect;
+		document.elementsFromPoint = () => [banner, el];
+		vi.spyOn(window, "getComputedStyle").mockReturnValue({
+			opacity: "1",
+			backgroundColor: "rgb(0, 0, 0)",
+			backgroundImage: "none",
+		} as CSSStyleDeclaration);
+
+		const result = measureObscuringScript(el, ATTR);
+
+		expect(result.fullyObscured).toBe(true);
+		expect(result.opacity).toBe("opaque");
+		expect(result.hasObscurer).toBe(true);
+		expect(banner.getAttribute(ATTR)).toBe("1");
+	});
+
+	it("classifies opacity below 1 as semi-transparent", () => {
+		document.body.innerHTML =
+			'<button>target</button><div id="veil">veil</div>';
+		const el = document.querySelector("button") as HTMLElement;
+		const veil = document.querySelector("#veil") as HTMLElement;
+		el.getBoundingClientRect = () =>
+			({
+				left: 10,
+				top: 10,
+				right: 110,
+				bottom: 50,
+				width: 100,
+				height: 40,
+			}) as DOMRect;
+		veil.getBoundingClientRect = () =>
+			({
+				left: 0,
+				top: 0,
+				right: 200,
+				bottom: 100,
+				width: 200,
+				height: 100,
+			}) as DOMRect;
+		document.elementsFromPoint = () => [veil, el];
+		vi.spyOn(window, "getComputedStyle").mockReturnValue({
+			opacity: "0.5",
+			backgroundColor: "rgb(0, 0, 0)",
+			backgroundImage: "none",
+		} as CSSStyleDeclaration);
+
+		const result = measureObscuringScript(el, ATTR);
+
+		expect(result.fullyObscured).toBe(true);
+		expect(result.opacity).toBe("semi-transparent");
 	});
 });
 
