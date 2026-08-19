@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { BrowserAdaptor } from "./adaptor";
 import {
 	activeElementHandleScript,
+	attributedHandleScript,
 	baselineScript,
 	blurScript,
 	clearAttributedScript,
@@ -799,6 +800,208 @@ describe("tab loop", () => {
 		});
 		orchestrator.attach(a);
 		await orchestrator.run();
-		expect(order).toEqual(["drain", "pair", "clear"]);
+		// The session's second (and final) loop iteration is the "done tabbing"
+		// isBody exit, which now also drains context signals before ending (see
+		// the F55 focus-removal tests below) — hence the trailing "drain" with
+		// no further "pair"/"clear" since that drain reports hasAttributed:
+		// false (this fixture has nothing attributed on the second iteration).
+		expect(order).toEqual(["drain", "pair", "clear", "drain"]);
+	});
+
+	describe("F55 focus-removal at the isBody exit", () => {
+		it("notifies an attached contextSignals consumer of the attributed element before ending", async () => {
+			const adaptor = loopAdaptor({
+				hasFocus: [true],
+				active: [],
+			});
+			const attributedRef = { kind: "attributed" };
+			adaptor.evaluateHandle = (async (fn) => {
+				if (fn === attributedHandleScript) {
+					return attributedRef;
+				}
+				return {};
+			}) as BrowserAdaptor["evaluateHandle"];
+			const original = adaptor.evaluate.bind(adaptor);
+			adaptor.evaluate = (async (fn, ...args) => {
+				if (fn === drainContextObserverScript) {
+					return {
+						openedWindow: false,
+						submittedForm: false,
+						focusRemoved: true,
+						redirect: null,
+						softUrlChange: false,
+						navigation: false,
+						attributedHtml: '<input id="blurred">',
+						hasAttributed: true,
+					};
+				}
+				if (fn === getSelector && args[0] === attributedRef) {
+					return "#blurred";
+				}
+				if (
+					fn === installContextObserverScript ||
+					fn === clearAttributedScript
+				) {
+					return undefined;
+				}
+				return original(fn, ...args);
+			}) as BrowserAdaptor["evaluate"];
+
+			const ctx = recordingConsumer(["contextSignals"]);
+			const orchestrator = createTabOrchestrator(adaptor, {
+				screenshotSettleDelay: 0,
+			});
+			orchestrator.attach(ctx);
+			await orchestrator.run();
+
+			expect(ctx.stops).toHaveLength(1);
+			expect(ctx.stops[0]?.tabIndex).toBe(1);
+			expect(ctx.stops[0]?.activeElement.selector).toBe("#blurred");
+			expect(ctx.stops[0]?.activeElement.html).toBe('<input id="blurred">');
+			expect(ctx.stops[0]?.activeElement.isBody).toBe(false);
+			expect(ctx.stops[0]?.contextSignals?.signals.focusRemoved).toBe(true);
+			expect(ctx.sessionEnds).toEqual(["completed"]);
+		});
+
+		it("also notifies an attached consumer that did not declare contextSignals, consistent with normal stops", async () => {
+			const adaptor = loopAdaptor({
+				hasFocus: [true],
+				active: [],
+			});
+			const attributedRef = { kind: "attributed" };
+			adaptor.evaluateHandle = (async (fn) => {
+				if (fn === attributedHandleScript) {
+					return attributedRef;
+				}
+				return {};
+			}) as BrowserAdaptor["evaluateHandle"];
+			const original = adaptor.evaluate.bind(adaptor);
+			adaptor.evaluate = (async (fn, ...args) => {
+				if (fn === drainContextObserverScript) {
+					return {
+						openedWindow: false,
+						submittedForm: false,
+						focusRemoved: true,
+						redirect: null,
+						softUrlChange: false,
+						navigation: false,
+						attributedHtml: '<input id="blurred">',
+						hasAttributed: true,
+					};
+				}
+				if (fn === getSelector && args[0] === attributedRef) {
+					return "#blurred";
+				}
+				if (
+					fn === installContextObserverScript ||
+					fn === clearAttributedScript
+				) {
+					return undefined;
+				}
+				return original(fn, ...args);
+			}) as BrowserAdaptor["evaluate"];
+
+			const ctx = recordingConsumer(["contextSignals"]);
+			const plain = recordingConsumer();
+			const orchestrator = createTabOrchestrator(adaptor, {
+				screenshotSettleDelay: 0,
+			});
+			orchestrator.attach(ctx);
+			orchestrator.attach(plain);
+			await orchestrator.run();
+
+			expect(plain.stops).toHaveLength(1);
+			expect(plain.stops[0]?.activeElement.selector).toBe("#blurred");
+			expect(plain.sessionEnds).toEqual(["completed"]);
+		});
+
+		it("ends silently with zero stops when isBody has nothing attributed (genuine end of tab sequence)", async () => {
+			const adaptor = loopAdaptor({
+				hasFocus: [true],
+				active: [],
+			});
+			const original = adaptor.evaluate.bind(adaptor);
+			adaptor.evaluate = (async (fn, ...args) => {
+				if (fn === drainContextObserverScript) {
+					return {
+						openedWindow: false,
+						submittedForm: false,
+						focusRemoved: false,
+						redirect: null,
+						softUrlChange: false,
+						navigation: false,
+						attributedHtml: null,
+						hasAttributed: false,
+					};
+				}
+				if (fn === installContextObserverScript) {
+					return undefined;
+				}
+				return original(fn, ...args);
+			}) as BrowserAdaptor["evaluate"];
+
+			const ctx = recordingConsumer(["contextSignals"]);
+			const orchestrator = createTabOrchestrator(adaptor, {
+				screenshotSettleDelay: 0,
+			});
+			orchestrator.attach(ctx);
+			await orchestrator.run();
+
+			expect(ctx.stops).toHaveLength(0);
+			expect(ctx.sessionEnds).toEqual(["completed"]);
+		});
+
+		it("does not drain at all when no attached consumer declared contextSignals", async () => {
+			let drains = 0;
+			const adaptor = loopAdaptor({
+				hasFocus: [true],
+				active: [],
+			});
+			const original = adaptor.evaluate.bind(adaptor);
+			adaptor.evaluate = (async (fn, ...args) => {
+				if (fn === drainContextObserverScript) {
+					drains++;
+				}
+				return original(fn, ...args);
+			}) as BrowserAdaptor["evaluate"];
+
+			const plain = recordingConsumer();
+			const orchestrator = createTabOrchestrator(adaptor, {
+				screenshotSettleDelay: 0,
+			});
+			orchestrator.attach(plain);
+			await orchestrator.run();
+
+			expect(drains).toBe(0);
+			expect(plain.stops).toHaveLength(0);
+			expect(plain.sessionEnds).toEqual(["completed"]);
+		});
+
+		it("ends with reason navigation when the isBody-exit drain throws a destroyed-context error", async () => {
+			const adaptor = loopAdaptor({
+				hasFocus: [true],
+				active: [],
+			});
+			const original = adaptor.evaluate.bind(adaptor);
+			adaptor.evaluate = (async (fn, ...args) => {
+				if (fn === drainContextObserverScript) {
+					throw new Error("Execution context was destroyed");
+				}
+				if (fn === installContextObserverScript) {
+					return undefined;
+				}
+				return original(fn, ...args);
+			}) as BrowserAdaptor["evaluate"];
+
+			const ctx = recordingConsumer(["contextSignals"]);
+			const orchestrator = createTabOrchestrator(adaptor, {
+				screenshotSettleDelay: 0,
+			});
+			orchestrator.attach(ctx);
+			await orchestrator.run();
+
+			expect(ctx.stops).toHaveLength(0);
+			expect(ctx.sessionEnds).toEqual(["navigation"]);
+		});
 	});
 });

@@ -2,6 +2,7 @@ import type { BrowserAdaptor, ElementRef } from "./adaptor";
 import {
 	type ActiveElementBase,
 	activeElementHandleScript,
+	attributedHandleScript,
 	baselineScript,
 	clearAttributedScript,
 	clearContextFocusInsScript,
@@ -319,6 +320,79 @@ export function createTabOrchestrator(
 					}
 
 					if (base === null || base.isBody) {
+						// Focus landed on <body>. This is normally "done tabbing", but it
+						// is also what F55 focus-removal looks like (an element receives
+						// focus and then blurs itself, e.g. `onfocus="this.blur()"`): the
+						// in-page observer's focusin history still attributes that stop to
+						// the element that briefly held focus, even though nothing is
+						// focused now. Drain before ending so that case gets one last
+						// notification instead of vanishing silently.
+						if (remainingHas("contextSignals")) {
+							let raw: DrainContextObserverResult;
+							try {
+								raw =
+									contextNav?.raw ??
+									(await adaptor.evaluate(
+										drainContextObserverScript,
+										MARKER_ATTR,
+									));
+							} catch (error) {
+								if (!isContextDestroyedError(error)) {
+									throw error;
+								}
+								// Mirrors the probe's own destroyed-context catch above:
+								// there is no attributed element left to report, so end
+								// directly with "navigation" rather than "completed" (a
+								// navigation signal always ends the session that way).
+								end("navigation");
+								break;
+							}
+
+							if (raw.hasAttributed) {
+								const attributedRef = await adaptor.evaluateHandle(
+									attributedHandleScript,
+								);
+								let selector: string;
+								try {
+									selector = await adaptor.evaluate(getSelector, attributedRef);
+								} finally {
+									await adaptor.disposeRef(attributedRef);
+								}
+
+								const activeElement: ActiveElementInfo = {
+									index: null,
+									isBody: false,
+									isIframe: false,
+									selector,
+									html: truncateHtml(raw.attributedHtml ?? ""),
+									styles: { element: {}, before: {}, after: {} },
+									rect: { x: 0, y: 0, width: 0, height: 0 },
+								};
+
+								const snapshot: TabStopSnapshot = {
+									tabIndex: ++tabIndex,
+									activeElement,
+									contextSignals: {
+										signals: {
+											openedWindow: raw.openedWindow,
+											submittedForm: raw.submittedForm,
+											focusRemoved: raw.focusRemoved,
+											redirect: raw.redirect,
+											softUrlChange: raw.softUrlChange,
+											navigation: raw.navigation,
+										},
+									},
+								};
+
+								const recipients = [...attached];
+								for (const consumer of recipients) {
+									await consumer.onTabStop(snapshot, handleFor(consumer));
+								}
+
+								await adaptor.evaluate(clearAttributedScript);
+							}
+						}
+
 						end("completed");
 						break;
 					}

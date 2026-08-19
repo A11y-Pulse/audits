@@ -927,6 +927,12 @@ export function drainContextObserverScript(
 	};
 }
 
+/** Return the element marked as attributed by drainContextObserverScript (the
+ * element that received a focus event this stop and then lost it), if any. */
+export function attributedHandleScript(): Element | null {
+	return document.querySelector("[data-a11y-ctx-attr]");
+}
+
 export function clearAttributedScript(): void {
 	for (const marked of Array.from(
 		document.querySelectorAll("[data-a11y-ctx-attr]"),
