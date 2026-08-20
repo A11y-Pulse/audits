@@ -1,45 +1,9 @@
-import type { Rect } from "@a11y-pulse/browser-adaptor";
+import type { Rect, StyleSnapshot } from "@a11y-pulse/tab-orchestrator";
 import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
 
-export type { Rect };
-
-/** A snapshot of an element's focus-relevant computed styles, plus its pseudo-elements. */
-export type StyleSnapshot = {
-	element: Record<string, string>;
-	before: Record<string, string>;
-	after: Record<string, string>;
-};
-
-/**
- * A screenshot clip framing `rect` with up to `buffer` pixels of padding on each side, shrunk
- * where the page edges leave less room. The padding allows for indicators drawn just outside
- * the element box (outlines, shadows) and for anti-aliasing.
- */
-export function bufferedClip(
-	rect: Rect,
-	pageWidth: number,
-	pageHeight: number,
-	buffer: number,
-): Rect {
-	const left = Math.max(0, Math.min(buffer, rect.x));
-	const top = Math.max(0, Math.min(buffer, rect.y));
-	const right = Math.max(0, Math.min(buffer, pageWidth - rect.x - rect.width));
-	const bottom = Math.max(
-		0,
-		Math.min(buffer, pageHeight - rect.y - rect.height),
-	);
-
-	// Clamp to non-negative origins: an element positioned partially off the top
-	// or left of the document has a negative page-relative rect, and Puppeteer
-	// rejects a screenshot clip with negative x/y.
-	return {
-		x: Math.max(0, rect.x - left),
-		y: Math.max(0, rect.y - top),
-		width: rect.width + left + right,
-		height: rect.height + top + bottom,
-	};
-}
+export { bufferedClip } from "@a11y-pulse/tab-orchestrator";
+export type { Rect, StyleSnapshot };
 
 /**
  * Collapse the colour/width of a decoration (outline, each border edge) that is
@@ -74,6 +38,97 @@ function renderedStyles(
 	}
 
 	return out;
+}
+
+function isIdleComputedValue(property: string, value: string): boolean {
+	const v = value.trim().toLowerCase();
+
+	if (
+		v === "" ||
+		v === "none" ||
+		v === "hidden" ||
+		v === "normal" ||
+		v === "transparent" ||
+		v === "0px" ||
+		v === "0"
+	) {
+		return true;
+	}
+
+	if (v === "rgba(0, 0, 0, 0)" || v === "rgba(0,0,0,0)") {
+		return true;
+	}
+
+	if (property === "font-weight" && v === "400") {
+		return true;
+	}
+
+	if (property === "text-decoration" && v.startsWith("none")) {
+		return true;
+	}
+
+	return false;
+}
+
+function omitIdleComputedStyles(
+	record: Record<string, string>,
+	dropUnusedPseudo: boolean,
+): Record<string, string> {
+	if (
+		dropUnusedPseudo &&
+		isIdleComputedValue("content", record.content ?? "none")
+	) {
+		return {};
+	}
+
+	const out: Record<string, string> = {};
+
+	for (const [property, value] of Object.entries(renderedStyles(record))) {
+		if (!isIdleComputedValue(property, value)) {
+			out[property] = value;
+		}
+	}
+
+	return collapseUniformBorderSides(out);
+}
+
+const BORDER_SIDES = ["top", "right", "bottom", "left"] as const;
+const BORDER_FACETS = ["color", "style", "width"] as const;
+
+function collapseUniformBorderSides(
+	record: Record<string, string>,
+): Record<string, string> {
+	const out = { ...record };
+
+	for (const facet of BORDER_FACETS) {
+		const keys = BORDER_SIDES.map((side) => `border-${side}-${facet}`);
+		const values = keys.map((key) => out[key]);
+		const first = values[0];
+
+		if (first === undefined || values.some((value) => value !== first)) {
+			continue;
+		}
+
+		out[`border-${facet}`] = first;
+		for (const key of keys) {
+			delete out[key];
+		}
+	}
+
+	return out;
+}
+
+/**
+ * Drop computed values that do not paint, so evidence only keeps styles that
+ * could be a visible indicator. `getComputedStyle` cannot tell authored from
+ * initial; this is the used-value equivalent of "none".
+ */
+export function omitIdleStyleSnapshot(snapshot: StyleSnapshot): StyleSnapshot {
+	return {
+		element: omitIdleComputedStyles(snapshot.element, false),
+		before: omitIdleComputedStyles(snapshot.before, true),
+		after: omitIdleComputedStyles(snapshot.after, true),
+	};
 }
 
 /**
