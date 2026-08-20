@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>async focus</title></head>
+<body>
+	<a href="#main" id="skip">Skip to content</a>
+	<nav>
+		<a href="/about">About</a>
+	</nav>
+	<main id="main" tabindex="-1">
+		<h1>Main content</h1>
+	</main>
+	<script>
+		document.getElementById("skip").addEventListener("click", (event) => {
+			event.preventDefault();
+			const main = document.getElementById("main");
+			requestAnimationFrame(() => {
+				setTimeout(() => {
+					main.focus();
+				}, 50);
+			});
+		});
+	</script>
+</body>
+</html>

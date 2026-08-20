@@ -1,0 +1,59 @@
+{
+	"name": "@a11y-pulse/skip-link-audit",
+	"version": "0.0.0",
+	"description": "WCAG 2.4.1 Bypass Blocks audit that finds skip-link-like in-page anchors in the first tab stops and verifies that activating them moves keyboard focus.",
+	"type": "module",
+	"license": "SEE LICENSE IN LICENSE.md",
+	"author": "A11y Pulse Limited",
+	"homepage": "https://github.com/A11y-Pulse/audits/tree/main/packages/skip-link-audit#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/A11y-Pulse/audits.git",
+		"directory": "packages/skip-link-audit"
+	},
+	"bugs": {
+		"url": "https://github.com/A11y-Pulse/audits/issues"
+	},
+	"keywords": [
+		"accessibility",
+		"a11y",
+		"wcag",
+		"bypass-blocks",
+		"skip-link",
+		"audit"
+	],
+	"engines": {
+		"node": ">=22"
+	},
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
+	},
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE.md"
+	],
+	"scripts": {
+		"build": "tsup && tsc -p tsconfig.build.json",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check",
+		"lint:fix": "biome check --fix",
+		"test:unit": "vitest run",
+		"test:integration": "vitest run --config vitest.integration.config.ts",
+		"test": "npm run typecheck && npm run test:unit",
+		"prepublishOnly": "npm run build"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"dependencies": {
+		"@a11y-pulse/browser-adaptor": "*"
+	},
+	"devDependencies": {
+		"happy-dom": "^20.11.2",
+		"puppeteer": "^25.5.0"
+	}
+}
