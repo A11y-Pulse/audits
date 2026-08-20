@@ -1,6 +1,6 @@
 {
 	"name": "@a11y-pulse/tab-orchestrator",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Shared Tab-session runner for A11y Pulse keyboard audits.",
 	"type": "module",
 	"license": "SEE LICENSE IN LICENSE.md",
