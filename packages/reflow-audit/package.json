@@ -1,0 +1,71 @@
+{
+	"name": "@a11y-pulse/reflow-audit",
+	"version": "0.0.0",
+	"description": "WCAG 1.4.10 Reflow audit that narrows the viewport to 320px and measures whether the page requires two-dimensional scrolling.",
+	"type": "module",
+	"license": "SEE LICENSE IN LICENSE.md",
+	"author": "A11y Pulse Limited",
+	"homepage": "https://github.com/A11y-Pulse/audits/tree/main/packages/reflow-audit#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/A11y-Pulse/audits.git",
+		"directory": "packages/reflow-audit"
+	},
+	"bugs": {
+		"url": "https://github.com/A11y-Pulse/audits/issues"
+	},
+	"keywords": [
+		"accessibility",
+		"a11y",
+		"wcag",
+		"reflow",
+		"puppeteer",
+		"audit"
+	],
+	"engines": {
+		"node": ">=22"
+	},
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		},
+		"./puppeteer": {
+			"types": "./dist/adaptors/puppeteer.d.ts",
+			"import": "./dist/adaptors/puppeteer.js"
+		}
+	},
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE.md"
+	],
+	"scripts": {
+		"build": "tsup && tsc -p tsconfig.build.json",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check",
+		"lint:fix": "biome check --fix",
+		"test:unit": "vitest run",
+		"test:integration": "vitest run --config vitest.integration.config.ts",
+		"test": "npm run typecheck && npm run test:unit",
+		"prepublishOnly": "npm run build"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"dependencies": {
+		"@a11y-pulse/browser-adaptor": "*"
+	},
+	"peerDependencies": {
+		"puppeteer": "^25.5.0"
+	},
+	"peerDependenciesMeta": {
+		"puppeteer": {
+			"optional": true
+		}
+	},
+	"devDependencies": {
+		"happy-dom": "^20.11.2",
+		"puppeteer": "^25.5.0"
+	}
+}
