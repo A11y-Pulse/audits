@@ -22,7 +22,7 @@
 		"@biomejs/biome": "^2.5.8",
 		"@changesets/changelog-github": "^1.0.0",
 		"@changesets/cli": "^3.0.0",
-		"@tsconfig/node22": "^22.0.2",
+		"@tsconfig/node22": "^22.0.6",
 		"@types/node": "^26.2.0",
 		"tsup": "^8.5.0",
 		"typescript": "^7.0.2",
