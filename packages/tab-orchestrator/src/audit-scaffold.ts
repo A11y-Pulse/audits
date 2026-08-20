@@ -52,10 +52,9 @@ export type AuditSelfDisconnect = {
 };
 
 /**
- * Tracks the clearTimer/disconnectSelf pattern shared by every audit
- * consumer: an optional timeout that self-disconnects, plus the flag
- * `onSessionEnd` needs to tell a self-initiated disconnect apart from the
- * session ending for some other reason.
+ * Arms an optional self-disconnecting timeout and tracks whether this
+ * consumer initiated its own disconnect, so `onSessionEnd` can tell that
+ * apart from an external end.
  */
 export function createAuditSelfDisconnect(): AuditSelfDisconnect {
 	let timer: ReturnType<typeof setTimeout> | undefined;
