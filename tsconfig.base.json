@@ -8,6 +8,7 @@
 		"lib": ["ES2022"],
 		"module": "esnext",
 		"moduleResolution": "bundler",
+		"customConditions": ["source"],
 		"moduleDetection": "force",
 		"noEmitOnError": true,
 		"noImplicitOverride": true,

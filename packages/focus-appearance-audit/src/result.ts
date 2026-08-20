@@ -1,3 +1,5 @@
+import type { BaseAuditSummary } from "@a11y-pulse/tab-orchestrator";
+
 import type { StyleSnapshot } from "./detection";
 
 export type DetectionMethod = "style" | "pixel-diff";
@@ -52,18 +54,5 @@ export type FocusElementResult = {
 export type FocusAppearanceResult = {
 	/** Every focusable element that was checked, in tab order. */
 	elements: FocusElementResult[];
-	summary: {
-		checked: number;
-		passed: number;
-		failed: number;
-		/** True if the element limit was hit before tabbing finished. */
-		reachedLimit: boolean;
-		/** True if the audit stopped early after hitting `failedElementLimit`. */
-		reachedFailedElementLimit: boolean;
-		/**
-		 * True if the audit returned early because `timeout` elapsed. The results
-		 * are whatever had been gathered when the deadline hit.
-		 */
-		timedOut: boolean;
-	};
+	summary: BaseAuditSummary;
 };

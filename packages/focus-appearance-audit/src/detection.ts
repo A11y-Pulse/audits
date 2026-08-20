@@ -1,44 +1,9 @@
+import type { Rect, StyleSnapshot } from "@a11y-pulse/tab-orchestrator";
 import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
 
-/** A snapshot of an element's focus-relevant computed styles, plus its pseudo-elements. */
-export type StyleSnapshot = {
-	element: Record<string, string>;
-	before: Record<string, string>;
-	after: Record<string, string>;
-};
-
-export type Rect = { x: number; y: number; width: number; height: number };
-
-/**
- * A screenshot clip framing `rect` with up to `buffer` pixels of padding on each side, shrunk
- * where the page edges leave less room. The padding allows for indicators drawn just outside
- * the element box (outlines, shadows) and for anti-aliasing.
- */
-export function bufferedClip(
-	rect: Rect,
-	pageWidth: number,
-	pageHeight: number,
-	buffer: number,
-): Rect {
-	const left = Math.max(0, Math.min(buffer, rect.x));
-	const top = Math.max(0, Math.min(buffer, rect.y));
-	const right = Math.max(0, Math.min(buffer, pageWidth - rect.x - rect.width));
-	const bottom = Math.max(
-		0,
-		Math.min(buffer, pageHeight - rect.y - rect.height),
-	);
-
-	// Clamp to non-negative origins: an element positioned partially off the top
-	// or left of the document has a negative page-relative rect, and Puppeteer
-	// rejects a screenshot clip with negative x/y.
-	return {
-		x: Math.max(0, rect.x - left),
-		y: Math.max(0, rect.y - top),
-		width: rect.width + left + right,
-		height: rect.height + top + bottom,
-	};
-}
+export { bufferedClip } from "@a11y-pulse/tab-orchestrator";
+export type { Rect, StyleSnapshot };
 
 /**
  * Collapse the colour/width of a decoration (outline, each border edge) that is

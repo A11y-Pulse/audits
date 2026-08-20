@@ -1,0 +1,26 @@
+{
+	"extends": ["@tsconfig/node22/tsconfig.json", "../../tsconfig.base.json"],
+	"compilerOptions": {
+		"types": ["node"],
+		"lib": ["ES2022", "DOM"],
+		// The shared-session integration test cross-imports the three audit
+		// packages. Unlike this package's own exports, theirs have no
+		// "source" condition (only "types" -> dist), so tsc would otherwise
+		// require `npm run build` to have already run for them before
+		// typecheck (which CI runs before build). Map straight to source,
+		// mirroring the alias already used at test-runtime in
+		// vitest.integration.config.ts.
+		"paths": {
+			"@a11y-pulse/focus-appearance-audit": [
+				"../focus-appearance-audit/src/index.ts"
+			],
+			"@a11y-pulse/focus-not-obscured-audit": [
+				"../focus-not-obscured-audit/src/index.ts"
+			],
+			"@a11y-pulse/context-change-on-focus-audit": [
+				"../context-change-on-focus-audit/src/index.ts"
+			]
+		}
+	},
+	"include": ["src", "tests"]
+}

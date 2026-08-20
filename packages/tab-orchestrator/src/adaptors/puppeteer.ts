@@ -1,5 +1,5 @@
 import type { JSHandle, Page } from "puppeteer";
-import type { ElementRef, FocusAppearanceAuditAdaptor, Rect } from "../adaptor";
+import type { BrowserAdaptor, ElementRef, Rect } from "../adaptor";
 
 // Pages that already have focus emulation enabled. A fresh adaptor is created per
 // audit run, but a page is often reused across runs (e.g. one page per snapshot,
@@ -10,7 +10,7 @@ import type { ElementRef, FocusAppearanceAuditAdaptor, Rect } from "../adaptor";
 const focusEmulationEnabled = new WeakSet<Page>();
 
 /** A BrowserAdaptor backed by a Puppeteer Page. */
-export class PuppeteerAdaptor implements FocusAppearanceAuditAdaptor {
+export class PuppeteerAdaptor implements BrowserAdaptor {
 	readonly screenshotClipScale = 2;
 
 	constructor(private readonly page: Page) {}
@@ -65,7 +65,7 @@ export class PuppeteerAdaptor implements FocusAppearanceAuditAdaptor {
 			focusEmulationEnabled.add(this.page);
 		} catch (error) {
 			console.warn(
-				"Could not enable focus emulation for the focus appearance audit",
+				"Could not enable focus emulation for the tab orchestrator",
 				{ error },
 			);
 		}

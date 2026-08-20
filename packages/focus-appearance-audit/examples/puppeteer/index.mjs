@@ -1,5 +1,5 @@
 import { runFocusAppearanceAudit } from "@a11y-pulse/focus-appearance-audit";
-import { PuppeteerAdaptor } from "@a11y-pulse/focus-appearance-audit/puppeteer";
+import { PuppeteerAdaptor } from "@a11y-pulse/tab-orchestrator/puppeteer";
 import puppeteer from "puppeteer";
 
 const browser = await puppeteer.launch({ headless: true });
