@@ -1,0 +1,12 @@
+{
+	"name": "text-spacing-audit-puppeteer-example",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"start": "node index.mjs"
+	},
+	"dependencies": {
+		"@a11y-pulse/text-spacing-audit": "file:../..",
+		"puppeteer": "^25.3.0"
+	}
+}

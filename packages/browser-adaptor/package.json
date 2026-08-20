@@ -1,0 +1,70 @@
+{
+	"name": "@a11y-pulse/browser-adaptor",
+	"version": "0.0.0",
+	"description": "Shared browser adaptor primitives and DOM helpers for A11y Pulse accessibility audits.",
+	"type": "module",
+	"license": "SEE LICENSE IN LICENSE.md",
+	"author": "A11y Pulse Limited",
+	"homepage": "https://github.com/A11y-Pulse/audits/tree/main/packages/browser-adaptor#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/A11y-Pulse/audits.git",
+		"directory": "packages/browser-adaptor"
+	},
+	"bugs": {
+		"url": "https://github.com/A11y-Pulse/audits/issues"
+	},
+	"keywords": [
+		"accessibility",
+		"a11y",
+		"puppeteer",
+		"browser-adaptor",
+		"audit"
+	],
+	"engines": {
+		"node": ">=22"
+	},
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		},
+		"./puppeteer": {
+			"types": "./dist/adaptors/puppeteer.d.ts",
+			"import": "./dist/adaptors/puppeteer.js"
+		},
+		"./dom": {
+			"types": "./dist/dom.d.ts",
+			"import": "./dist/dom.js"
+		}
+	},
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE.md"
+	],
+	"scripts": {
+		"build": "tsup && tsc -p tsconfig.build.json",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check",
+		"lint:fix": "biome check --fix",
+		"test:unit": "vitest run",
+		"test": "npm run typecheck && npm run test:unit",
+		"prepublishOnly": "npm run build"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"peerDependencies": {
+		"puppeteer": "^25.5.0"
+	},
+	"peerDependenciesMeta": {
+		"puppeteer": {
+			"optional": true
+		}
+	},
+	"devDependencies": {
+		"happy-dom": "^20.11.2",
+		"puppeteer": "^25.5.0"
+	}
+}

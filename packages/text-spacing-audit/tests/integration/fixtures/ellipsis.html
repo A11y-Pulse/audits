@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Text spacing ellipsis</title>
+		<style>
+			.title {
+				box-sizing: border-box;
+				width: 12rem;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+				font: 16px/1.2 sans-serif;
+			}
+		</style>
+	</head>
+	<body>
+		<p class="title" id="title">
+			A very long heading that is already truncated with an ellipsis before any
+			spacing override is applied
+		</p>
+	</body>
+</html>
