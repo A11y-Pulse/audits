@@ -1,38 +1,18 @@
 import {
+	type BaseAuditOptions,
 	type BrowserAdaptor,
+	createAuditSelfDisconnect,
 	createTabOrchestrator,
+	DEFAULT_ELEMENT_LIMIT,
+	DEFAULT_FAILED_ELEMENT_LIMIT,
+	DEFAULT_SCREENSHOT_SETTLE_DELAY,
+	DEFAULT_TIMEOUT,
 	type TabConsumer,
-	type TabSessionHandle,
 } from "@a11y-pulse/tab-orchestrator";
 import { classifyObscuring } from "./classify";
 import type { FocusNotObscuredResult } from "./result";
 
-export const DEFAULT_ELEMENT_LIMIT = 1024;
-export const DEFAULT_SCREENSHOT_SETTLE_DELAY = 33; // ~2 frames at 60fps
-export const DEFAULT_FAILED_ELEMENT_LIMIT = 0; // 0 = never finish early
-export const DEFAULT_TIMEOUT = 0; // 0 = no timeout
-
-export type FocusNotObscuredOptions = {
-	/** Max focusable elements to tab through */
-	elementLimit?: number;
-
-	/** How long to wait (in ms) after each Tab for the page to settle before measuring */
-	screenshotSettleDelay?: number;
-
-	/**
-	 * Finish the audit early once this many elements have failed, leaving the
-	 * remaining elements unchecked. Useful as a fail-fast signal when you only
-	 * need to know that a page has focus problems, not their full extent. 0
-	 * (the default) means no early finish.
-	 */
-	failedElementLimit?: number;
-
-	/**
-	 * Limit how long (in ms) the audit runs before returning the results it has
-	 * gathered so far.
-	 */
-	timeout?: number;
-};
+export type FocusNotObscuredOptions = BaseAuditOptions;
 
 type ResolvedOptions = Required<FocusNotObscuredOptions>;
 
@@ -84,33 +64,15 @@ export function createFocusNotObscuredAudit(
 	const result = emptyResult();
 	let checked = 0;
 	let failures = 0;
-	let timer: ReturnType<typeof setTimeout> | undefined;
-	let disconnectedSelf = false;
-
-	const clearTimer = (): void => {
-		if (timer !== undefined) {
-			clearTimeout(timer);
-			timer = undefined;
-		}
-	};
-
-	const disconnectSelf = (session: TabSessionHandle): void => {
-		disconnectedSelf = true;
-		clearTimer();
-		session.disconnect();
-	};
+	const selfDisconnect = createAuditSelfDisconnect();
 
 	return {
 		result,
 		capabilities: new Set(["obscuring"] as const),
 		onSessionStart(session) {
-			if (resolved.timeout > 0) {
-				timer = setTimeout(() => {
-					timer = undefined;
-					result.summary.timedOut = true;
-					disconnectSelf(session);
-				}, resolved.timeout);
-			}
+			selfDisconnect.armTimeout(resolved.timeout, session, () => {
+				result.summary.timedOut = true;
+			});
 		},
 		onTabStop(snapshot, session) {
 			checked++;
@@ -143,18 +105,18 @@ export function createFocusNotObscuredAudit(
 				failures >= resolved.failedElementLimit
 			) {
 				result.summary.reachedFailedElementLimit = true;
-				disconnectSelf(session);
+				selfDisconnect.disconnect(session);
 				return;
 			}
 
 			if (checked >= resolved.elementLimit) {
 				result.summary.reachedLimit = true;
-				disconnectSelf(session);
+				selfDisconnect.disconnect(session);
 			}
 		},
 		onSessionEnd(reason) {
-			clearTimer();
-			if (!disconnectedSelf) {
+			selfDisconnect.clear();
+			if (!selfDisconnect.disconnectedSelf) {
 				result.summary.sessionEnd = reason;
 			}
 		},

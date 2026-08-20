@@ -1,4 +1,16 @@
 export type { BrowserAdaptor, ElementRef, Rect } from "./adaptor";
+export type {
+	AuditSelfDisconnect,
+	BaseAuditOptions,
+	BaseAuditSummary,
+} from "./audit-scaffold";
+export {
+	createAuditSelfDisconnect,
+	DEFAULT_ELEMENT_LIMIT,
+	DEFAULT_FAILED_ELEMENT_LIMIT,
+	DEFAULT_SCREENSHOT_SETTLE_DELAY,
+	DEFAULT_TIMEOUT,
+} from "./audit-scaffold";
 export type { ActiveElementBase, BaselinePayload } from "./browser-scripts";
 export {
 	activeElementHandleScript,

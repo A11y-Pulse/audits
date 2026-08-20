@@ -1,4 +1,4 @@
-import type { SessionEndReason } from "@a11y-pulse/tab-orchestrator";
+import type { BaseAuditSummary } from "@a11y-pulse/tab-orchestrator";
 
 import type { ContextChangeFinding } from "./classify";
 
@@ -22,23 +22,5 @@ export type ContextChangeOnFocusElementResult = {
 export type ContextChangeOnFocusResult = {
 	/** Every focusable element that was checked, in tab order. */
 	elements: ContextChangeOnFocusElementResult[];
-	summary: {
-		checked: number;
-		passed: number;
-		failed: number;
-		/** True if the element limit was hit before tabbing finished. */
-		reachedLimit: boolean;
-		/** True if the audit stopped early after hitting `failedElementLimit`. */
-		reachedFailedElementLimit: boolean;
-		/**
-		 * True if the audit returned early because `timeout` elapsed. The results
-		 * are whatever had been gathered when the deadline hit.
-		 */
-		timedOut: boolean;
-		/**
-		 * Why the tab session ended, or `null` when this consumer disconnected
-		 * itself (element limit, failed-element limit, or timeout).
-		 */
-		sessionEnd: SessionEndReason | null;
-	};
+	summary: BaseAuditSummary;
 };
