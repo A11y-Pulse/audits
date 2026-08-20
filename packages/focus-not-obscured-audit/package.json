@@ -53,6 +53,6 @@
 		"@a11y-pulse/tab-orchestrator": "*"
 	},
 	"devDependencies": {
-		"puppeteer": "^25.5.0"
+		"puppeteer": "^25.7.0"
 	}
 }
