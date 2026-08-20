@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>clipped overflow</title>
+	<style>
+		html, body { margin: 0; }
+		body { overflow-x: hidden; }
+		.wide { width: 1200px; height: 40px; background: #fcc; }
+	</style>
+</head>
+<body>
+	<div class="wide">Clipped by overflow:hidden; a documented v1 false negative.</div>
+</body>
+</html>
