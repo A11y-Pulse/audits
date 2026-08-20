@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0
+
+### Minor Changes
+
+- [`dbdabe9`](https://github.com/A11y-Pulse/audits/commit/dbdabe9ca3f435fe273568b4b786ad83b022083c) Thanks [@wildlyinaccurate](https://github.com/wildlyinaccurate)! - Republish with the `tab-orchestrator`-based orchestration, `FocusElementResult.failureEvidence`, and `StyleSnapshot`/`FocusFailureEvidence` exports. The previous `0.2.0` published to npm predated the monorepo conversion and did not include these; this version corrects the drift between the registry and this repo's `main`.
+
 ## 0.2.0
 
 ### Minor Changes
