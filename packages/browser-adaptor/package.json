@@ -1,6 +1,6 @@
 {
 	"name": "@a11y-pulse/browser-adaptor",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "Shared browser adaptor primitives and DOM helpers for A11y Pulse accessibility audits.",
 	"type": "module",
 	"license": "SEE LICENSE IN LICENSE.md",

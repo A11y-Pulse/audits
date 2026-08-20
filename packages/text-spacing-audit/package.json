@@ -1,6 +1,6 @@
 {
 	"name": "@a11y-pulse/text-spacing-audit",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "WCAG 1.4.12 Text Spacing audit that injects the SC spacing overrides and detects clipped or overlapping text.",
 	"type": "module",
 	"license": "SEE LICENSE IN LICENSE.md",

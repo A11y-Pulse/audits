@@ -1,6 +1,6 @@
 {
 	"name": "@a11y-pulse/context-change-on-focus-audit",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "WCAG 3.2.1 On Focus audit that tabs through a page and detects focus-triggered context changes (new windows, auto-submits, navigation, and focus theft/removal).",
 	"type": "module",
 	"license": "SEE LICENSE IN LICENSE.md",
