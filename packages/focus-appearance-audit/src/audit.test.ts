@@ -1,368 +1,44 @@
-import { PNG } from "pngjs";
-import { describe, expect, it } from "vitest";
-import type { FocusAppearanceAuditAdaptor } from "./adaptor";
 import {
 	type ActiveElementInfo,
-	type FocusProbe,
-	runFocusAppearanceAudit,
-	runFocusLoop,
-} from "./audit";
-import {
+	type BaselinePayload,
+	type BrowserAdaptor,
 	baselineScript,
 	blurScript,
 	clearMarkersScript,
+	createTabOrchestrator,
 	elementRectScript,
+	elementStylesScript,
 	focusScript,
+	getSelector,
 	isCenterObscuredScript,
 	pageDimensionsScript,
 	probeActiveElementScript,
 	scrollToCenterScript,
-} from "./browser-scripts";
+	type TabConsumer,
+	type TabStopSnapshot,
+} from "@a11y-pulse/tab-orchestrator";
+import { PNG } from "pngjs";
+import { describe, expect, it } from "vitest";
+import type { FocusAppearanceAuditAdaptor } from "./adaptor";
+import {
+	createFocusAppearanceAudit,
+	type FocusAppearanceOptions,
+	runFocusAppearanceAudit,
+} from "./audit";
 import type { Rect, StyleSnapshot } from "./detection";
-import { getSelector } from "./get-selector";
-import type { DetectionMethod, IndicatorDetection } from "./result";
 
 const EMPTY_STYLES: StyleSnapshot = { element: {}, before: {}, after: {} };
-const OPTIONS = {
-	elementLimit: 100,
-	baselineElementLimit: 200,
-	screenshotSettleDelay: 0,
-	screenshotClipBuffer: 10,
-	screenshotDiffThreshold: 0,
-	skipStyleCheck: false,
-	failedElementLimit: 0,
-	timeout: 0,
+const UNFOCUSED_STYLES: StyleSnapshot = {
+	element: { "outline-style": "none" },
+	before: {},
+	after: {},
 };
-
-const EMPTY_FAILURE_EVIDENCE = {
-	focusedScreenshot: new Uint8Array([1]),
-	unfocusedScreenshot: new Uint8Array([2]),
-	focusedStyles: EMPTY_STYLES,
-	unfocusedStyles: EMPTY_STYLES,
+const FOCUSED_STYLES: StyleSnapshot = {
+	element: { "outline-style": "auto" },
+	before: {},
+	after: {},
 };
-
-/** Convenience for scripted probes: `"style"` / `null` → `IndicatorDetection`. */
-function detection(method: DetectionMethod | null): IndicatorDetection {
-	return method === null
-		? { method: null, ...EMPTY_FAILURE_EVIDENCE }
-		: { method };
-}
-
-function info(index: number): ActiveElementInfo {
-	return {
-		index,
-		isBody: false,
-		isIframe: false,
-		selector: `#e${index}`,
-		html: `<button>${index}</button>`,
-		styles: EMPTY_STYLES,
-		rect: { x: 0, y: 0, width: 10, height: 10 },
-	};
-}
-
-function scriptedProbe(script: {
-	hasFocus: boolean[];
-	active: (ActiveElementInfo | null)[];
-	indicator: (DetectionMethod | null)[];
-}): FocusProbe {
-	let focusCall = 0;
-	let activeCall = 0;
-	let indicatorCall = 0;
-
-	return {
-		captureBaseline: async () => new Map(),
-		hasFocus: async () => script.hasFocus[focusCall++] ?? false,
-		pressTab: async () => {},
-		settle: async () => {},
-		probeActiveElement: async () => script.active[activeCall++] ?? null,
-		detectIndicator: async () =>
-			detection(script.indicator[indicatorCall++] ?? null),
-		clearMarkers: async () => {},
-	};
-}
-
-/**
- * A probe that processes `hangAfter` elements and then wedges forever on the
- * next settle, modelling a page interaction that never resolves. Only a timeout
- * can end an audit driven by this probe.
- */
-function hangingProbe(script: {
-	active: ActiveElementInfo[];
-	indicator: (DetectionMethod | null)[];
-	hangAfter: number;
-}): FocusProbe {
-	let settleCall = 0;
-	let activeCall = 0;
-	let indicatorCall = 0;
-
-	return {
-		captureBaseline: async () => new Map(),
-		hasFocus: async () => true,
-		pressTab: async () => {},
-		settle: () =>
-			settleCall++ < script.hangAfter
-				? Promise.resolve()
-				: new Promise<void>(() => {}),
-		probeActiveElement: async () => script.active[activeCall++] ?? null,
-		detectIndicator: async () =>
-			detection(script.indicator[indicatorCall++] ?? null),
-		clearMarkers: async () => {},
-	};
-}
-
-describe("runFocusLoop", () => {
-	it("bails out when the document loses focus", async () => {
-		const result = await runFocusLoop(
-			scriptedProbe({
-				hasFocus: [true, false],
-				active: [info(0)],
-				indicator: ["style"],
-			}),
-			OPTIONS,
-		);
-
-		expect(result.summary.passed).toBe(1);
-		expect(result.summary.failed).toBe(0);
-	});
-
-	it("stops when focus cycles back to an already-seen element", async () => {
-		const result = await runFocusLoop(
-			scriptedProbe({
-				hasFocus: [true, true, true],
-				active: [info(0), info(0)],
-				indicator: ["style"],
-			}),
-			OPTIONS,
-		);
-
-		expect(result.summary.checked).toBe(1);
-	});
-
-	it("skips iframes without recording or detecting them", async () => {
-		const iframe: ActiveElementInfo = {
-			...info(0),
-			index: null,
-			isIframe: true,
-			selector: "iframe",
-		};
-		const result = await runFocusLoop(
-			scriptedProbe({
-				hasFocus: [true, true, false],
-				active: [iframe, info(1)],
-				indicator: ["style"],
-			}),
-			OPTIONS,
-		);
-
-		// Only the real control is recorded; the frame is passed through.
-		expect(result.summary.checked).toBe(1);
-		expect(result.elements).toHaveLength(1);
-		expect(result.elements[0]?.selector).toBe("#e1");
-	});
-
-	it("keeps tabbing through a frame that reports itself on every inner stop", async () => {
-		// document.activeElement is the same <iframe> for each control inside it;
-		// the loop must not record duplicates or wedge on the repeated element.
-		const iframe: ActiveElementInfo = {
-			...info(0),
-			index: null,
-			isIframe: true,
-			selector: "iframe",
-		};
-		const result = await runFocusLoop(
-			scriptedProbe({
-				hasFocus: [true, true, true, false],
-				active: [iframe, iframe, info(1)],
-				indicator: ["style"],
-			}),
-			OPTIONS,
-		);
-
-		expect(result.summary.checked).toBe(1);
-		expect(result.elements[0]?.selector).toBe("#e1");
-	});
-
-	it("stops when focus reaches the body", async () => {
-		const body: ActiveElementInfo = { ...info(0), isBody: true };
-		const result = await runFocusLoop(
-			scriptedProbe({
-				hasFocus: [true, true],
-				active: [info(0), body],
-				indicator: ["style"],
-			}),
-			OPTIONS,
-		);
-
-		expect(result.summary.checked).toBe(1);
-	});
-
-	it("records elements without an indicator as failed", async () => {
-		const result = await runFocusLoop(
-			scriptedProbe({
-				hasFocus: [true, true, false],
-				active: [info(0), info(1)],
-				indicator: ["style", null],
-			}),
-			OPTIONS,
-		);
-
-		const failed = result.elements.filter((e) => !e.passed);
-		expect(failed).toHaveLength(1);
-		expect(failed[0]?.selector).toBe("#e1");
-		expect(failed[0]?.failureEvidence).toEqual(EMPTY_FAILURE_EVIDENCE);
-		expect(result.summary.failed).toBe(1);
-	});
-
-	it("records the detection method for passing elements", async () => {
-		const result = await runFocusLoop(
-			scriptedProbe({
-				hasFocus: [true, false],
-				active: [info(0)],
-				indicator: ["pixel-diff"],
-			}),
-			OPTIONS,
-		);
-
-		expect(result.elements[0]?.detectionMethod).toBe("pixel-diff");
-		expect(result.elements[0]?.failureEvidence).toBeUndefined();
-	});
-
-	it("processes untracked elements and is still bounded by elementLimit", async () => {
-		const untracked: ActiveElementInfo = { ...info(0), index: null };
-		const result = await runFocusLoop(
-			scriptedProbe({
-				hasFocus: [true, true, true, true],
-				active: [untracked, untracked, untracked, untracked],
-				indicator: ["style", "style", "style", "style"],
-			}),
-			{ ...OPTIONS, elementLimit: 3 },
-		);
-
-		expect(result.summary.checked).toBe(3);
-		expect(result.summary.reachedLimit).toBe(true);
-	});
-
-	it("respects elementLimit", async () => {
-		const result = await runFocusLoop(
-			scriptedProbe({
-				hasFocus: [true, true, true, true, true],
-				active: [info(0), info(1), info(2), info(3), info(4)],
-				indicator: ["style", "style", "style", "style", "style"],
-			}),
-			{ ...OPTIONS, elementLimit: 2 },
-		);
-
-		expect(result.summary.checked).toBe(2);
-		expect(result.summary.reachedLimit).toBe(true);
-	});
-});
-
-describe("runFocusLoop — failedElementLimit", () => {
-	it("finishes early once the failed-element limit is reached", async () => {
-		const result = await runFocusLoop(
-			scriptedProbe({
-				hasFocus: [true, true, true, true, true],
-				active: [info(0), info(1), info(2), info(3), info(4)],
-				indicator: [null, null, null, null, null],
-			}),
-			{ ...OPTIONS, failedElementLimit: 2 },
-		);
-
-		expect(result.summary.checked).toBe(2);
-		expect(result.summary.failed).toBe(2);
-		expect(result.summary.reachedFailedElementLimit).toBe(true);
-		// Stopping on failures is distinct from exhausting the element budget.
-		expect(result.summary.reachedLimit).toBe(false);
-	});
-
-	it("counts only failures, not passes, toward the limit", async () => {
-		const result = await runFocusLoop(
-			scriptedProbe({
-				hasFocus: [true, true, true, true, true],
-				active: [info(0), info(1), info(2), info(3), info(4)],
-				indicator: ["style", null, "style", null, "style"],
-			}),
-			{ ...OPTIONS, failedElementLimit: 2 },
-		);
-
-		// pass, fail, pass, fail → the second failure lands on the fourth element.
-		expect(result.summary.checked).toBe(4);
-		expect(result.summary.passed).toBe(2);
-		expect(result.summary.failed).toBe(2);
-		expect(result.summary.reachedFailedElementLimit).toBe(true);
-	});
-
-	it("never finishes early when the limit is 0", async () => {
-		const result = await runFocusLoop(
-			scriptedProbe({
-				hasFocus: [true, true, true, false],
-				active: [info(0), info(1), info(2)],
-				indicator: [null, null, null],
-			}),
-			{ ...OPTIONS, failedElementLimit: 0 },
-		);
-
-		expect(result.summary.checked).toBe(3);
-		expect(result.summary.failed).toBe(3);
-		expect(result.summary.reachedFailedElementLimit).toBe(false);
-	});
-});
-
-describe("runFocusLoop — timeout", () => {
-	it("returns the results gathered so far when the timeout fires", async () => {
-		const result = await runFocusLoop(
-			hangingProbe({
-				active: [info(0), info(1), info(2), info(3)],
-				indicator: ["style", "style", "style", "style"],
-				hangAfter: 2,
-			}),
-			{ ...OPTIONS, timeout: 50 },
-		);
-
-		expect(result.summary.timedOut).toBe(true);
-		expect(result.summary.checked).toBe(2);
-		expect(result.summary.passed).toBe(2);
-		expect(result.elements).toHaveLength(2);
-	}, 2000);
-
-	it("times out with no results when the audit wedges immediately", async () => {
-		const result = await runFocusLoop(
-			hangingProbe({ active: [info(0)], indicator: ["style"], hangAfter: 0 }),
-			{ ...OPTIONS, timeout: 50 },
-		);
-
-		expect(result.summary.timedOut).toBe(true);
-		expect(result.summary.checked).toBe(0);
-	}, 2000);
-
-	it("does not time out when the timeout is 0", async () => {
-		const result = await runFocusLoop(
-			scriptedProbe({
-				hasFocus: [true, true, false],
-				active: [info(0), info(1)],
-				indicator: ["style", "style"],
-			}),
-			{ ...OPTIONS, timeout: 0 },
-		);
-
-		expect(result.summary.timedOut).toBe(false);
-		expect(result.summary.checked).toBe(2);
-	});
-
-	it("completes normally when the audit finishes before the timeout", async () => {
-		const result = await runFocusLoop(
-			scriptedProbe({
-				hasFocus: [true, true, false],
-				active: [info(0), info(1)],
-				indicator: ["style", "style"],
-			}),
-			{ ...OPTIONS, timeout: 10_000 },
-		);
-
-		expect(result.summary.timedOut).toBe(false);
-		expect(result.summary.checked).toBe(2);
-	});
-});
+const RECT: Rect = { x: 0, y: 0, width: 10, height: 10 };
 
 function solidPng(
 	width: number,
@@ -380,6 +56,358 @@ function solidPng(
 
 	return PNG.sync.write(png);
 }
+
+const WHITE_PNG = new Uint8Array(solidPng(8, 8, [255, 255, 255]));
+const BLACK_PNG = new Uint8Array(solidPng(8, 8, [0, 0, 0]));
+
+function info(
+	index: number,
+	extra: Partial<Omit<ActiveElementInfo, "selector">> = {},
+): Omit<ActiveElementInfo, "selector"> {
+	return {
+		index,
+		isBody: false,
+		isIframe: false,
+		html: `<button>${index}</button>`,
+		styles: EMPTY_STYLES,
+		rect: RECT,
+		...extra,
+	};
+}
+
+function stylePassActive(index: number): Omit<ActiveElementInfo, "selector"> {
+	return info(index, { styles: FOCUSED_STYLES });
+}
+
+function stylePassBaseline(indexes: number[]): BaselinePayload {
+	return {
+		styles: [UNFOCUSED_STYLES],
+		entries: indexes.map((index) => ({
+			index,
+			styleIndex: 0,
+			rect: RECT,
+		})),
+	};
+}
+
+function recordingConsumer(): TabConsumer & { stops: TabStopSnapshot[] } {
+	const record = {
+		stops: [] as TabStopSnapshot[],
+		capabilities: new Set<never>(),
+		async onTabStop(snapshot: TabStopSnapshot) {
+			record.stops.push(snapshot);
+		},
+	};
+	return record;
+}
+
+function loopAdaptor(script: {
+	hasFocus?: boolean[];
+	active?: Array<Omit<ActiveElementInfo, "selector"> | null>;
+	baseline?: BaselinePayload;
+	pngs?: Uint8Array[];
+}): BrowserAdaptor & { clipCalls: number } {
+	let focusCall = 0;
+	let activeCall = 0;
+	let lastIndex: number | null = null;
+	let pngCall = 0;
+	const adaptor: BrowserAdaptor & { clipCalls: number } = {
+		clipCalls: 0,
+		evaluate: (async (fn, ..._args) => {
+			if (fn === baselineScript) {
+				return script.baseline ?? { styles: [EMPTY_STYLES], entries: [] };
+			}
+			if (fn === probeActiveElementScript) {
+				const next = script.active?.[activeCall++] ?? {
+					index: null,
+					isBody: true,
+					isIframe: false,
+					html: "",
+					styles: EMPTY_STYLES,
+					rect: { x: 0, y: 0, width: 0, height: 0 },
+				};
+				lastIndex = next?.index ?? null;
+				return next;
+			}
+			if (fn === getSelector) {
+				return lastIndex === null ? "#fake" : `#e${lastIndex}`;
+			}
+			if (fn === elementStylesScript) {
+				return EMPTY_STYLES;
+			}
+			if (fn === pageDimensionsScript) {
+				return { width: 2000, height: 4000 };
+			}
+			if (fn === isCenterObscuredScript) {
+				return false;
+			}
+			if (fn === elementRectScript) {
+				return { x: 100, y: 100, width: 40, height: 20 };
+			}
+			if (
+				fn === blurScript ||
+				fn === focusScript ||
+				fn === scrollToCenterScript ||
+				fn === clearMarkersScript
+			) {
+				return undefined;
+			}
+			return script.hasFocus?.[focusCall++] ?? false;
+		}) as BrowserAdaptor["evaluate"],
+		async evaluateHandle() {
+			return {};
+		},
+		async disposeRef() {},
+		async pressTab() {},
+		async screenshotClip() {
+			adaptor.clipCalls++;
+			const pngs = script.pngs;
+			if (pngs !== undefined && pngs.length > 0) {
+				return pngs[pngCall++ % pngs.length] ?? WHITE_PNG;
+			}
+			return WHITE_PNG;
+		},
+		async ensureFocusReporting() {},
+	};
+	return adaptor;
+}
+
+async function runWithOrchestrator(
+	adaptor: BrowserAdaptor,
+	options: FocusAppearanceOptions = {},
+	extra: TabConsumer[] = [],
+) {
+	const orchestrator = createTabOrchestrator(adaptor, {
+		screenshotSettleDelay: options.screenshotSettleDelay ?? 0,
+		screenshotClipBuffer: options.screenshotClipBuffer,
+		markerLimit: options.elementLimit,
+		baselineElementLimit: options.baselineElementLimit,
+	});
+	const audit = createFocusAppearanceAudit(options);
+	orchestrator.attach(audit);
+	for (const consumer of extra) {
+		orchestrator.attach(consumer);
+	}
+	await orchestrator.run();
+	return audit;
+}
+
+describe("createFocusAppearanceAudit", () => {
+	it("passes via style without calling screenshotClip", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			active: [stylePassActive(0)],
+			baseline: stylePassBaseline([0]),
+		});
+
+		const audit = await runWithOrchestrator(adaptor);
+
+		expect(audit.result.elements[0]?.detectionMethod).toBe("style");
+		expect(audit.result.elements[0]?.passed).toBe(true);
+		expect(audit.result.elements[0]?.failureEvidence).toBeUndefined();
+		expect(adaptor.clipCalls).toBe(0);
+		expect(audit.result.summary.sessionEnd).toBe("completed");
+	});
+
+	it("calls ensureUnfocusedPair on a style miss and passes via pixel-diff", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			active: [info(0, { styles: UNFOCUSED_STYLES })],
+			baseline: {
+				styles: [UNFOCUSED_STYLES],
+				entries: [{ index: 0, styleIndex: 0, rect: RECT }],
+			},
+			pngs: [WHITE_PNG, BLACK_PNG],
+		});
+
+		const audit = await runWithOrchestrator(adaptor);
+
+		expect(audit.result.elements[0]?.detectionMethod).toBe("pixel-diff");
+		expect(audit.result.elements[0]?.passed).toBe(true);
+		expect(adaptor.clipCalls).toBe(2);
+		expect(audit.result.summary.sessionEnd).toBe("completed");
+	});
+
+	it("disconnects after failedElementLimit: 1 while another consumer keeps receiving stops", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true, true],
+			active: [info(0), info(1)],
+		});
+		const other = recordingConsumer();
+
+		const audit = await runWithOrchestrator(
+			adaptor,
+			{ failedElementLimit: 1 },
+			[other],
+		);
+
+		expect(audit.result.summary.checked).toBe(1);
+		expect(audit.result.summary.failed).toBe(1);
+		expect(audit.result.summary.reachedFailedElementLimit).toBe(true);
+		expect(audit.result.summary.reachedLimit).toBe(false);
+		expect(audit.result.summary.sessionEnd).toBeNull();
+		expect(other.stops.map((s) => s.activeElement.index)).toEqual([0, 1]);
+	});
+
+	it("disconnects after elementLimit: 1", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true, true],
+			active: [stylePassActive(0), stylePassActive(1)],
+			baseline: stylePassBaseline([0, 1]),
+		});
+		const other = recordingConsumer();
+
+		const audit = await runWithOrchestrator(adaptor, { elementLimit: 1 }, [
+			other,
+		]);
+
+		expect(audit.result.summary.checked).toBe(1);
+		expect(audit.result.summary.reachedLimit).toBe(true);
+		expect(audit.result.summary.sessionEnd).toBeNull();
+		expect(other.stops).toHaveLength(2);
+	});
+
+	it("records no appearance row when the only candidate is an iframe then body", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			active: [
+				info(0, {
+					index: null,
+					isIframe: true,
+					html: "<iframe></iframe>",
+				}),
+			],
+		});
+
+		const audit = await runWithOrchestrator(adaptor);
+
+		expect(audit.result.elements).toEqual([]);
+		expect(audit.result.summary.checked).toBe(0);
+		expect(audit.result.summary.sessionEnd).toBe("completed");
+	});
+
+	it("sets sessionEnd to lostFocus when the document loses focus while attached", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true, false],
+			active: [stylePassActive(0)],
+			baseline: stylePassBaseline([0]),
+		});
+
+		const audit = await runWithOrchestrator(adaptor);
+
+		expect(audit.result.summary.checked).toBe(1);
+		expect(audit.result.summary.sessionEnd).toBe("lostFocus");
+	});
+
+	it("records a failure with evidence when neither stage finds an indicator", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			active: [info(0)],
+		});
+
+		const audit = await runWithOrchestrator(adaptor);
+
+		const failed = audit.result.elements[0];
+		expect(failed?.passed).toBe(false);
+		expect(failed?.detectionMethod).toBeNull();
+		expect(failed?.failureEvidence?.focusedScreenshot).toBeInstanceOf(
+			Uint8Array,
+		);
+		expect(failed?.failureEvidence?.unfocusedScreenshot).toBeInstanceOf(
+			Uint8Array,
+		);
+		expect(audit.result.summary.failed).toBe(1);
+		expect(audit.result.summary.sessionEnd).toBe("completed");
+	});
+});
+
+describe("createFocusAppearanceAudit — failedElementLimit", () => {
+	it("never finishes early when the limit is 0", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true, true, true],
+			active: [info(0), info(1), info(2)],
+		});
+
+		const audit = await runWithOrchestrator(adaptor, {
+			failedElementLimit: 0,
+		});
+
+		expect(audit.result.summary.checked).toBe(3);
+		expect(audit.result.summary.failed).toBe(3);
+		expect(audit.result.summary.reachedFailedElementLimit).toBe(false);
+		expect(audit.result.summary.sessionEnd).toBe("completed");
+	});
+});
+
+describe("createFocusAppearanceAudit — timeout", () => {
+	it("returns results gathered so far when timeout fires during a hung settle", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true, true, true],
+			active: [stylePassActive(0), stylePassActive(1), stylePassActive(2)],
+			baseline: stylePassBaseline([0, 1, 2]),
+		});
+
+		const started = Date.now();
+		const audit = await runWithOrchestrator(adaptor, {
+			timeout: 150,
+			screenshotSettleDelay: 80,
+		});
+
+		expect(Date.now() - started).toBeLessThan(400);
+		expect(audit.result.summary.timedOut).toBe(true);
+		expect(audit.result.summary.checked).toBe(1);
+		expect(audit.result.summary.passed).toBe(1);
+		expect(audit.result.elements).toHaveLength(1);
+		expect(audit.result.summary.sessionEnd).toBeNull();
+	}, 2000);
+
+	it("times out with no results when settle hangs immediately", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true],
+			active: [stylePassActive(0)],
+			baseline: stylePassBaseline([0]),
+		});
+
+		const started = Date.now();
+		const audit = await runWithOrchestrator(adaptor, {
+			timeout: 50,
+			screenshotSettleDelay: 500,
+		});
+
+		expect(Date.now() - started).toBeLessThan(250);
+		expect(audit.result.summary.timedOut).toBe(true);
+		expect(audit.result.summary.checked).toBe(0);
+		expect(audit.result.summary.sessionEnd).toBeNull();
+	}, 2000);
+
+	it("does not time out when the timeout is 0", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true, true],
+			active: [stylePassActive(0), stylePassActive(1)],
+			baseline: stylePassBaseline([0, 1]),
+		});
+
+		const audit = await runWithOrchestrator(adaptor, { timeout: 0 });
+
+		expect(audit.result.summary.timedOut).toBe(false);
+		expect(audit.result.summary.checked).toBe(2);
+		expect(audit.result.summary.sessionEnd).toBe("completed");
+	});
+
+	it("completes normally when the audit finishes before the timeout", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true, true],
+			active: [stylePassActive(0), stylePassActive(1)],
+			baseline: stylePassBaseline([0, 1]),
+		});
+
+		const audit = await runWithOrchestrator(adaptor, { timeout: 10_000 });
+
+		expect(audit.result.summary.timedOut).toBe(false);
+		expect(audit.result.summary.checked).toBe(2);
+		expect(audit.result.summary.sessionEnd).toBe("completed");
+	});
+});
 
 type AdaptorScript = {
 	/** Per-call results for isCenterObscuredScript. Defaults to false. */
@@ -471,6 +499,10 @@ function fakeAdaptor(script: AdaptorScript = {}): {
 				);
 			}
 
+			if (fn === elementStylesScript) {
+				return EMPTY_STYLES;
+			}
+
 			if (
 				fn === blurScript ||
 				fn === focusScript ||
@@ -517,6 +549,7 @@ describe("runFocusAppearanceAudit", () => {
 		expect(result.summary.checked).toBe(3);
 		expect(result.summary.failed).toBe(3);
 		expect(result.summary.reachedFailedElementLimit).toBe(false);
+		expect(result.summary.sessionEnd).toBe("lostFocus");
 	});
 
 	it("attaches focused and unfocused screenshots and styles on failure", async () => {
@@ -582,6 +615,7 @@ describe("runFocusAppearanceAudit", () => {
 
 		expect(result.summary.timedOut).toBe(false);
 		expect(result.summary.checked).toBe(2);
+		expect(result.summary.sessionEnd).toBe("lostFocus");
 	});
 
 	it("centres the element before screenshotting when its centre is obscured", async () => {
@@ -606,11 +640,11 @@ describe("runFocusAppearanceAudit", () => {
 		expect(record.scrolls).toBe(0);
 	});
 
-	it("fails loudly when an entry references a missing snapshot", async () => {
-		// A dangling styleIndex means the baseline payload violated its own
-		// invariant; degrading silently would disguise the bug as a slow audit.
+	it("does not throw when an entry references a missing snapshot", async () => {
+		// Orchestrator skips dangling interned indexes instead of throwing; the
+		// style stage is skipped and detection falls through to the pixel diff.
 		const { adaptor } = fakeAdaptor({
-			tabStops: 0,
+			tabStops: 1,
 			baseline: {
 				styles: [],
 				entries: [
@@ -621,11 +655,22 @@ describe("runFocusAppearanceAudit", () => {
 					},
 				],
 			},
+			active: {
+				index: 0,
+				isBody: false,
+				isIframe: false,
+				html: "<button>x</button>",
+				styles: EMPTY_STYLES,
+				rect: { x: 0, y: 0, width: 10, height: 10 },
+			},
 		});
 
-		await expect(runFocusAppearanceAudit(adaptor, {})).rejects.toThrow(
-			/missing style/i,
-		);
+		const result = await runFocusAppearanceAudit(adaptor, {
+			screenshotSettleDelay: 0,
+		});
+
+		expect(result.elements[0]?.detectionMethod).toBeNull();
+		expect(result.summary.failed).toBe(1);
 	});
 
 	it("resolves interned baseline snapshots for the style check", async () => {

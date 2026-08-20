@@ -1,13 +1,12 @@
+import { FOCUS_STYLE_PROPERTIES } from "@a11y-pulse/tab-orchestrator";
 import { PNG } from "pngjs";
 import { describe, expect, it } from "vitest";
 import {
 	alignedRegionsDiffer,
-	bufferedClip,
 	omitIdleStyleSnapshot,
 	type StyleSnapshot,
 	stylesIndicateFocus,
 } from "./detection";
-import { FOCUS_STYLE_PROPERTIES } from "./focus-style";
 
 function snapshot(
 	overrides: Partial<Record<string, string>> = {},
@@ -341,38 +340,5 @@ describe("alignedRegionsDiffer", () => {
 		const b = solidPng(8, 8, [0, 0, 0]);
 
 		expect(alignedRegionsDiffer(a, ORIGIN, b, { x: 30, y: 0 }, 1)).toBe(false);
-	});
-});
-
-describe("bufferedClip", () => {
-	it("pads the rect by the buffer on every side", () => {
-		const rect = { x: 100, y: 100, width: 40, height: 20 };
-
-		const clip = bufferedClip(rect, 800, 600, 10);
-
-		expect(clip).toEqual({ x: 90, y: 90, width: 60, height: 40 });
-	});
-
-	it("shrinks the padding at the page edges", () => {
-		// Only 4px of page to the left of the element, and 5px below it.
-		const rect = { x: 4, y: 100, width: 40, height: 495 };
-
-		const clip = bufferedClip(rect, 800, 600, 10);
-
-		expect(clip.x).toBe(0);
-		expect(clip.width).toBe(40 + 4 + 10);
-		expect(clip.y).toBe(90);
-		expect(clip.height).toBe(495 + 10 + 5);
-	});
-
-	it("clamps to zero when the element is off the top-left of the document", () => {
-		// A negative page-relative origin (element partly off-screen) would
-		// otherwise yield a negative clip, which Puppeteer rejects.
-		const rect = { x: -30, y: -12, width: 40, height: 20 };
-
-		const clip = bufferedClip(rect, 800, 600, 10);
-
-		expect(clip.x).toBe(0);
-		expect(clip.y).toBe(0);
 	});
 });
