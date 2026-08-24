@@ -78,6 +78,7 @@ export function createContextChangeOnFocusAudit(
 			checked++;
 
 			const drain = snapshot.contextSignals;
+
 			if (drain === undefined) {
 				// Should not happen: this consumer declares the "contextSignals"
 				// capability, so the orchestrator always populates it.
@@ -107,6 +108,7 @@ export function createContextChangeOnFocusAudit(
 			) {
 				result.summary.reachedFailedElementLimit = true;
 				selfDisconnect.disconnect(session);
+
 				return;
 			}
 
@@ -117,6 +119,7 @@ export function createContextChangeOnFocusAudit(
 		},
 		onSessionEnd(reason) {
 			selfDisconnect.clear();
+
 			if (!selfDisconnect.disconnectedSelf) {
 				result.summary.sessionEnd = reason;
 			}
@@ -141,5 +144,6 @@ export async function runContextChangeOnFocusAudit(
 	const audit = createContextChangeOnFocusAudit(options);
 	orchestrator.attach(audit);
 	await orchestrator.run();
+
 	return audit.result;
 }

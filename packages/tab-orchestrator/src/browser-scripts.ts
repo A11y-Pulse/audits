@@ -432,8 +432,11 @@ export function elementStylesScript(
 }
 
 /**
- * Remove the marker attribute from all elements and blur the active element. This is a best-effort
- * attempt to reset state between audits.
+ * Remove the marker attribute from all elements, blur the active element, and
+ * scroll back to the top. This is a best-effort attempt to reset state between
+ * audits: the tab loop scrolls later elements into view as it walks the page
+ * (see scrollToCenterScript), and nothing else undoes that once the session
+ * ends.
  */
 export function clearMarkersScript(markerAttr: string): void {
 	const clear = (root: Document | ShadowRoot): void => {
@@ -452,6 +455,8 @@ export function clearMarkersScript(markerAttr: string): void {
 	clear(document);
 
 	(document.activeElement as HTMLElement | null)?.blur();
+
+	window.scrollTo(0, 0);
 }
 
 export type MeasureObscuringResult = {

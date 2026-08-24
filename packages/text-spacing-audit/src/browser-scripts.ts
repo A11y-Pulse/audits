@@ -18,6 +18,13 @@ p { margin-bottom: 2em !important; }`;
 
 export const DEFAULT_OVERLAP_AREA_PX2 = 4;
 
+export function pageDimensionsScript(): { width: number; height: number } {
+	return {
+		width: document.documentElement.scrollWidth,
+		height: document.documentElement.scrollHeight,
+	};
+}
+
 const SKIP_TAGS = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE"]);
 
 export type OverlapInput = Pick<

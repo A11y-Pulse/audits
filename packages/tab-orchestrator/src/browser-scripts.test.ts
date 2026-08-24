@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	baselineScript,
+	clearMarkersScript,
 	drainContextObserverScript,
 	elementRectScript,
 	elementStylesScript,
@@ -550,5 +551,39 @@ describe("scrollToCenterScript", () => {
 		expect(scrollIntoView).toHaveBeenCalledWith(
 			expect.objectContaining({ block: "center", behavior: "instant" }),
 		);
+	});
+});
+
+describe("clearMarkersScript", () => {
+	afterEach(() => {
+		document.body.innerHTML = "";
+	});
+
+	it("removes the marker attribute from marked elements", () => {
+		document.body.innerHTML = `<div ${MARKER}="1"></div>`;
+
+		clearMarkersScript(MARKER);
+
+		expect(document.querySelector(`[${MARKER}]`)).toBeNull();
+	});
+
+	it("blurs the active element", () => {
+		document.body.innerHTML = `<button ${MARKER}="1"></button>`;
+		const button = document.querySelector("button") as HTMLElement;
+		button.focus();
+		expect(document.activeElement).toBe(button);
+
+		clearMarkersScript(MARKER);
+
+		expect(document.activeElement).not.toBe(button);
+	});
+
+	it("scrolls the page back to the top", () => {
+		const scrollTo = vi.fn();
+		window.scrollTo = scrollTo;
+
+		clearMarkersScript(MARKER);
+
+		expect(scrollTo).toHaveBeenCalledWith(0, 0);
 	});
 });

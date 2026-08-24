@@ -52,6 +52,7 @@ function executingAdaptor(): TextSpacingAuditAdaptor & {
 
 			return result;
 		},
+		screenshotClip: async () => new Uint8Array([1, 2, 3]),
 	};
 }
 

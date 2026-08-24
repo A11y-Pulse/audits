@@ -178,6 +178,7 @@ export function createFocusAppearanceAudit(
 			) {
 				result.summary.reachedFailedElementLimit = true;
 				selfDisconnect.disconnect(session);
+
 				return;
 			}
 
@@ -188,6 +189,7 @@ export function createFocusAppearanceAudit(
 		},
 		onSessionEnd(reason) {
 			selfDisconnect.clear();
+
 			if (!selfDisconnect.disconnectedSelf) {
 				result.summary.sessionEnd = reason;
 			}
@@ -213,5 +215,6 @@ export async function runFocusAppearanceAudit(
 	const audit = createFocusAppearanceAudit(options);
 	orchestrator.attach(audit);
 	await orchestrator.run();
+
 	return audit.result;
 }

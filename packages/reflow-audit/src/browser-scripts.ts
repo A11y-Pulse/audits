@@ -2,8 +2,10 @@
  * IMPORTANT: Functions in this file that are serialized and injected into the
  * audited page must not reference any symbols outside their own scope. Shared
  * helpers used by unit tests are therefore duplicated inside each injected
- * function.
+ * function. Type-only imports are erased by the compiler, so they don't count.
  */
+
+import type { Rect } from "@a11y-pulse/browser-adaptor";
 
 export const REFLOW_WIDTH = 320;
 export const MIN_REFLOW_HEIGHT = 1024;
@@ -23,6 +25,7 @@ export type ReflowMeasureOffender = {
 	html: string;
 	overflowPx: number;
 	reason: "element-overflow" | "fixed-width-container";
+	rect: Rect;
 };
 
 export type ReflowMeasure = {
@@ -134,6 +137,13 @@ export function readLayoutFingerprintScript(): LayoutFingerprint {
 		bodyScrollWidth: body ? body.scrollWidth : 0,
 		bodyClientWidth: body ? body.clientWidth : 0,
 		childCount: body ? body.childElementCount : 0,
+	};
+}
+
+export function pageDimensionsScript(): { width: number; height: number } {
+	return {
+		width: document.documentElement.scrollWidth,
+		height: document.documentElement.scrollHeight,
 	};
 }
 
@@ -594,6 +604,7 @@ export function measureReflowScript(): ReflowMeasure {
 			html: (el.cloneNode(false) as Element).outerHTML,
 			overflowPx: Math.round(overflowPx),
 			reason: "element-overflow",
+			rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
 		});
 	}
 
@@ -630,11 +641,14 @@ export function measureReflowScript(): ReflowMeasure {
 				continue;
 			}
 
+			const rect = el.getBoundingClientRect();
+
 			offenders.push({
 				selector: getSelector(el),
 				html: (el.cloneNode(false) as Element).outerHTML,
 				overflowPx: Math.round(computed - viewportWidth),
 				reason: "fixed-width-container",
+				rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
 			});
 		}
 	}

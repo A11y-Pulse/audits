@@ -1,9 +1,11 @@
+import { bufferedClip } from "@a11y-pulse/browser-adaptor";
 import { truncateHtml } from "@a11y-pulse/browser-adaptor/dom";
 import type { TextSpacingAuditAdaptor } from "./adaptor";
 import {
 	collectBaselineScript,
 	findOverlapPairs,
 	injectOverrideScript,
+	pageDimensionsScript,
 	remeasureScript,
 	restoreAndVerifyScript,
 	waitTwoFramesScript,
@@ -19,6 +21,8 @@ export type { CandidateSnapshot } from "./result";
 export const DEFAULT_CANDIDATE_LIMIT = 500;
 export const DEFAULT_CLIP_TOLERANCE_PX = 2;
 export const DEFAULT_SETTLE_MS = 200;
+export const DEFAULT_SCREENSHOT_CLIP_BUFFER = 10;
+export const DEFAULT_SCREENSHOT_LIMIT = 10;
 
 export type TextSpacingOptions = {
 	/** Max visible text containers to measure, in document order. Defaults to 500. */
@@ -27,6 +31,10 @@ export type TextSpacingOptions = {
 	clipTolerancePx?: number;
 	/** Extra wait after two animation frames for layout to settle. Defaults to 200. */
 	settleMs?: number;
+	/** Padding around a finding's box when clipping its screenshot. Defaults to 10. */
+	screenshotClipBuffer?: number;
+	/** Max findings to screenshot (each is a real page.screenshot() call). Defaults to 10. */
+	screenshotLimit?: number;
 };
 
 export type ClassifyOptions = {
@@ -191,6 +199,53 @@ export function classifyTextSpacing(
 }
 
 /**
+ * Screenshot up to `limit` findings, showing the element with spacing overrides
+ * still applied (the state that demonstrates the defect), clipped to its `after`
+ * box plus `clipBuffer`. A finding whose selector no longer matches an `after`
+ * candidate, or past the limit, gets `undefined` rather than being dropped, so
+ * index alignment with `findings` is preserved.
+ */
+async function captureFindingScreenshots(
+	adaptor: TextSpacingAuditAdaptor,
+	findings: TextSpacingElementResult[],
+	afterCandidates: CandidateSnapshot[],
+	clipBuffer: number,
+	limit: number,
+): Promise<Array<Uint8Array | undefined>> {
+	if (findings.length === 0) {
+		return [];
+	}
+
+	const { width: pageWidth, height: pageHeight } =
+		await adaptor.evaluate(pageDimensionsScript);
+	const afterBySelector = new Map(
+		afterCandidates.map((candidate) => [candidate.selector, candidate]),
+	);
+	const scale = adaptor.screenshotClipScale ?? 1;
+
+	const screenshots: Array<Uint8Array | undefined> = [];
+
+	for (let i = 0; i < findings.length; i++) {
+		const candidate = afterBySelector.get(findings[i]!.selector);
+
+		if (i >= limit || !candidate) {
+			screenshots.push(undefined);
+			continue;
+		}
+
+		const clip = bufferedClip(
+			candidate.rect,
+			pageWidth,
+			pageHeight,
+			clipBuffer,
+		);
+		screenshots.push(await adaptor.screenshotClip(clip, scale));
+	}
+
+	return screenshots;
+}
+
+/**
  * Apply WCAG 1.4.12 spacing overrides, measure candidate text containers, and
  * restore injected styles. Classification of clipped vs growth-only vs
  * truncation vs overlap is `classifyTextSpacing`.
@@ -202,6 +257,9 @@ export async function runTextSpacingAudit(
 	const candidateLimit = options.candidateLimit ?? DEFAULT_CANDIDATE_LIMIT;
 	const clipTolerancePx = options.clipTolerancePx ?? DEFAULT_CLIP_TOLERANCE_PX;
 	const settleMs = options.settleMs ?? DEFAULT_SETTLE_MS;
+	const screenshotClipBuffer =
+		options.screenshotClipBuffer ?? DEFAULT_SCREENSHOT_CLIP_BUFFER;
+	const screenshotLimit = options.screenshotLimit ?? DEFAULT_SCREENSHOT_LIMIT;
 
 	let restored = false;
 	let findings: TextSpacingElementResult[] = [];
@@ -220,11 +278,26 @@ export async function runTextSpacingAudit(
 		candidateCount = baseline.candidates.filter(
 			(candidate) => !candidate.unstable,
 		).length;
-		findings = classifyTextSpacing(baseline.candidates, after.candidates, {
-			clipTolerancePx,
-		}).map((finding) => ({
+		const classified = classifyTextSpacing(
+			baseline.candidates,
+			after.candidates,
+			{ clipTolerancePx },
+		);
+
+		// Screenshots must be captured here, while the spacing overrides are
+		// still applied, not after the restore below.
+		const screenshots = await captureFindingScreenshots(
+			adaptor,
+			classified,
+			after.candidates,
+			screenshotClipBuffer,
+			screenshotLimit,
+		);
+
+		findings = classified.map((finding, index) => ({
 			...finding,
 			html: truncateHtml(finding.html),
+			screenshot: screenshots[index],
 		}));
 	} finally {
 		try {

@@ -50,6 +50,13 @@ describe("focus not obscured audit (integration)", () => {
 		expect(violations[0]?.measurement.obscuredBy?.html).toMatch(
 			/sticky-footer/,
 		);
+
+		expect(violations[0]?.screenshot).toBeInstanceOf(Uint8Array);
+		expect(violations[0]?.screenshot?.length ?? 0).toBeGreaterThan(100);
+		// PNG magic number.
+		expect(Array.from(violations[0]!.screenshot!.slice(0, 8))).toEqual([
+			0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+		]);
 	});
 
 	it("passes a page where no element is obscured", async () => {
@@ -62,6 +69,7 @@ describe("focus not obscured audit (integration)", () => {
 		expect(
 			result.elements.filter((element) => element.bucket === "incomplete"),
 		).toHaveLength(0);
+		expect(result.elements.every((element) => !element.screenshot)).toBe(true);
 	});
 
 	it("does not flag a semi-transparent overlay as a violation", async () => {

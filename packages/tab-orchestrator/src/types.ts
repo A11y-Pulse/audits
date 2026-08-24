@@ -20,6 +20,7 @@ export type Capability =
 	| "baselineStyles"
 	| "contextSignals"
 	| "obscuring"
+	| "screenshot"
 	| "unfocusedPair";
 
 export type SessionEndReason =
@@ -71,6 +72,12 @@ export type ObscuredMeasurement = {
 export type TabSessionHandle = {
 	disconnect(): void;
 	ensureUnfocusedPair(): Promise<UnfocusedPair>;
+	/**
+	 * Screenshot the currently focused element, clipped and padded. Requires the
+	 * `screenshot` capability. Cached per stop, so multiple consumers calling
+	 * this on the same stop only trigger one capture.
+	 */
+	screenshotClip(): Promise<Uint8Array>;
 };
 
 export type TabConsumer = {

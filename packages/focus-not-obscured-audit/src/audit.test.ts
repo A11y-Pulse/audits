@@ -5,7 +5,9 @@ import {
 	baselineScript,
 	clearMarkersScript,
 	createTabOrchestrator,
+	elementRectScript,
 	getSelector,
+	pageDimensionsScript,
 	probeActiveElementScript,
 	type TabConsumer,
 	type TabStopSnapshot,
@@ -46,6 +48,7 @@ function recordingConsumer(): TabConsumer & { stops: TabStopSnapshot[] } {
 			record.stops.push(snapshot);
 		},
 	};
+
 	return record;
 }
 
@@ -60,11 +63,13 @@ function loopAdaptor(script: {
 }): BrowserAdaptor {
 	let focusCall = 0;
 	let activeCall = 0;
+
 	return {
 		evaluate: (async (fn, ..._args) => {
 			if (fn === baselineScript) {
 				return { styles: [EMPTY_STYLES], entries: [] };
 			}
+
 			if (fn === probeActiveElementScript) {
 				return (
 					script.active?.[activeCall++] ?? {
@@ -77,18 +82,30 @@ function loopAdaptor(script: {
 					}
 				);
 			}
+
 			if (fn === getSelector) {
 				return "#fake";
 			}
+
 			if (fn === clearMarkersScript) {
 				return undefined;
 			}
+
+			if (fn === pageDimensionsScript) {
+				return { width: 1024, height: 768 };
+			}
+
+			if (fn === elementRectScript) {
+				return { x: 0, y: 0, width: 10, height: 10 };
+			}
+
 			return script.hasFocus?.[focusCall++] ?? false;
 		}) as BrowserAdaptor["evaluate"],
 		async evaluateHandle(fn) {
 			if (fn === activeElementHandleScript) {
 				return { kind: "active" };
 			}
+
 			return {};
 		},
 		async disposeRef() {},
@@ -121,16 +138,21 @@ function obscuringAdaptor(
 	adaptor.evaluate = (async (fn, ...args) => {
 		if (fn === probeActiveElementScript) {
 			stopIndex++;
+
 			return original(fn, ...args);
 		}
+
 		if (fn === measureObscuringScript) {
 			return measurements[stopIndex];
 		}
+
 		if (fn === clearObscurerScript) {
 			return undefined;
 		}
+
 		return original(fn, ...args);
 	}) as BrowserAdaptor["evaluate"];
+
 	return adaptor;
 }
 
@@ -149,12 +171,13 @@ function measurement(
 }
 
 describe("createFocusNotObscuredAudit", () => {
-	it("declares only the obscuring capability", () => {
+	it("declares the obscuring and screenshot capabilities", () => {
 		const audit = createFocusNotObscuredAudit();
 		expect(audit.capabilities.has("obscuring")).toBe(true);
+		expect(audit.capabilities.has("screenshot")).toBe(true);
 		expect(audit.capabilities.has("unfocusedPair")).toBe(false);
 		expect(audit.capabilities.has("baselineStyles")).toBe(false);
-		expect(audit.capabilities.size).toBe(1);
+		expect(audit.capabilities.size).toBe(2);
 	});
 
 	it("records a violation for opaque full cover and disconnects at elementLimit", async () => {
@@ -358,9 +381,73 @@ describe("createFocusNotObscuredAudit options type", () => {
 			failedElementLimit: 1,
 			timeout: 100,
 			screenshotSettleDelay: 10,
+			screenshotLimit: 3,
 		};
 		expect(
 			createFocusNotObscuredAudit(options).capabilities.has("obscuring"),
 		).toBe(true);
+	});
+});
+
+describe("createFocusNotObscuredAudit screenshots", () => {
+	it("captures a screenshot for a violation but not for a pass", async () => {
+		const audit = createFocusNotObscuredAudit();
+		const orchestrator = createTabOrchestrator(
+			obscuringAdaptor([
+				measurement({
+					coveredFraction: 1,
+					fullyObscured: true,
+					opacity: "opaque",
+					hasObscurer: true,
+				}),
+				measurement(),
+			]),
+			{ screenshotSettleDelay: 0 },
+		);
+		orchestrator.attach(audit);
+		await orchestrator.run();
+
+		expect(audit.result.elements).toHaveLength(2);
+		expect(audit.result.elements[0]?.bucket).toBe("violation");
+		expect(audit.result.elements[0]?.screenshot).toEqual(new Uint8Array([1]));
+		expect(audit.result.elements[1]?.bucket).toBe("pass");
+		expect(audit.result.elements[1]?.screenshot).toBeUndefined();
+	});
+
+	it("captures a screenshot for an incomplete offscreen element", async () => {
+		const audit = createFocusNotObscuredAudit();
+		const orchestrator = createTabOrchestrator(
+			obscuringAdaptor([measurement({ offscreen: true })]),
+			{ screenshotSettleDelay: 0 },
+		);
+		orchestrator.attach(audit);
+		await orchestrator.run();
+
+		expect(audit.result.elements[0]?.bucket).toBe("incomplete");
+		expect(audit.result.elements[0]?.screenshot).toEqual(new Uint8Array([1]));
+	});
+
+	it("omits screenshots past screenshotLimit but keeps every element", async () => {
+		const violations = Array.from({ length: 3 }, () =>
+			measurement({
+				coveredFraction: 1,
+				fullyObscured: true,
+				opacity: "opaque",
+				hasObscurer: true,
+			}),
+		);
+		const audit = createFocusNotObscuredAudit({ screenshotLimit: 2 });
+		const orchestrator = createTabOrchestrator(obscuringAdaptor(violations), {
+			screenshotSettleDelay: 0,
+		});
+		orchestrator.attach(audit);
+		await orchestrator.run();
+
+		expect(audit.result.elements).toHaveLength(3);
+		expect(audit.result.summary.failed).toBe(3);
+		expect(audit.result.elements.slice(0, 2).every((e) => e.screenshot)).toBe(
+			true,
+		);
+		expect(audit.result.elements[2]?.screenshot).toBeUndefined();
 	});
 });
