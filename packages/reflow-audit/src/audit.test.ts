@@ -92,7 +92,12 @@ function createFake(opts: {
 			throw new Error(`unexpected evaluate: ${fn.name}`);
 		},
 		screenshotClip: async (clip, scale = 1) => {
-			screenshotCalls.push({ clip, scale, viewportWidthAtCall: viewport.width });
+			screenshotCalls.push({
+				clip,
+				scale,
+				viewportWidthAtCall: viewport.width,
+			});
+
 			return new Uint8Array([1, 2, 3]);
 		},
 		screenshotClipScale: opts.screenshotClipScale,

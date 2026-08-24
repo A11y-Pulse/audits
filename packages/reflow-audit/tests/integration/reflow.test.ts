@@ -156,6 +156,7 @@ describe("reflow audit (integration)", () => {
 					width: viewport?.width ?? 0,
 					height: viewport?.height ?? 0,
 				});
+
 				return original(viewport);
 			}) as Page["setViewport"];
 

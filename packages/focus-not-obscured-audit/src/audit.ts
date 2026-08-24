@@ -85,6 +85,7 @@ export function createFocusNotObscuredAudit(
 			checked++;
 
 			const measurement = snapshot.obscuring;
+
 			if (measurement === undefined) {
 				// Should not happen: this consumer declares the "obscuring"
 				// capability, so the orchestrator always populates it.
@@ -100,6 +101,7 @@ export function createFocusNotObscuredAudit(
 				bucket !== "pass" && screenshotsTaken < resolved.screenshotLimit
 					? await session.screenshotClip()
 					: undefined;
+
 			if (screenshot) {
 				screenshotsTaken++;
 			}
@@ -125,6 +127,7 @@ export function createFocusNotObscuredAudit(
 			) {
 				result.summary.reachedFailedElementLimit = true;
 				selfDisconnect.disconnect(session);
+
 				return;
 			}
 
@@ -135,6 +138,7 @@ export function createFocusNotObscuredAudit(
 		},
 		onSessionEnd(reason) {
 			selfDisconnect.clear();
+
 			if (!selfDisconnect.disconnectedSelf) {
 				result.summary.sessionEnd = reason;
 			}
@@ -159,5 +163,6 @@ export async function runFocusNotObscuredAudit(
 	const audit = createFocusNotObscuredAudit(options);
 	orchestrator.attach(audit);
 	await orchestrator.run();
+
 	return audit.result;
 }

@@ -112,6 +112,7 @@ function recordingConsumer(
 			record.sessionEnds.push(reason);
 		},
 	};
+
 	return record;
 }
 
@@ -129,11 +130,13 @@ function loopAdaptor(script: {
 }): BrowserAdaptor {
 	let focusCall = 0;
 	let activeCall = 0;
+
 	return {
 		evaluate: (async (fn, ..._args) => {
 			if (fn === baselineScript) {
 				return { styles: [EMPTY_STYLES], entries: [] };
 			}
+
 			if (fn === probeActiveElementScript) {
 				return (
 					script.active?.[activeCall++] ?? {
@@ -146,24 +149,30 @@ function loopAdaptor(script: {
 					}
 				);
 			}
+
 			if (fn === getSelector) {
 				return "#fake";
 			}
+
 			if (fn === elementStylesScript) {
 				return EMPTY_STYLES;
 			}
+
 			if (fn === clearMarkersScript) {
 				return undefined;
 			}
+
 			if (fn === locationHrefScript) {
 				return STABLE_HREF;
 			}
+
 			return script.hasFocus?.[focusCall++] ?? false;
 		}) as BrowserAdaptor["evaluate"],
 		async evaluateHandle(fn) {
 			if (fn === activeElementHandleScript) {
 				return { kind: "active" };
 			}
+
 			return {};
 		},
 		async disposeRef() {},
@@ -266,6 +275,7 @@ describe("tab loop", () => {
 		});
 		adaptor.screenshotClip = async () => {
 			screenshots.push(1);
+
 			return new Uint8Array([1]);
 		};
 		const a = recordingConsumer(["unfocusedPair"]);
@@ -290,6 +300,7 @@ describe("tab loop", () => {
 				} catch (error) {
 					thrown = error as Error;
 				}
+
 				await a.onTabStop(snapshot, session);
 			},
 		};
@@ -313,12 +324,15 @@ describe("tab loop", () => {
 			if (fn === pageDimensionsScript) {
 				return { width: 2000, height: 4000 };
 			}
+
 			if (fn === isCenterObscuredScript) {
 				return false;
 			}
+
 			if (fn === elementRectScript) {
 				return { x: 10, y: 20, width: 30, height: 40 };
 			}
+
 			if (
 				fn === blurScript ||
 				fn === focusScript ||
@@ -326,10 +340,12 @@ describe("tab loop", () => {
 			) {
 				return undefined;
 			}
+
 			return originalEvaluate(fn, ...args);
 		}) as BrowserAdaptor["evaluate"];
 		adaptor.screenshotClip = async (clip) => {
 			clips.push(clip);
+
 			return new Uint8Array([clips.length]);
 		};
 
@@ -361,6 +377,7 @@ describe("tab loop", () => {
 		});
 		adaptor.screenshotClip = async () => {
 			screenshots.push(1);
+
 			return new Uint8Array([1]);
 		};
 		const a = recordingConsumer(["screenshot"]);
@@ -383,6 +400,7 @@ describe("tab loop", () => {
 				} catch (error) {
 					thrown = error as Error;
 				}
+
 				await a.onTabStop(snapshot, session);
 			},
 		};
@@ -406,13 +424,16 @@ describe("tab loop", () => {
 			if (fn === pageDimensionsScript) {
 				return { width: 2000, height: 4000 };
 			}
+
 			if (fn === elementRectScript) {
 				return { x: 10, y: 20, width: 30, height: 40 };
 			}
+
 			return originalEvaluate(fn, ...args);
 		}) as BrowserAdaptor["evaluate"];
 		adaptor.screenshotClip = async (clip) => {
 			clips.push(clip);
+
 			return new Uint8Array([clips.length]);
 		};
 
@@ -446,19 +467,25 @@ describe("tab loop", () => {
 			if (fn === isCenterObscuredScript) {
 				return true;
 			}
+
 			if (fn === scrollToCenterScript) {
 				scrolls++;
+
 				return undefined;
 			}
+
 			if (fn === pageDimensionsScript) {
 				return { width: 2000, height: 4000 };
 			}
+
 			if (fn === elementRectScript) {
 				return { x: 10, y: 20, width: 30, height: 40 };
 			}
+
 			if (fn === blurScript || fn === focusScript) {
 				return undefined;
 			}
+
 			return originalEvaluate(fn, ...args);
 		}) as BrowserAdaptor["evaluate"];
 		adaptor.screenshotClip = async () => new Uint8Array([1]);
@@ -495,6 +522,7 @@ describe("tab loop", () => {
 			if (fn === probeActiveElementScript) {
 				probeCalls += 1;
 			}
+
 			return evaluate(fn, ...args);
 		}) as BrowserAdaptor["evaluate"];
 
@@ -536,6 +564,7 @@ describe("tab loop", () => {
 		adaptor.evaluate = (async (fn, ...args) => {
 			if (fn === measureObscuringScript) {
 				measures.push(1);
+
 				return {
 					coveredFraction: 0,
 					fullyObscured: false,
@@ -545,9 +574,11 @@ describe("tab loop", () => {
 					hasObscurer: false,
 				};
 			}
+
 			if (fn === clearObscurerScript || fn === obscurerHandleScript) {
 				return fn === obscurerHandleScript ? null : undefined;
 			}
+
 			return original(fn, ...args);
 		}) as BrowserAdaptor["evaluate"];
 
@@ -583,6 +614,7 @@ describe("tab loop", () => {
 			if (fn === clearMarkersScript) {
 				throw new Error("teardown failed");
 			}
+
 			return evaluate(fn, ...args);
 		}) as BrowserAdaptor["evaluate"];
 
@@ -604,10 +636,13 @@ describe("tab loop", () => {
 		adaptor.evaluate = (async (fn, ...args) => {
 			if (fn === installContextObserverScript) {
 				order.push("install");
+
 				return undefined;
 			}
+
 			if (fn === drainContextObserverScript) {
 				order.push("drain");
+
 				return {
 					openedWindow: false,
 					submittedForm: false,
@@ -619,8 +654,10 @@ describe("tab loop", () => {
 					hasAttributed: false,
 				};
 			}
+
 			if (fn === measureObscuringScript) {
 				order.push("obscure");
+
 				return {
 					coveredFraction: 0,
 					fullyObscured: false,
@@ -630,6 +667,7 @@ describe("tab loop", () => {
 					hasObscurer: false,
 				};
 			}
+
 			return original(fn, ...args);
 		}) as BrowserAdaptor["evaluate"];
 		const orchestrator = createTabOrchestrator(adaptor, {
@@ -650,6 +688,7 @@ describe("tab loop", () => {
 		adaptor.evaluate = (async (fn, ...args) => {
 			if (fn === drainContextObserverScript) {
 				drains++;
+
 				return {
 					openedWindow: false,
 					submittedForm: false,
@@ -661,9 +700,11 @@ describe("tab loop", () => {
 					hasAttributed: false,
 				};
 			}
+
 			if (fn === installContextObserverScript) {
 				return undefined;
 			}
+
 			return original(fn, ...args);
 		}) as BrowserAdaptor["evaluate"];
 		const ctx = recordingConsumer(
@@ -701,9 +742,11 @@ describe("tab loop", () => {
 					hasAttributed: false,
 				};
 			}
+
 			if (fn === installContextObserverScript) {
 				return undefined;
 			}
+
 			return original(fn, ...args);
 		}) as BrowserAdaptor["evaluate"];
 		const ctx = recordingConsumer(["contextSignals"]);
@@ -727,8 +770,10 @@ describe("tab loop", () => {
 		adaptor.evaluate = (async (fn, ...args) => {
 			if (fn === locationHrefScript) {
 				hrefCalls++;
+
 				return hrefCalls === 1 ? STABLE_HREF : "https://example.test/other";
 			}
+
 			if (fn === drainContextObserverScript) {
 				// Soft-nav flag is false: the observer's execution context
 				// survived long enough to answer, but this was a hard nav, not a
@@ -745,9 +790,11 @@ describe("tab loop", () => {
 					hasAttributed: false,
 				};
 			}
+
 			if (fn === installContextObserverScript) {
 				return undefined;
 			}
+
 			return original(fn, ...args);
 		}) as BrowserAdaptor["evaluate"];
 		const ctx = recordingConsumer(["contextSignals"]);
@@ -770,9 +817,11 @@ describe("tab loop", () => {
 			if (fn === probeActiveElementScript) {
 				throw new Error("Execution context was destroyed");
 			}
+
 			if (fn === installContextObserverScript) {
 				return undefined;
 			}
+
 			return original(fn, ...args);
 		}) as BrowserAdaptor["evaluate"];
 		const ctx = recordingConsumer(["contextSignals"]);
@@ -797,9 +846,11 @@ describe("tab loop", () => {
 				drains++;
 				throw new Error("Execution context was destroyed");
 			}
+
 			if (fn === installContextObserverScript) {
 				return undefined;
 			}
+
 			return original(fn, ...args);
 		}) as BrowserAdaptor["evaluate"];
 		const ctx = recordingConsumer(["contextSignals"]);
@@ -831,6 +882,7 @@ describe("tab loop", () => {
 		adaptor.evaluate = (async (fn, ...args) => {
 			if (fn === drainContextObserverScript) {
 				order.push("drain");
+
 				return {
 					openedWindow: false,
 					submittedForm: false,
@@ -842,13 +894,17 @@ describe("tab loop", () => {
 					hasAttributed: false,
 				};
 			}
+
 			if (fn === clearContextFocusInsScript || fn === clearAttributedScript) {
 				order.push("clear");
+
 				return undefined;
 			}
+
 			if (fn === installContextObserverScript) {
 				return undefined;
 			}
+
 			if (
 				fn === pageDimensionsScript ||
 				fn === isCenterObscuredScript ||
@@ -859,14 +915,18 @@ describe("tab loop", () => {
 				if (fn === pageDimensionsScript) {
 					return { width: 100, height: 100 };
 				}
+
 				if (fn === isCenterObscuredScript) {
 					return false;
 				}
+
 				if (fn === elementRectScript) {
 					return { x: 0, y: 0, width: 10, height: 10 };
 				}
+
 				return undefined;
 			}
+
 			return original(fn, ...args);
 		}) as BrowserAdaptor["evaluate"];
 		adaptor.screenshotClip = async () => new Uint8Array([1]);
@@ -901,6 +961,7 @@ describe("tab loop", () => {
 				if (fn === attributedHandleScript) {
 					return attributedRef;
 				}
+
 				return {};
 			}) as BrowserAdaptor["evaluateHandle"];
 			const original = adaptor.evaluate.bind(adaptor);
@@ -917,15 +978,18 @@ describe("tab loop", () => {
 						hasAttributed: true,
 					};
 				}
+
 				if (fn === getSelector && args[0] === attributedRef) {
 					return "#blurred";
 				}
+
 				if (
 					fn === installContextObserverScript ||
 					fn === clearAttributedScript
 				) {
 					return undefined;
 				}
+
 				return original(fn, ...args);
 			}) as BrowserAdaptor["evaluate"];
 
@@ -955,6 +1019,7 @@ describe("tab loop", () => {
 				if (fn === attributedHandleScript) {
 					return attributedRef;
 				}
+
 				return {};
 			}) as BrowserAdaptor["evaluateHandle"];
 			const original = adaptor.evaluate.bind(adaptor);
@@ -971,15 +1036,18 @@ describe("tab loop", () => {
 						hasAttributed: true,
 					};
 				}
+
 				if (fn === getSelector && args[0] === attributedRef) {
 					return "#blurred";
 				}
+
 				if (
 					fn === installContextObserverScript ||
 					fn === clearAttributedScript
 				) {
 					return undefined;
 				}
+
 				return original(fn, ...args);
 			}) as BrowserAdaptor["evaluate"];
 
@@ -1022,9 +1090,11 @@ describe("tab loop", () => {
 						hasAttributed: false,
 					};
 				}
+
 				if (fn === installContextObserverScript) {
 					return undefined;
 				}
+
 				return original(fn, ...args);
 			}) as BrowserAdaptor["evaluate"];
 
@@ -1050,6 +1120,7 @@ describe("tab loop", () => {
 				if (fn === drainContextObserverScript) {
 					drains++;
 				}
+
 				return original(fn, ...args);
 			}) as BrowserAdaptor["evaluate"];
 
@@ -1075,9 +1146,11 @@ describe("tab loop", () => {
 				if (fn === drainContextObserverScript) {
 					throw new Error("Execution context was destroyed");
 				}
+
 				if (fn === installContextObserverScript) {
 					return undefined;
 				}
+
 				return original(fn, ...args);
 			}) as BrowserAdaptor["evaluate"];
 
@@ -1118,12 +1191,14 @@ describe("tab loop", () => {
 					session: { ensureUnfocusedPair(): Promise<unknown> },
 				) {
 					record.stops.push(snapshot);
+
 					if (!snapshot.baselineStyles) {
 						record.ensureCalls++;
 						await session.ensureUnfocusedPair();
 					}
 				},
 			};
+
 			return record;
 		}
 
@@ -1137,6 +1212,7 @@ describe("tab loop", () => {
 				if (fn === attributedHandleScript) {
 					return attributedRef;
 				}
+
 				return {};
 			}) as BrowserAdaptor["evaluateHandle"];
 			const original = adaptor.evaluate.bind(adaptor);
@@ -1153,17 +1229,21 @@ describe("tab loop", () => {
 						hasAttributed: true,
 					};
 				}
+
 				if (fn === getSelector && args[0] === attributedRef) {
 					return "#blurred";
 				}
+
 				if (
 					fn === installContextObserverScript ||
 					fn === clearAttributedScript
 				) {
 					return undefined;
 				}
+
 				return original(fn, ...args);
 			}) as BrowserAdaptor["evaluate"];
+
 			return adaptor;
 		}
 
@@ -1215,8 +1295,10 @@ describe("tab loop", () => {
 			adaptor.evaluate = (async (fn, ...args) => {
 				if (fn === clearAttributedScript) {
 					clearCalls++;
+
 					return undefined;
 				}
+
 				return original(fn, ...args);
 			}) as BrowserAdaptor["evaluate"];
 

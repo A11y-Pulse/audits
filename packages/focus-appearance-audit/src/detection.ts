@@ -110,6 +110,7 @@ function collapseUniformBorderSides(
 		}
 
 		out[`border-${facet}`] = first;
+
 		for (const key of keys) {
 			delete out[key];
 		}

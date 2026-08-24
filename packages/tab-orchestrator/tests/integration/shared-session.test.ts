@@ -33,6 +33,7 @@ describe("shared session across three audits (integration)", () => {
 			if (key === "Tab") {
 				tabs++;
 			}
+
 			return press(key, opts);
 		};
 		let clips = 0;
@@ -44,6 +45,7 @@ describe("shared session across three audits (integration)", () => {
 			pressTab: inner.pressTab.bind(inner),
 			screenshotClip: async (clip, scale) => {
 				clips++;
+
 				return inner.screenshotClip(clip, scale);
 			},
 			get screenshotClipScale() {

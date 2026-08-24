@@ -519,6 +519,7 @@ function scriptedAdaptor(page: ScriptedPage): TextSpacingAuditAdaptor & {
 		screenshotClip: async (clip) => {
 			calls.push("screenshotClip");
 			screenshotCalls.push(clip);
+
 			return new Uint8Array([1, 2, 3]);
 		},
 	};

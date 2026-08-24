@@ -42,6 +42,7 @@ import { captureUnfocusedPair } from "./unfocused-pair";
  */
 function isContextDestroyedError(error: unknown): boolean {
 	const message = error instanceof Error ? error.message : String(error);
+
 	return /Execution context was destroyed|Target closed|frame was detached|navigat/i.test(
 		message,
 	);
@@ -92,12 +93,14 @@ export function createTabOrchestrator(
 			if (started) {
 				throw new Error("Cannot attach after run() has started");
 			}
+
 			consumers.push(consumer);
 		},
 		async run() {
 			if (ran) {
 				throw new Error("run() has already been called");
 			}
+
 			ran = true;
 			started = true;
 
@@ -143,6 +146,7 @@ export function createTabOrchestrator(
 			const handleFor = (consumer: TabConsumer): TabSessionHandle => ({
 				disconnect() {
 					attached.delete(consumer);
+
 					if (attached.size === 0 && settleTimer !== undefined) {
 						clearTimeout(settleTimer);
 						settleTimer = undefined;
@@ -154,34 +158,42 @@ export function createTabOrchestrator(
 					if (!consumer.capabilities.has("unfocusedPair")) {
 						throw new Error("Consumer did not declare unfocusedPair");
 					}
+
 					if (!remainingHas("unfocusedPair")) {
 						throw new Error("Consumer did not declare unfocusedPair");
 					}
+
 					if (activeHandle === undefined) {
 						throw new Error("unfocusedPair capture not implemented");
 					}
+
 					pairByStop.current ??= captureUnfocusedPair(
 						adaptor,
 						resolved,
 						activeHandle,
 					);
+
 					return pairByStop.current;
 				},
 				screenshotClip: () => {
 					if (!consumer.capabilities.has("screenshot")) {
 						throw new Error("Consumer did not declare screenshot");
 					}
+
 					if (!remainingHas("screenshot")) {
 						throw new Error("Consumer did not declare screenshot");
 					}
+
 					if (activeHandle === undefined) {
 						throw new Error("screenshot capture not implemented");
 					}
+
 					screenshotByStop.current ??= captureScreenshot(
 						adaptor,
 						resolved,
 						activeHandle,
 					);
+
 					return screenshotByStop.current;
 				},
 			});
@@ -190,6 +202,7 @@ export function createTabOrchestrator(
 				for (const consumer of attached) {
 					consumer.onSessionEnd?.(reason);
 				}
+
 				attached.clear();
 			};
 
@@ -216,12 +229,14 @@ export function createTabOrchestrator(
 			 */
 			async function checkContextNavigation(): Promise<ContextNavigationOutcome> {
 				let href: string;
+
 				try {
 					href = await adaptor.evaluate(locationHrefScript);
 				} catch (error) {
 					if (!isContextDestroyedError(error)) {
 						throw error;
 					}
+
 					return { navigation: true };
 				}
 
@@ -233,6 +248,7 @@ export function createTabOrchestrator(
 				// own soft-nav flag when the execution context survived;
 				// otherwise treat it as a full navigation.
 				let raw: DrainContextObserverResult | null = null;
+
 				try {
 					raw = await adaptor.evaluate(drainContextObserverScript, MARKER_ATTR);
 				} catch {
@@ -244,10 +260,12 @@ export function createTabOrchestrator(
 				}
 
 				baselineHref = href;
+
 				return { navigation: false, raw };
 			}
 
 			let failure: unknown;
+
 			try {
 				await adaptor.ensureFocusReporting();
 
@@ -258,8 +276,10 @@ export function createTabOrchestrator(
 					markerLimit,
 				);
 				const interned = new Map<number, StyleSnapshot>();
+
 				for (const entry of payload.entries) {
 					const styles = payload.styles[entry.styleIndex];
+
 					if (styles !== undefined) {
 						interned.set(entry.index, styles);
 					}
@@ -283,6 +303,7 @@ export function createTabOrchestrator(
 					lastHasAttributed = false;
 
 					const hasFocus = await adaptor.evaluate(() => document.hasFocus());
+
 					if (!hasFocus) {
 						end("lostFocus");
 						break;
@@ -303,6 +324,7 @@ export function createTabOrchestrator(
 					}
 
 					let base: ActiveElementBase | null;
+
 					try {
 						base = await adaptor.evaluate(
 							probeActiveElementScript,
@@ -322,6 +344,7 @@ export function createTabOrchestrator(
 							end("navigation");
 							break;
 						}
+
 						throw error;
 					}
 
@@ -331,12 +354,15 @@ export function createTabOrchestrator(
 					// call time), so a hard nav can surface as an ordinary `isBody: true`
 					// probe result with no thrown error at all.
 					let contextNav: ContextNavigationOutcome | null = null;
+
 					if (remainingHas("contextSignals")) {
 						const outcome = await checkContextNavigation();
+
 						if (outcome.navigation) {
 							end("navigation");
 							break;
 						}
+
 						contextNav = outcome;
 					}
 
@@ -350,6 +376,7 @@ export function createTabOrchestrator(
 						// notification instead of vanishing silently.
 						if (remainingHas("contextSignals")) {
 							let raw: DrainContextObserverResult;
+
 							try {
 								raw =
 									contextNav?.raw ??
@@ -361,6 +388,7 @@ export function createTabOrchestrator(
 								if (!isContextDestroyedError(error)) {
 									throw error;
 								}
+
 								// Mirrors the probe's own destroyed-context catch above:
 								// there is no attributed element left to report, so end
 								// directly with "navigation" rather than "completed" (a
@@ -374,6 +402,7 @@ export function createTabOrchestrator(
 									attributedHandleScript,
 								);
 								let selector: string;
+
 								try {
 									selector = await adaptor.evaluate(getSelector, attributedRef);
 								} finally {
@@ -419,6 +448,7 @@ export function createTabOrchestrator(
 								const recipients = [...attached].filter((consumer) =>
 									consumer.capabilities.has("contextSignals"),
 								);
+
 								try {
 									for (const consumer of recipients) {
 										await consumer.onTabStop(snapshot, handleFor(consumer));
@@ -447,11 +477,13 @@ export function createTabOrchestrator(
 							end("completed");
 							break;
 						}
+
 						visited.add(base.index);
 					}
 
 					const ref = await adaptor.evaluateHandle(activeElementHandleScript);
 					activeHandle = ref;
+
 					try {
 						const selector = await adaptor.evaluate(getSelector, ref);
 
@@ -471,6 +503,7 @@ export function createTabOrchestrator(
 							activeElement.index !== null
 						) {
 							const baselineStyles = interned.get(activeElement.index);
+
 							if (baselineStyles !== undefined) {
 								snapshot.baselineStyles = baselineStyles;
 							}
@@ -478,6 +511,7 @@ export function createTabOrchestrator(
 
 						if (remainingHas("contextSignals")) {
 							let signals: ContextChangeSignals;
+
 							try {
 								// Reuse the drain already fetched above while resolving
 								// a soft URL change (checkContextNavigation), if any;
@@ -505,6 +539,7 @@ export function createTabOrchestrator(
 								if (!isContextDestroyedError(error)) {
 									throw error;
 								}
+
 								// The page navigated out from under the drain call: the
 								// in-page observer's own state (and any DOM markers it
 								// set) went with it, so there is nothing left to report
@@ -529,6 +564,7 @@ export function createTabOrchestrator(
 								ref,
 								OBSCURER_ATTR,
 							);
+
 							if (raw.fullyObscured) {
 								await new Promise((resolve) =>
 									setTimeout(resolve, OBSCURING_RECHECK_DELAY_MS),
@@ -541,9 +577,11 @@ export function createTabOrchestrator(
 							}
 
 							let obscuredBy: { selector: string; html: string } | null = null;
+
 							if (raw.hasObscurer) {
 								const obscurer =
 									await adaptor.evaluateHandle(obscurerHandleScript);
+
 								try {
 									const obscurerSelector = await adaptor.evaluate(
 										getSelector,
@@ -570,6 +608,7 @@ export function createTabOrchestrator(
 						}
 
 						const recipients = [...attached];
+
 						for (const consumer of recipients) {
 							await consumer.onTabStop(snapshot, handleFor(consumer));
 						}
@@ -599,6 +638,7 @@ export function createTabOrchestrator(
 							// Capture errors already surface through the consumer that
 							// awaited; still dispose the handle below.
 						}
+
 						activeHandle = undefined;
 						await adaptor.disposeRef(ref);
 					}

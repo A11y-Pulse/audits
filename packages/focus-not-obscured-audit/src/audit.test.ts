@@ -48,6 +48,7 @@ function recordingConsumer(): TabConsumer & { stops: TabStopSnapshot[] } {
 			record.stops.push(snapshot);
 		},
 	};
+
 	return record;
 }
 
@@ -62,6 +63,7 @@ function loopAdaptor(script: {
 }): BrowserAdaptor {
 	let focusCall = 0;
 	let activeCall = 0;
+
 	return {
 		evaluate: (async (fn, ..._args) => {
 			if (fn === baselineScript) {
@@ -136,16 +138,21 @@ function obscuringAdaptor(
 	adaptor.evaluate = (async (fn, ...args) => {
 		if (fn === probeActiveElementScript) {
 			stopIndex++;
+
 			return original(fn, ...args);
 		}
+
 		if (fn === measureObscuringScript) {
 			return measurements[stopIndex];
 		}
+
 		if (fn === clearObscurerScript) {
 			return undefined;
 		}
+
 		return original(fn, ...args);
 	}) as BrowserAdaptor["evaluate"];
+
 	return adaptor;
 }
 
