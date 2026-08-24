@@ -3,6 +3,8 @@ import type { Rect, TextSpacingAuditAdaptor } from "../adaptor";
 
 /** A TextSpacingAuditAdaptor backed by a Puppeteer Page. */
 export class PuppeteerAdaptor implements TextSpacingAuditAdaptor {
+	readonly screenshotClipScale = 1;
+
 	constructor(private readonly page: Page) {}
 
 	evaluate<T>(
@@ -13,7 +15,10 @@ export class PuppeteerAdaptor implements TextSpacingAuditAdaptor {
 		return this.page.evaluate(fn as never, ...(args as never[])) as Promise<T>;
 	}
 
-	async screenshotClip(clip: Rect): Promise<Uint8Array> {
-		return (await this.page.screenshot({ type: "png", clip })) as Uint8Array;
+	async screenshotClip(clip: Rect, scale = 1): Promise<Uint8Array> {
+		return (await this.page.screenshot({
+			type: "png",
+			clip: { ...clip, scale },
+		})) as Uint8Array;
 	}
 }

@@ -1,4 +1,3 @@
-import { bufferedClip } from "@a11y-pulse/browser-adaptor";
 import { truncateHtml } from "@a11y-pulse/browser-adaptor/dom";
 import type { ReflowAuditAdaptor } from "./adaptor";
 import {
@@ -25,7 +24,7 @@ export type ReflowOptions = {
 	settleDelayMs?: number;
 	/** Max fingerprint readings before measuring anyway and marking the result unsettled. */
 	settleAttempts?: number;
-	/** Padding around an offender's box when clipping its screenshot. Defaults to 10. */
+	/** Vertical padding above/below an offender's row when clipping its screenshot. Defaults to 10. */
 	screenshotClipBuffer?: number;
 	/** Max offenders to screenshot (each is a real page.screenshot() call). Defaults to 10. */
 	screenshotLimit?: number;
@@ -79,14 +78,19 @@ async function settle(
 }
 
 /**
- * Screenshot up to `limit` offenders, clipped to their box plus `clipBuffer`. Each
- * clip is a real `page.screenshot()` call, so the count is bounded; offenders
- * past the limit get `undefined` rather than a truncated array, so index
- * alignment with `offenders` is preserved.
+ * Screenshot up to `limit` offenders. Each clip always spans the full
+ * `viewportWidth` starting at x=0, rather than a box around the offender: this
+ * frames the crop the same way the audit measured it (a 320px-wide viewport),
+ * so an offender that extends past the edge is visibly cut off there instead
+ * of being fully visible in a crop that just happens to be wider than the
+ * viewport. Each clip is a real `page.screenshot()` call, so the count is
+ * bounded; offenders past the limit get `undefined` rather than a truncated
+ * array, so index alignment with `offenders` is preserved.
  */
 async function captureOffenderScreenshots(
 	adaptor: ReflowAuditAdaptor,
 	offenders: ReflowMeasureOffender[],
+	viewportWidth: number,
 	clipBuffer: number,
 	limit: number,
 ): Promise<Array<Uint8Array | undefined>> {
@@ -94,8 +98,8 @@ async function captureOffenderScreenshots(
 		return [];
 	}
 
-	const { width: pageWidth, height: pageHeight } =
-		await adaptor.evaluate(pageDimensionsScript);
+	const { height: pageHeight } = await adaptor.evaluate(pageDimensionsScript);
+	const scale = adaptor.screenshotClipScale ?? 1;
 
 	const screenshots: Array<Uint8Array | undefined> = [];
 
@@ -105,13 +109,21 @@ async function captureOffenderScreenshots(
 			continue;
 		}
 
-		const clip = bufferedClip(
-			offenders[i]!.rect,
-			pageWidth,
-			pageHeight,
-			clipBuffer,
+		const { rect } = offenders[i]!;
+		const y = Math.max(0, rect.y - clipBuffer);
+		const bottom = Math.min(pageHeight, rect.y + rect.height + clipBuffer);
+
+		screenshots.push(
+			await adaptor.screenshotClip(
+				{
+					x: 0,
+					y,
+					width: viewportWidth,
+					height: bottom - y,
+				},
+				scale,
+			),
 		);
-		screenshots.push(await adaptor.screenshotClip(clip));
 	}
 
 	return screenshots;
@@ -196,6 +208,7 @@ export async function runReflowAudit(
 		screenshots = await captureOffenderScreenshots(
 			adaptor,
 			measure.offenders,
+			measureViewport.width,
 			screenshotClipBuffer,
 			screenshotLimit,
 		);

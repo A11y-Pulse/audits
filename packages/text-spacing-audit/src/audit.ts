@@ -221,6 +221,7 @@ async function captureFindingScreenshots(
 	const afterBySelector = new Map(
 		afterCandidates.map((candidate) => [candidate.selector, candidate]),
 	);
+	const scale = adaptor.screenshotClipScale ?? 1;
 
 	const screenshots: Array<Uint8Array | undefined> = [];
 
@@ -238,7 +239,7 @@ async function captureFindingScreenshots(
 			pageHeight,
 			clipBuffer,
 		);
-		screenshots.push(await adaptor.screenshotClip(clip));
+		screenshots.push(await adaptor.screenshotClip(clip, scale));
 	}
 
 	return screenshots;

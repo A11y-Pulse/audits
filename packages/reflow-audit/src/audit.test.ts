@@ -36,12 +36,14 @@ function createFake(opts: {
 	fingerprints?: LayoutFingerprint[];
 	measure?: ReflowMeasure | (() => ReflowMeasure);
 	throwOnMeasure?: Error;
+	screenshotClipScale?: number;
 }): {
 	adaptor: ReflowAuditAdaptor;
 	setCalls: Array<{ width: number; height: number }>;
 	current: () => { width: number; height: number };
 	screenshotCalls: Array<{
 		clip: { x: number; y: number; width: number; height: number };
+		scale: number;
 		viewportWidthAtCall: number;
 	}>;
 } {
@@ -49,6 +51,7 @@ function createFake(opts: {
 	const setCalls: Array<{ width: number; height: number }> = [];
 	const screenshotCalls: Array<{
 		clip: { x: number; y: number; width: number; height: number };
+		scale: number;
 		viewportWidthAtCall: number;
 	}> = [];
 	let fingerprintIndex = 0;
@@ -88,10 +91,11 @@ function createFake(opts: {
 
 			throw new Error(`unexpected evaluate: ${fn.name}`);
 		},
-		screenshotClip: async (clip) => {
-			screenshotCalls.push({ clip, viewportWidthAtCall: viewport.width });
+		screenshotClip: async (clip, scale = 1) => {
+			screenshotCalls.push({ clip, scale, viewportWidthAtCall: viewport.width });
 			return new Uint8Array([1, 2, 3]);
 		},
+		screenshotClipScale: opts.screenshotClipScale,
 	};
 
 	return { adaptor, setCalls, current: () => viewport, screenshotCalls };
@@ -325,15 +329,71 @@ describe("runReflowAudit screenshots", () => {
 
 		expect(result.offenders[0]?.screenshot).toEqual(new Uint8Array([1, 2, 3]));
 		expect(fake.screenshotCalls).toHaveLength(1);
-		// Buffered by the default 10px clip, clamped to the 320x1024 measurement page.
+		// Always the full 320px measurement viewport, starting at x=0, so an
+		// offender that extends past the edge is visibly cut off there. Vertically
+		// buffered by the default 10px clip, clamped to the 1024px-tall page.
 		expect(fake.screenshotCalls[0]?.clip).toEqual({
 			x: 0,
 			y: 10,
-			width: 120,
+			width: 320,
 			height: 50,
 		});
 		// The clip was captured before the finally block restored the wide viewport.
 		expect(fake.screenshotCalls[0]?.viewportWidthAtCall).toBe(320);
+	});
+
+	it("captures at the adaptor's screenshotClipScale, independent of the page's own scale factor", async () => {
+		const fake = createFake({
+			viewport: WIDE,
+			screenshotClipScale: 2,
+			measure: emptyMeasure({
+				documentOverflowPx: 80,
+				offenders: [
+					offender({ rect: { x: 10, y: 20, width: 100, height: 30 } }),
+				],
+			}),
+		});
+
+		await runReflowAudit(fake.adaptor, OPTIONS);
+
+		expect(fake.screenshotCalls[0]?.scale).toBe(2);
+	});
+
+	it("defaults to scale 1 when the adaptor doesn't declare screenshotClipScale", async () => {
+		const fake = createFake({
+			viewport: WIDE,
+			measure: emptyMeasure({
+				documentOverflowPx: 80,
+				offenders: [
+					offender({ rect: { x: 10, y: 20, width: 100, height: 30 } }),
+				],
+			}),
+		});
+
+		await runReflowAudit(fake.adaptor, OPTIONS);
+
+		expect(fake.screenshotCalls[0]?.scale).toBe(1);
+	});
+
+	it("cuts the clip off at the viewport edge instead of widening to fit an offender that overflows it", async () => {
+		const fake = createFake({
+			viewport: WIDE,
+			measure: emptyMeasure({
+				documentOverflowPx: 80,
+				offenders: [
+					offender({ rect: { x: 250, y: 0, width: 150, height: 20 } }),
+				],
+			}),
+		});
+
+		await runReflowAudit(fake.adaptor, OPTIONS);
+
+		expect(fake.screenshotCalls[0]?.clip).toEqual({
+			x: 0,
+			y: 0,
+			width: 320,
+			height: 30,
+		});
 	});
 
 	it(`omits screenshots past screenshotLimit (${DEFAULT_SCREENSHOT_LIMIT}) but keeps every offender`, async () => {

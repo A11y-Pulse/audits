@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PuppeteerAdaptor } from "../../src/adaptors/puppeteer";
 import {
 	runTextSpacingAudit,
+	type TextSpacingAuditAdaptor,
 	type TextSpacingOptions,
 	type TextSpacingResult,
 } from "../../src/index";
@@ -89,6 +90,52 @@ describe("text spacing audit (integration)", () => {
 		expect(Array.from(clipped!.screenshot!.slice(0, 8))).toEqual([
 			0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
 		]);
+	});
+
+	it("captures the screenshot at the adaptor's fixed scale", async () => {
+		// Puppeteer's clip.scale multiplies against the page's current
+		// deviceScaleFactor rather than replacing it (verified directly against
+		// real Puppeteer in the reflow-audit integration suite), so this only
+		// comes out matching the clip's own CSS-pixel size given the page's own
+		// deviceScaleFactor is 1, as it is by default here.
+		const page: Page = await browser.newPage();
+
+		try {
+			await page.goto(`${server.url}/clipped-fixed-height.html`, {
+				waitUntil: "load",
+			});
+
+			const inner = new PuppeteerAdaptor(page);
+			const calls: Array<{
+				clip: { width: number };
+				scale: number;
+			}> = [];
+			const spy: TextSpacingAuditAdaptor = {
+				evaluate: inner.evaluate.bind(inner),
+				screenshotClipScale: inner.screenshotClipScale,
+				screenshotClip: async (clip, scale = 1) => {
+					calls.push({ clip, scale });
+
+					return inner.screenshotClip(clip, scale);
+				},
+			};
+
+			const result = await runTextSpacingAudit(spy);
+			const clipped = result.findings.find(
+				(finding) => finding.kind === "clipped",
+			);
+
+			expect(clipped?.screenshot).toBeInstanceOf(Uint8Array);
+			expect(calls).toHaveLength(1);
+			expect(calls[0]?.scale).toBe(1);
+
+			const png = Buffer.from(clipped!.screenshot!);
+			const pngWidth = png.readUInt32BE(16);
+
+			expect(pngWidth).toBe(Math.round(calls[0]!.clip.width));
+		} finally {
+			await page.close();
+		}
 	});
 
 	it("routes deeper ellipsis truncation to incomplete, never a violation", async () => {

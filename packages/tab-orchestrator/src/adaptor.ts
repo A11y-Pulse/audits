@@ -36,7 +36,10 @@ export interface BrowserAdaptor {
 
 	/**
 	 * Screenshot a clipped region of the page. `scale` is the device scale
-	 * factor (bitmap pixels per CSS pixel).
+	 * factor (bitmap pixels per CSS pixel), multiplied against whatever
+	 * deviceScaleFactor the page itself currently has (Puppeteer does not
+	 * replace it). The caller is responsible for the page being at a known
+	 * deviceScaleFactor before invoking this.
 	 */
 	screenshotClip(clip: Rect, scale?: number): Promise<Uint8Array>;
 
