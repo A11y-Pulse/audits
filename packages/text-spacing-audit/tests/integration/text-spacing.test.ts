@@ -79,6 +79,16 @@ describe("text spacing audit (integration)", () => {
 		expect(result.summary.clipped).toBeGreaterThan(0);
 		expect(result.restored).toBe(true);
 		expect(leftoverStyles).toBe(0);
+
+		const clipped = result.findings.find(
+			(finding) => finding.kind === "clipped",
+		);
+		expect(clipped?.screenshot).toBeInstanceOf(Uint8Array);
+		expect(clipped?.screenshot?.length ?? 0).toBeGreaterThan(100);
+		// PNG magic number.
+		expect(Array.from(clipped!.screenshot!.slice(0, 8))).toEqual([
+			0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+		]);
 	});
 
 	it("routes deeper ellipsis truncation to incomplete, never a violation", async () => {

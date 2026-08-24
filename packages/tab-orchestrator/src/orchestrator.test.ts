@@ -353,6 +353,88 @@ describe("tab loop", () => {
 		expect(clips).toHaveLength(2);
 	});
 
+	it("does not capture a screenshot when nobody calls session.screenshotClip", async () => {
+		const screenshots: number[] = [];
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			active: [info(0)],
+		});
+		adaptor.screenshotClip = async () => {
+			screenshots.push(1);
+			return new Uint8Array([1]);
+		};
+		const a = recordingConsumer(["screenshot"]);
+		const orchestrator = createTabOrchestrator(adaptor, {
+			screenshotSettleDelay: 0,
+		});
+		orchestrator.attach(a);
+		await orchestrator.run();
+		expect(screenshots).toEqual([]);
+	});
+
+	it("throws from screenshotClip when the consumer did not declare it", async () => {
+		const a = recordingConsumer([]);
+		let thrown: Error | undefined;
+		const wrapped: TabConsumer = {
+			capabilities: new Set(),
+			async onTabStop(snapshot, session) {
+				try {
+					await session.screenshotClip();
+				} catch (error) {
+					thrown = error as Error;
+				}
+				await a.onTabStop(snapshot, session);
+			},
+		};
+		const orchestrator = createTabOrchestrator(
+			loopAdaptor({ hasFocus: [true, true], active: [info(0)] }),
+			{ screenshotSettleDelay: 0 },
+		);
+		orchestrator.attach(wrapped);
+		await orchestrator.run();
+		expect(thrown?.message).toMatch(/did not declare screenshot/i);
+	});
+
+	it("captures a screenshot once per stop when a declarer calls screenshotClip", async () => {
+		const clips: unknown[] = [];
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			active: [info(0)],
+		});
+		const originalEvaluate = adaptor.evaluate.bind(adaptor);
+		adaptor.evaluate = (async (fn, ...args) => {
+			if (fn === pageDimensionsScript) {
+				return { width: 2000, height: 4000 };
+			}
+			if (fn === elementRectScript) {
+				return { x: 10, y: 20, width: 30, height: 40 };
+			}
+			return originalEvaluate(fn, ...args);
+		}) as BrowserAdaptor["evaluate"];
+		adaptor.screenshotClip = async (clip) => {
+			clips.push(clip);
+			return new Uint8Array([clips.length]);
+		};
+
+		const a: TabConsumer = {
+			capabilities: new Set(["screenshot"]),
+			async onTabStop(_snapshot, session) {
+				const first = await session.screenshotClip();
+				const second = await session.screenshotClip();
+				expect(first).toBe(second);
+				expect(first).toEqual(new Uint8Array([1]));
+			},
+		};
+
+		const orchestrator = createTabOrchestrator(adaptor, {
+			screenshotSettleDelay: 0,
+			screenshotClipBuffer: 10,
+		});
+		orchestrator.attach(a);
+		await orchestrator.run();
+		expect(clips).toHaveLength(1);
+	});
+
 	it("scrolls to center before capture when the element centre is covered", async () => {
 		let scrolls = 0;
 		const adaptor = loopAdaptor({

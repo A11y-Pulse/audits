@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { ReflowAuditAdaptor } from "./adaptor";
-import { runReflowAudit } from "./audit";
+import { DEFAULT_SCREENSHOT_LIMIT, runReflowAudit } from "./audit";
 import {
 	type LayoutFingerprint,
 	measureReflowScript,
+	pageDimensionsScript,
 	type ReflowMeasure,
+	type ReflowMeasureOffender,
 	readLayoutFingerprintScript,
 } from "./browser-scripts";
 
@@ -38,9 +40,17 @@ function createFake(opts: {
 	adaptor: ReflowAuditAdaptor;
 	setCalls: Array<{ width: number; height: number }>;
 	current: () => { width: number; height: number };
+	screenshotCalls: Array<{
+		clip: { x: number; y: number; width: number; height: number };
+		viewportWidthAtCall: number;
+	}>;
 } {
 	let viewport = { ...(opts.viewport ?? WIDE) };
 	const setCalls: Array<{ width: number; height: number }> = [];
+	const screenshotCalls: Array<{
+		clip: { x: number; y: number; width: number; height: number };
+		viewportWidthAtCall: number;
+	}> = [];
 	let fingerprintIndex = 0;
 
 	const adaptor: ReflowAuditAdaptor = {
@@ -72,11 +82,19 @@ function createFake(opts: {
 				return (opts.measure ?? emptyMeasure()) as T;
 			}
 
+			if (fn === pageDimensionsScript) {
+				return { width: 320, height: 1024 } as T;
+			}
+
 			throw new Error(`unexpected evaluate: ${fn.name}`);
+		},
+		screenshotClip: async (clip) => {
+			screenshotCalls.push({ clip, viewportWidthAtCall: viewport.width });
+			return new Uint8Array([1, 2, 3]);
 		},
 	};
 
-	return { adaptor, setCalls, current: () => viewport };
+	return { adaptor, setCalls, current: () => viewport, screenshotCalls };
 }
 
 describe("runReflowAudit viewport restore", () => {
@@ -138,6 +156,7 @@ describe("runReflowAudit buckets", () => {
 						html: '<div id="shell" style="width:1000px">',
 						overflowPx: 80,
 						reason: "element-overflow",
+						rect: { x: 0, y: 0, width: 1000, height: 40 },
 					},
 				],
 			}),
@@ -150,6 +169,7 @@ describe("runReflowAudit buckets", () => {
 		expect(result.offenders).toHaveLength(1);
 		expect(result.offenders[0]?.selector).toBe("#shell");
 		expect(result.offenders[0]?.reason).toBe("element-overflow");
+		expect(result.offenders[0]?.screenshot).toEqual(new Uint8Array([1, 2, 3]));
 	});
 
 	it("does not flag overflow fully explained by a data table", async () => {
@@ -176,6 +196,7 @@ describe("runReflowAudit buckets", () => {
 						html: '<div id="pinned">',
 						overflowPx: 680,
 						reason: "fixed-width-container",
+						rect: { x: 0, y: 0, width: 1000, height: 40 },
 					},
 				],
 			}),
@@ -273,5 +294,78 @@ describe("runReflowAudit already-narrow viewport", () => {
 		expect(result.restored).toBe(true);
 		expect(result.viewport).toEqual(NARROW);
 		expect(result.bucket).toBe("pass");
+	});
+});
+
+function offender(
+	overrides: Partial<ReflowMeasureOffender> = {},
+): ReflowMeasureOffender {
+	return {
+		selector: overrides.selector ?? "#el",
+		html: overrides.html ?? "<div id='el'>",
+		overflowPx: overrides.overflowPx ?? 80,
+		reason: overrides.reason ?? "element-overflow",
+		rect: overrides.rect ?? { x: 0, y: 0, width: 1000, height: 40 },
+	};
+}
+
+describe("runReflowAudit screenshots", () => {
+	it("captures a clipped screenshot for each offender while still at the narrow viewport", async () => {
+		const fake = createFake({
+			viewport: WIDE,
+			measure: emptyMeasure({
+				documentOverflowPx: 80,
+				offenders: [
+					offender({ rect: { x: 10, y: 20, width: 100, height: 30 } }),
+				],
+			}),
+		});
+
+		const result = await runReflowAudit(fake.adaptor, OPTIONS);
+
+		expect(result.offenders[0]?.screenshot).toEqual(new Uint8Array([1, 2, 3]));
+		expect(fake.screenshotCalls).toHaveLength(1);
+		// Buffered by the default 10px clip, clamped to the 320x1024 measurement page.
+		expect(fake.screenshotCalls[0]?.clip).toEqual({
+			x: 0,
+			y: 10,
+			width: 120,
+			height: 50,
+		});
+		// The clip was captured before the finally block restored the wide viewport.
+		expect(fake.screenshotCalls[0]?.viewportWidthAtCall).toBe(320);
+	});
+
+	it(`omits screenshots past screenshotLimit (${DEFAULT_SCREENSHOT_LIMIT}) but keeps every offender`, async () => {
+		const offenders = Array.from(
+			{ length: DEFAULT_SCREENSHOT_LIMIT + 2 },
+			(_, i) => offender({ selector: `#el-${i}` }),
+		);
+		const fake = createFake({
+			measure: emptyMeasure({ documentOverflowPx: 80, offenders }),
+		});
+
+		const result = await runReflowAudit(fake.adaptor, OPTIONS);
+
+		expect(result.offenders).toHaveLength(DEFAULT_SCREENSHOT_LIMIT + 2);
+		expect(fake.screenshotCalls).toHaveLength(DEFAULT_SCREENSHOT_LIMIT);
+		expect(
+			result.offenders
+				.slice(0, DEFAULT_SCREENSHOT_LIMIT)
+				.every((o) => o.screenshot),
+		).toBe(true);
+		expect(
+			result.offenders
+				.slice(DEFAULT_SCREENSHOT_LIMIT)
+				.every((o) => o.screenshot === undefined),
+		).toBe(true);
+	});
+
+	it("takes no screenshots when there are no offenders", async () => {
+		const fake = createFake({ measure: emptyMeasure() });
+
+		await runReflowAudit(fake.adaptor, OPTIONS);
+
+		expect(fake.screenshotCalls).toHaveLength(0);
 	});
 });

@@ -85,6 +85,18 @@ describe("reflow audit (integration)", () => {
 		);
 	});
 
+	it("captures a real PNG screenshot of the offending element", async () => {
+		const result = await runFixture("overflowing-element.html");
+		const offender = result.offenders.find((o) => o.selector.includes("poke"));
+
+		expect(offender?.screenshot).toBeInstanceOf(Uint8Array);
+		expect(offender?.screenshot?.length ?? 0).toBeGreaterThan(100);
+		// PNG magic number.
+		expect(Array.from(offender!.screenshot!.slice(0, 8))).toEqual([
+			0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+		]);
+	});
+
 	it("does not flag a scroll-snap carousel with no document overflow", async () => {
 		const result = await runFixture("carousel.html");
 

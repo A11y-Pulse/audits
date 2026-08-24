@@ -71,7 +71,15 @@ describe("shared session across three audits (integration)", () => {
 		expect(focus.result.elements).toHaveLength(1);
 		expect(obscured.result.elements.length).toBeGreaterThan(1);
 		expect(context.result.elements.length).toBeGreaterThan(1);
-		expect(clips).toBe(2); // one unfocusedPair = focused + unfocused, only stop 1
+
+		const hiddenByFooter = obscured.result.elements.find(
+			(element) => element.bucket === "violation",
+		);
+		expect(hiddenByFooter?.screenshot).toBeInstanceOf(Uint8Array);
+
+		// unfocusedPair (focused + unfocused, stop 1 only) plus one screenshotClip
+		// from focus-not-obscured for the element hidden behind the sticky footer.
+		expect(clips).toBe(3);
 		// The session ends naturally once Tab lands on <body> (or revisits an
 		// already-seen element) with nothing left to tab to; detecting that
 		// requires one more real Tab press than there are real elements to

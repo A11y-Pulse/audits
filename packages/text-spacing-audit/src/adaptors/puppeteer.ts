@@ -1,5 +1,5 @@
 import type { Page } from "puppeteer";
-import type { TextSpacingAuditAdaptor } from "../adaptor";
+import type { Rect, TextSpacingAuditAdaptor } from "../adaptor";
 
 /** A TextSpacingAuditAdaptor backed by a Puppeteer Page. */
 export class PuppeteerAdaptor implements TextSpacingAuditAdaptor {
@@ -11,5 +11,9 @@ export class PuppeteerAdaptor implements TextSpacingAuditAdaptor {
 		...args: unknown[]
 	): Promise<T> {
 		return this.page.evaluate(fn as never, ...(args as never[])) as Promise<T>;
+	}
+
+	async screenshotClip(clip: Rect): Promise<Uint8Array> {
+		return (await this.page.screenshot({ type: "png", clip })) as Uint8Array;
 	}
 }

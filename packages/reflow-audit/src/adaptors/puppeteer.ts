@@ -1,5 +1,5 @@
 import type { Page, Viewport } from "puppeteer";
-import type { ReflowAuditAdaptor } from "../adaptor";
+import type { Rect, ReflowAuditAdaptor } from "../adaptor";
 
 /** A ReflowAuditAdaptor backed by a Puppeteer Page. */
 export class PuppeteerAdaptor implements ReflowAuditAdaptor {
@@ -30,5 +30,9 @@ export class PuppeteerAdaptor implements ReflowAuditAdaptor {
 			: { width: v.width, height: v.height };
 
 		await this.page.setViewport(next);
+	}
+
+	async screenshotClip(clip: Rect): Promise<Uint8Array> {
+		return (await this.page.screenshot({ type: "png", clip })) as Uint8Array;
 	}
 }

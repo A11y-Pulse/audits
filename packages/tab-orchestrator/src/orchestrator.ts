@@ -16,6 +16,7 @@ import {
 	obscurerHandleScript,
 	probeActiveElementScript,
 } from "./browser-scripts";
+import { captureScreenshot } from "./capture-screenshot";
 import { FOCUS_STYLE_PROPERTIES } from "./focus-style";
 import { getSelector } from "./get-selector";
 import { truncateHtml } from "./truncate-html";
@@ -123,6 +124,7 @@ export function createTabOrchestrator(
 			let settleTimer: ReturnType<typeof setTimeout> | undefined;
 			let resolveSettle: (() => void) | undefined;
 			const pairByStop = { current: null as Promise<UnfocusedPair> | null };
+			const screenshotByStop = { current: null as Promise<Uint8Array> | null };
 			let activeHandle: ElementRef | undefined;
 			let lastHasAttributed = false;
 			// Captured when observers are installed and re-armed after every
@@ -164,6 +166,23 @@ export function createTabOrchestrator(
 						activeHandle,
 					);
 					return pairByStop.current;
+				},
+				screenshotClip: () => {
+					if (!consumer.capabilities.has("screenshot")) {
+						throw new Error("Consumer did not declare screenshot");
+					}
+					if (!remainingHas("screenshot")) {
+						throw new Error("Consumer did not declare screenshot");
+					}
+					if (activeHandle === undefined) {
+						throw new Error("screenshot capture not implemented");
+					}
+					screenshotByStop.current ??= captureScreenshot(
+						adaptor,
+						resolved,
+						activeHandle,
+					);
+					return screenshotByStop.current;
 				},
 			});
 
@@ -260,6 +279,7 @@ export function createTabOrchestrator(
 
 				while (attached.size > 0) {
 					pairByStop.current = null;
+					screenshotByStop.current = null;
 					lastHasAttributed = false;
 
 					const hasFocus = await adaptor.evaluate(() => document.hasFocus());

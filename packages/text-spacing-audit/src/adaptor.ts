@@ -1,3 +1,7 @@
+import type { Rect } from "@a11y-pulse/browser-adaptor";
+
+export type { Rect } from "@a11y-pulse/browser-adaptor";
+
 /**
  * An element handle in the page. This type is adaptor-specific and is opaque to the audit.
  */
@@ -16,4 +20,9 @@ export interface TextSpacingAuditAdaptor {
 		fn: (...args: any[]) => T | Promise<T>,
 		...args: unknown[]
 	): Promise<T>;
+
+	/**
+	 * Screenshot a clipped region of the page defined by `clip`. This function must return PNG bytes.
+	 */
+	screenshotClip(clip: Rect): Promise<Uint8Array>;
 }

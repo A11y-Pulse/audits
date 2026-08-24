@@ -26,6 +26,9 @@ export type FocusNotObscuredElementResult = {
 	 * failures under the Minimum criterion.
 	 */
 	bucket: ObscuringBucket;
+
+	/** PNG bytes of this element, clipped and padded. Only captured for a non-"pass" bucket, and omitted past `screenshotLimit`. */
+	screenshot?: Uint8Array;
 };
 
 export type FocusNotObscuredResult = {
