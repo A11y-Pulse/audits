@@ -36,6 +36,11 @@ async function runFixture(name: string): Promise<ReflowResult> {
 	}
 }
 
+/** Width in pixels from a PNG's IHDR chunk (bytes 16-19, big-endian). */
+function readPngWidth(png: Uint8Array): number {
+	return new DataView(png.buffer, png.byteOffset, png.byteLength).getUint32(16);
+}
+
 describe("reflow audit (integration)", () => {
 	it("passes a page that reflows at 320px and restores the viewport", async () => {
 		const page = await browser.newPage();
@@ -85,6 +90,33 @@ describe("reflow audit (integration)", () => {
 		);
 	});
 
+	it("captures a real PNG screenshot of the offending element", async () => {
+		const result = await runFixture("overflowing-element.html");
+		const offender = result.offenders.find((o) => o.selector.includes("poke"));
+
+		expect(offender?.screenshot).toBeInstanceOf(Uint8Array);
+		expect(offender?.screenshot?.length ?? 0).toBeGreaterThan(100);
+		// PNG magic number.
+		expect(Array.from(offender!.screenshot!.slice(0, 8))).toEqual([
+			0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+		]);
+	});
+
+	it("captures the screenshot at the measurement viewport's width in real pixels", async () => {
+		// Puppeteer's clip.scale multiplies against the page's current
+		// deviceScaleFactor rather than replacing it (verified directly against
+		// real Puppeteer), so this only comes out at exactly 320px given the
+		// page's own deviceScaleFactor is 1, as it is by default here. A caller
+		// that leaves deviceScaleFactor at something else beforehand (the
+		// a11y-pulse driver briefly does, for its own unrelated thumbnail) is
+		// responsible for restoring it before invoking this audit.
+		const result = await runFixture("overflowing-element.html");
+		const offender = result.offenders.find((o) => o.selector.includes("poke"));
+
+		expect(offender?.screenshot).toBeInstanceOf(Uint8Array);
+		expect(readPngWidth(offender!.screenshot!)).toBe(320);
+	});
+
 	it("does not flag a scroll-snap carousel with no document overflow", async () => {
 		const result = await runFixture("carousel.html");
 
@@ -124,6 +156,7 @@ describe("reflow audit (integration)", () => {
 					width: viewport?.width ?? 0,
 					height: viewport?.height ?? 0,
 				});
+
 				return original(viewport);
 			}) as Page["setViewport"];
 

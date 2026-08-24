@@ -47,6 +47,7 @@ function recordingConsumer(): TabConsumer & { stops: TabStopSnapshot[] } {
 			record.stops.push(snapshot);
 		},
 	};
+
 	return record;
 }
 
@@ -61,11 +62,13 @@ function loopAdaptor(script: {
 }): BrowserAdaptor {
 	let focusCall = 0;
 	let activeCall = 0;
+
 	return {
 		evaluate: (async (fn, ..._args) => {
 			if (fn === baselineScript) {
 				return { styles: [EMPTY_STYLES], entries: [] };
 			}
+
 			if (fn === probeActiveElementScript) {
 				return (
 					script.active?.[activeCall++] ?? {
@@ -78,18 +81,22 @@ function loopAdaptor(script: {
 					}
 				);
 			}
+
 			if (fn === getSelector) {
 				return "#fake";
 			}
+
 			if (fn === clearMarkersScript) {
 				return undefined;
 			}
+
 			return script.hasFocus?.[focusCall++] ?? false;
 		}) as BrowserAdaptor["evaluate"],
 		async evaluateHandle(fn) {
 			if (fn === activeElementHandleScript) {
 				return { kind: "active" };
 			}
+
 			return {};
 		},
 		async disposeRef() {},
@@ -134,19 +141,25 @@ function contextAdaptor(
 	adaptor.evaluate = (async (fn, ...args) => {
 		if (fn === probeActiveElementScript) {
 			stopIndex++;
+
 			return original(fn, ...args);
 		}
+
 		if (fn === locationHrefScript) {
 			return "http://fake/";
 		}
+
 		if (fn === installContextObserverScript) {
 			return undefined;
 		}
+
 		if (fn === drainContextObserverScript) {
 			return drains[stopIndex] ?? emptyDrain();
 		}
+
 		return original(fn, ...args);
 	}) as BrowserAdaptor["evaluate"];
+
 	return adaptor;
 }
 

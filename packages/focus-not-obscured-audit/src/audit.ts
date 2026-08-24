@@ -12,7 +12,12 @@ import {
 import { classifyObscuring } from "./classify";
 import type { FocusNotObscuredResult } from "./result";
 
-export type FocusNotObscuredOptions = BaseAuditOptions;
+export const DEFAULT_SCREENSHOT_LIMIT = 10;
+
+export type FocusNotObscuredOptions = BaseAuditOptions & {
+	/** Max obscured/incomplete elements to screenshot (each is a real page.screenshot() call). Defaults to 10. */
+	screenshotLimit?: number;
+};
 
 type ResolvedOptions = Required<FocusNotObscuredOptions>;
 
@@ -24,6 +29,7 @@ function resolveOptions(options: FocusNotObscuredOptions): ResolvedOptions {
 		failedElementLimit:
 			options.failedElementLimit ?? DEFAULT_FAILED_ELEMENT_LIMIT,
 		timeout: options.timeout ?? DEFAULT_TIMEOUT,
+		screenshotLimit: options.screenshotLimit ?? DEFAULT_SCREENSHOT_LIMIT,
 	};
 }
 
@@ -64,20 +70,22 @@ export function createFocusNotObscuredAudit(
 	const result = emptyResult();
 	let checked = 0;
 	let failures = 0;
+	let screenshotsTaken = 0;
 	const selfDisconnect = createAuditSelfDisconnect();
 
 	return {
 		result,
-		capabilities: new Set(["obscuring"] as const),
+		capabilities: new Set(["obscuring", "screenshot"] as const),
 		onSessionStart(session) {
 			selfDisconnect.armTimeout(resolved.timeout, session, () => {
 				result.summary.timedOut = true;
 			});
 		},
-		onTabStop(snapshot, session) {
+		async onTabStop(snapshot, session) {
 			checked++;
 
 			const measurement = snapshot.obscuring;
+
 			if (measurement === undefined) {
 				// Should not happen: this consumer declares the "obscuring"
 				// capability, so the orchestrator always populates it.
@@ -86,12 +94,25 @@ export function createFocusNotObscuredAudit(
 
 			const bucket = classifyObscuring(measurement);
 
+			// Pass elements need no evidence; only screenshot the elements that
+			// are actually worth a human looking at, and only up to the limit,
+			// since each capture is a real page.screenshot() call.
+			const screenshot =
+				bucket !== "pass" && screenshotsTaken < resolved.screenshotLimit
+					? await session.screenshotClip()
+					: undefined;
+
+			if (screenshot) {
+				screenshotsTaken++;
+			}
+
 			result.elements.push({
 				selector: snapshot.activeElement.selector,
 				html: snapshot.activeElement.html,
 				tabIndex: snapshot.tabIndex,
 				measurement,
 				bucket,
+				screenshot,
 			});
 
 			if (bucket === "violation") {
@@ -106,6 +127,7 @@ export function createFocusNotObscuredAudit(
 			) {
 				result.summary.reachedFailedElementLimit = true;
 				selfDisconnect.disconnect(session);
+
 				return;
 			}
 
@@ -116,6 +138,7 @@ export function createFocusNotObscuredAudit(
 		},
 		onSessionEnd(reason) {
 			selfDisconnect.clear();
+
 			if (!selfDisconnect.disconnectedSelf) {
 				result.summary.sessionEnd = reason;
 			}
@@ -140,5 +163,6 @@ export async function runFocusNotObscuredAudit(
 	const audit = createFocusNotObscuredAudit(options);
 	orchestrator.attach(audit);
 	await orchestrator.run();
+
 	return audit.result;
 }

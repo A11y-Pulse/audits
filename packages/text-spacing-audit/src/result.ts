@@ -39,6 +39,8 @@ export type TextSpacingElementResult = {
 	kind: TextSpacingFindingKind;
 	metrics: { beforeOverflowPx: number; afterOverflowPx: number };
 	overlapsWith?: string;
+	/** PNG bytes of the element with WCAG 1.4.12 spacing overrides applied. Omitted past `screenshotLimit`. */
+	screenshot?: Uint8Array;
 };
 
 export type TextSpacingResult = {

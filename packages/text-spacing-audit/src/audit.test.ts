@@ -4,6 +4,7 @@ import {
 	type CandidateSnapshot,
 	classifyTextSpacing,
 	DEFAULT_CANDIDATE_LIMIT,
+	DEFAULT_SCREENSHOT_LIMIT,
 	runTextSpacingAudit,
 } from "./audit";
 
@@ -461,11 +462,24 @@ type ScriptedPage = {
 
 function scriptedAdaptor(page: ScriptedPage): TextSpacingAuditAdaptor & {
 	calls: string[];
+	screenshotCalls: Array<{
+		x: number;
+		y: number;
+		width: number;
+		height: number;
+	}>;
 } {
 	const calls: string[] = [];
+	const screenshotCalls: Array<{
+		x: number;
+		y: number;
+		width: number;
+		height: number;
+	}> = [];
 
 	return {
 		calls,
+		screenshotCalls,
 		evaluate: async <T>(
 			fn: (...args: never[]) => T | Promise<T>,
 			..._args: unknown[]
@@ -488,6 +502,10 @@ function scriptedAdaptor(page: ScriptedPage): TextSpacingAuditAdaptor & {
 				return page.after as T;
 			}
 
+			if (fn.name === "pageDimensionsScript") {
+				return { width: 1280, height: 800 } as T;
+			}
+
 			if (fn.name === "restoreAndVerifyScript") {
 				if (page.throwOnRestore) {
 					throw page.throwOnRestore;
@@ -497,6 +515,12 @@ function scriptedAdaptor(page: ScriptedPage): TextSpacingAuditAdaptor & {
 			}
 
 			throw new Error(`unexpected evaluate: ${fn.name}`);
+		},
+		screenshotClip: async (clip) => {
+			calls.push("screenshotClip");
+			screenshotCalls.push(clip);
+
+			return new Uint8Array([1, 2, 3]);
 		},
 	};
 }
@@ -568,6 +592,7 @@ describe("runTextSpacingAudit", () => {
 
 				return undefined as T;
 			},
+			screenshotClip: async () => new Uint8Array([1, 2, 3]),
 		};
 
 		await expect(runTextSpacingAudit(adaptor, { settleMs: 0 })).rejects.toThrow(
@@ -616,6 +641,7 @@ describe("runTextSpacingAudit", () => {
 
 				return undefined as T;
 			},
+			screenshotClip: async () => new Uint8Array([1, 2, 3]),
 		};
 
 		await runTextSpacingAudit(adaptor, { candidateLimit: 7, settleMs: 0 });
@@ -716,5 +742,92 @@ describe("runTextSpacingAudit", () => {
 			"truncation-increased",
 			"overlap",
 		]);
+	});
+});
+
+function truncationFinding(selector: string) {
+	const before = snapshot({
+		index: 0,
+		selector,
+		truncated: true,
+		scrollWidth: 100,
+		clientWidth: 100,
+		rect: rect(0, 0, 100, 20),
+	});
+	const after = snapshot({
+		index: 0,
+		selector,
+		truncated: true,
+		scrollWidth: 150,
+		clientWidth: 100,
+		rect: rect(0, 0, 150, 20),
+	});
+
+	return { before, after };
+}
+
+describe("runTextSpacingAudit screenshots", () => {
+	it("captures a clipped screenshot of each finding while overrides are still applied", async () => {
+		const { before, after } = truncationFinding("#t");
+		const adaptor = scriptedAdaptor({
+			baseline: { candidates: [before] },
+			after: { candidates: [after] },
+			restore: { restored: true },
+		});
+
+		const result = await runTextSpacingAudit(adaptor, { settleMs: 0 });
+
+		expect(result.findings).toHaveLength(1);
+		expect(result.findings[0]?.screenshot).toEqual(new Uint8Array([1, 2, 3]));
+		expect(adaptor.screenshotCalls).toHaveLength(1);
+		// Buffered by the default 10px clip around the `after` (150x20) rect.
+		expect(adaptor.screenshotCalls[0]).toEqual({
+			x: 0,
+			y: 0,
+			width: 160,
+			height: 30,
+		});
+		// Captured before the override was restored.
+		expect(adaptor.calls.indexOf("screenshotClip")).toBeLessThan(
+			adaptor.calls.indexOf("restoreAndVerifyScript"),
+		);
+	});
+
+	it(`omits screenshots past screenshotLimit (${DEFAULT_SCREENSHOT_LIMIT}) but keeps every finding`, async () => {
+		const pairs = Array.from({ length: DEFAULT_SCREENSHOT_LIMIT + 2 }, (_, i) =>
+			truncationFinding(`#t-${i}`),
+		);
+		const adaptor = scriptedAdaptor({
+			baseline: { candidates: pairs.map((p) => p.before) },
+			after: { candidates: pairs.map((p) => p.after) },
+			restore: { restored: true },
+		});
+
+		const result = await runTextSpacingAudit(adaptor, { settleMs: 0 });
+
+		expect(result.findings).toHaveLength(DEFAULT_SCREENSHOT_LIMIT + 2);
+		expect(adaptor.screenshotCalls).toHaveLength(DEFAULT_SCREENSHOT_LIMIT);
+		expect(
+			result.findings
+				.slice(0, DEFAULT_SCREENSHOT_LIMIT)
+				.every((f) => f.screenshot),
+		).toBe(true);
+		expect(
+			result.findings
+				.slice(DEFAULT_SCREENSHOT_LIMIT)
+				.every((f) => f.screenshot === undefined),
+		).toBe(true);
+	});
+
+	it("takes no screenshots when there are no findings", async () => {
+		const adaptor = scriptedAdaptor({
+			baseline: { candidates: [] },
+			after: { candidates: [] },
+			restore: { restored: true },
+		});
+
+		await runTextSpacingAudit(adaptor, { settleMs: 0 });
+
+		expect(adaptor.screenshotCalls).toHaveLength(0);
 	});
 });

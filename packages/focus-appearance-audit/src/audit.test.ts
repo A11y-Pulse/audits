@@ -98,6 +98,7 @@ function recordingConsumer(): TabConsumer & { stops: TabStopSnapshot[] } {
 			record.stops.push(snapshot);
 		},
 	};
+
 	return record;
 }
 
@@ -117,6 +118,7 @@ function loopAdaptor(script: {
 			if (fn === baselineScript) {
 				return script.baseline ?? { styles: [EMPTY_STYLES], entries: [] };
 			}
+
 			if (fn === probeActiveElementScript) {
 				const next = script.active?.[activeCall++] ?? {
 					index: null,
@@ -127,23 +129,30 @@ function loopAdaptor(script: {
 					rect: { x: 0, y: 0, width: 0, height: 0 },
 				};
 				lastIndex = next?.index ?? null;
+
 				return next;
 			}
+
 			if (fn === getSelector) {
 				return lastIndex === null ? "#fake" : `#e${lastIndex}`;
 			}
+
 			if (fn === elementStylesScript) {
 				return EMPTY_STYLES;
 			}
+
 			if (fn === pageDimensionsScript) {
 				return { width: 2000, height: 4000 };
 			}
+
 			if (fn === isCenterObscuredScript) {
 				return false;
 			}
+
 			if (fn === elementRectScript) {
 				return { x: 100, y: 100, width: 40, height: 20 };
 			}
+
 			if (
 				fn === blurScript ||
 				fn === focusScript ||
@@ -152,6 +161,7 @@ function loopAdaptor(script: {
 			) {
 				return undefined;
 			}
+
 			return script.hasFocus?.[focusCall++] ?? false;
 		}) as BrowserAdaptor["evaluate"],
 		async evaluateHandle() {
@@ -162,13 +172,16 @@ function loopAdaptor(script: {
 		async screenshotClip() {
 			adaptor.clipCalls++;
 			const pngs = script.pngs;
+
 			if (pngs !== undefined && pngs.length > 0) {
 				return pngs[pngCall++ % pngs.length] ?? WHITE_PNG;
 			}
+
 			return WHITE_PNG;
 		},
 		async ensureFocusReporting() {},
 	};
+
 	return adaptor;
 }
 
@@ -185,10 +198,13 @@ async function runWithOrchestrator(
 	});
 	const audit = createFocusAppearanceAudit(options);
 	orchestrator.attach(audit);
+
 	for (const consumer of extra) {
 		orchestrator.attach(consumer);
 	}
+
 	await orchestrator.run();
+
 	return audit;
 }
 
