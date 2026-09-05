@@ -10,6 +10,7 @@ import {
 	clearObscurerScript,
 	type DrainContextObserverResult,
 	drainContextObserverScript,
+	hasFocusScript,
 	installContextObserverScript,
 	locationHrefScript,
 	measureObscuringScript,
@@ -264,6 +265,21 @@ export function createTabOrchestrator(
 				return { navigation: false, raw };
 			}
 
+			/**
+			 * Whether the page reports focus, re-asserting focus reporting once
+			 * before answering no.
+			 */
+			async function documentHasFocus(): Promise<boolean> {
+				if (await adaptor.evaluate(hasFocusScript)) {
+					return true;
+				}
+
+				// Another target taking the foreground clears focus emulation.
+				await adaptor.ensureFocusReporting();
+
+				return adaptor.evaluate(hasFocusScript);
+			}
+
 			let failure: unknown;
 
 			try {
@@ -302,9 +318,7 @@ export function createTabOrchestrator(
 					screenshotByStop.current = null;
 					lastHasAttributed = false;
 
-					const hasFocus = await adaptor.evaluate(() => document.hasFocus());
-
-					if (!hasFocus) {
+					if (!(await documentHasFocus())) {
 						end("lostFocus");
 						break;
 					}
@@ -320,6 +334,15 @@ export function createTabOrchestrator(
 					});
 
 					if (attached.size === 0) {
+						break;
+					}
+
+					// Chromium only matches :focus while the document reports focus, so
+					// an element measured after a loss reads as having no indicator
+					// however correct its CSS is. Re-checked here, at the point of
+					// measurement, rather than relying on the pre-tab check.
+					if (!(await documentHasFocus())) {
+						end("lostFocus");
 						break;
 					}
 

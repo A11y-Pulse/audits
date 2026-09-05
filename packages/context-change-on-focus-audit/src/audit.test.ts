@@ -6,6 +6,7 @@ import {
 	clearMarkersScript,
 	createTabOrchestrator,
 	getSelector,
+	hasFocusScript,
 	probeActiveElementScript,
 	type TabConsumer,
 	type TabStopSnapshot,
@@ -60,7 +61,8 @@ function loopAdaptor(script: {
 	hasFocus?: boolean[];
 	active?: Array<Omit<ActiveElementInfo, "selector"> | null>;
 }): BrowserAdaptor {
-	let focusCall = 0;
+	let stopIndex = -1;
+	let tabbed = false;
 	let activeCall = 0;
 
 	return {
@@ -70,6 +72,8 @@ function loopAdaptor(script: {
 			}
 
 			if (fn === probeActiveElementScript) {
+				tabbed = false;
+
 				return (
 					script.active?.[activeCall++] ?? {
 						index: null,
@@ -90,7 +94,11 @@ function loopAdaptor(script: {
 				return undefined;
 			}
 
-			return script.hasFocus?.[focusCall++] ?? false;
+			if (fn === hasFocusScript) {
+				return script.hasFocus?.[tabbed ? stopIndex : stopIndex + 1] ?? false;
+			}
+
+			return false;
 		}) as BrowserAdaptor["evaluate"],
 		async evaluateHandle(fn) {
 			if (fn === activeElementHandleScript) {
@@ -100,7 +108,10 @@ function loopAdaptor(script: {
 			return {};
 		},
 		async disposeRef() {},
-		async pressTab() {},
+		async pressTab() {
+			stopIndex++;
+			tabbed = true;
+		},
 		async screenshotClip() {
 			return new Uint8Array([1]);
 		},

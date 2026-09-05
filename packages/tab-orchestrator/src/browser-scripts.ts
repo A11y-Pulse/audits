@@ -966,3 +966,10 @@ export function clearContextFocusInsScript(): void {
 export function locationHrefScript(): string {
 	return location.href;
 }
+
+/**
+ * Whether the document reports focus.
+ */
+export function hasFocusScript(): boolean {
+	return document.hasFocus();
+}
