@@ -56,7 +56,7 @@
 		"access": "public"
 	},
 	"peerDependencies": {
-		"puppeteer": "^25.5.0"
+		"puppeteer": "^25.9.0"
 	},
 	"peerDependenciesMeta": {
 		"puppeteer": {
@@ -64,7 +64,7 @@
 		}
 	},
 	"devDependencies": {
-		"happy-dom": "^20.11.2",
-		"puppeteer": "^25.5.0"
+		"happy-dom": "^20.12.0",
+		"puppeteer": "^25.9.0"
 	}
 }
