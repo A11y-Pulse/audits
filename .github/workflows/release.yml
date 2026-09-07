@@ -33,9 +33,9 @@ jobs:
 
       - uses: changesets/action@v2
         with:
-          publish: npm run release
-          title: Version packages
-          commit: Version packages
+          publish-script: npm run release
+          pr-title: Version packages
+          commit-message: Version packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ""
