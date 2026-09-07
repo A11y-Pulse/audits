@@ -10,11 +10,7 @@ import {
 	restoreAndVerifyScript,
 	waitTwoFramesScript,
 } from "./browser-scripts";
-import type {
-	CandidateSnapshot,
-	TextSpacingElementResult,
-	TextSpacingResult,
-} from "./result";
+import type { CandidateSnapshot, TextSpacingElementResult, TextSpacingResult } from "./result";
 
 export type { CandidateSnapshot } from "./result";
 
@@ -51,10 +47,7 @@ function delay(ms: number): Promise<void> {
 	});
 }
 
-async function settle(
-	adaptor: TextSpacingAuditAdaptor,
-	settleMs: number,
-): Promise<void> {
+async function settle(adaptor: TextSpacingAuditAdaptor, settleMs: number): Promise<void> {
 	await adaptor.evaluate(waitTwoFramesScript);
 	await delay(settleMs);
 }
@@ -91,10 +84,7 @@ function clippedFinding(
 	let hit = false;
 
 	if (clipsX) {
-		const beforePx = axisOverflow(
-			before.clipScrollWidth,
-			before.clipClientWidth,
-		);
+		const beforePx = axisOverflow(before.clipScrollWidth, before.clipClientWidth);
 		const afterPx = axisOverflow(after.clipScrollWidth, after.clipClientWidth);
 
 		if (beforePx <= clipTolerancePx && afterPx > clipTolerancePx) {
@@ -105,14 +95,8 @@ function clippedFinding(
 	}
 
 	if (clipsY) {
-		const beforePx = axisOverflow(
-			before.clipScrollHeight,
-			before.clipClientHeight,
-		);
-		const afterPx = axisOverflow(
-			after.clipScrollHeight,
-			after.clipClientHeight,
-		);
+		const beforePx = axisOverflow(before.clipScrollHeight, before.clipClientHeight);
+		const afterPx = axisOverflow(after.clipScrollHeight, after.clipClientHeight);
 
 		if (beforePx <= clipTolerancePx && afterPx > clipTolerancePx) {
 			hit = true;
@@ -142,9 +126,7 @@ export function classifyTextSpacing(
 	options: ClassifyOptions = {},
 ): TextSpacingElementResult[] {
 	const clipTolerancePx = options.clipTolerancePx ?? DEFAULT_CLIP_TOLERANCE_PX;
-	const afterByIndex = new Map(
-		after.map((candidate) => [candidate.index, candidate]),
-	);
+	const afterByIndex = new Map(after.map((candidate) => [candidate.index, candidate]));
 	const findings: TextSpacingElementResult[] = [];
 
 	for (const before of baseline) {
@@ -182,9 +164,7 @@ export function classifyTextSpacing(
 	}
 
 	for (const pair of findOverlapPairs(baseline, after)) {
-		const source = baseline.find(
-			(candidate) => candidate.selector === pair.selector,
-		);
+		const source = baseline.find((candidate) => candidate.selector === pair.selector);
 
 		findings.push({
 			selector: pair.selector,
@@ -199,11 +179,10 @@ export function classifyTextSpacing(
 }
 
 /**
- * Screenshot up to `limit` findings, showing the element with spacing overrides
- * still applied (the state that demonstrates the defect), clipped to its `after`
- * box plus `clipBuffer`. A finding whose selector no longer matches an `after`
- * candidate, or past the limit, gets `undefined` rather than being dropped, so
- * index alignment with `findings` is preserved.
+ * Screenshot up to `limit` findings, showing the element with spacing overrides still applied (the
+ * state that demonstrates the defect), clipped to its `after` box plus `clipBuffer`. A finding
+ * whose selector no longer matches an `after` candidate, or past the limit, gets `undefined` rather
+ * than being dropped, so index alignment with `findings` is preserved.
  */
 async function captureFindingScreenshots(
 	adaptor: TextSpacingAuditAdaptor,
@@ -216,8 +195,7 @@ async function captureFindingScreenshots(
 		return [];
 	}
 
-	const { width: pageWidth, height: pageHeight } =
-		await adaptor.evaluate(pageDimensionsScript);
+	const { width: pageWidth, height: pageHeight } = await adaptor.evaluate(pageDimensionsScript);
 	const afterBySelector = new Map(
 		afterCandidates.map((candidate) => [candidate.selector, candidate]),
 	);
@@ -233,12 +211,7 @@ async function captureFindingScreenshots(
 			continue;
 		}
 
-		const clip = bufferedClip(
-			candidate.rect,
-			pageWidth,
-			pageHeight,
-			clipBuffer,
-		);
+		const clip = bufferedClip(candidate.rect, pageWidth, pageHeight, clipBuffer);
 		screenshots.push(await adaptor.screenshotClip(clip, scale));
 	}
 
@@ -246,9 +219,9 @@ async function captureFindingScreenshots(
 }
 
 /**
- * Apply WCAG 1.4.12 spacing overrides, measure candidate text containers, and
- * restore injected styles. Classification of clipped vs growth-only vs
- * truncation vs overlap is `classifyTextSpacing`.
+ * Apply WCAG 1.4.12 spacing overrides, measure candidate text containers, and restore injected
+ * styles. Classification of clipped vs growth-only vs truncation vs overlap is
+ * `classifyTextSpacing`.
  */
 export async function runTextSpacingAudit(
 	adaptor: TextSpacingAuditAdaptor,
@@ -257,8 +230,7 @@ export async function runTextSpacingAudit(
 	const candidateLimit = options.candidateLimit ?? DEFAULT_CANDIDATE_LIMIT;
 	const clipTolerancePx = options.clipTolerancePx ?? DEFAULT_CLIP_TOLERANCE_PX;
 	const settleMs = options.settleMs ?? DEFAULT_SETTLE_MS;
-	const screenshotClipBuffer =
-		options.screenshotClipBuffer ?? DEFAULT_SCREENSHOT_CLIP_BUFFER;
+	const screenshotClipBuffer = options.screenshotClipBuffer ?? DEFAULT_SCREENSHOT_CLIP_BUFFER;
 	const screenshotLimit = options.screenshotLimit ?? DEFAULT_SCREENSHOT_LIMIT;
 
 	let restored = false;
@@ -266,26 +238,19 @@ export async function runTextSpacingAudit(
 	let candidateCount = 0;
 
 	try {
-		const baseline = await adaptor.evaluate(
-			collectBaselineScript,
-			candidateLimit,
-		);
+		const baseline = await adaptor.evaluate(collectBaselineScript, candidateLimit);
 
 		await adaptor.evaluate(injectOverrideScript);
 		await settle(adaptor, settleMs);
 
 		const after = await adaptor.evaluate(remeasureScript);
-		candidateCount = baseline.candidates.filter(
-			(candidate) => !candidate.unstable,
-		).length;
-		const classified = classifyTextSpacing(
-			baseline.candidates,
-			after.candidates,
-			{ clipTolerancePx },
-		);
+		candidateCount = baseline.candidates.filter((candidate) => !candidate.unstable).length;
+		const classified = classifyTextSpacing(baseline.candidates, after.candidates, {
+			clipTolerancePx,
+		});
 
-		// Screenshots must be captured here, while the spacing overrides are
-		// still applied, not after the restore below.
+		// Screenshots must be captured here, while the spacing overrides are still applied, not after
+		// the restore below.
 		const screenshots = await captureFindingScreenshots(
 			adaptor,
 			classified,
@@ -315,9 +280,8 @@ export async function runTextSpacingAudit(
 		restored,
 		summary: {
 			clipped: findings.filter((finding) => finding.kind === "clipped").length,
-			truncationIncreased: findings.filter(
-				(finding) => finding.kind === "truncation-increased",
-			).length,
+			truncationIncreased: findings.filter((finding) => finding.kind === "truncation-increased")
+				.length,
 			overlaps: findings.filter((finding) => finding.kind === "overlap").length,
 		},
 	};

@@ -6,10 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { BrowserAdaptor } from "../../src/adaptor";
 import { PuppeteerAdaptor } from "../../src/adaptors/puppeteer";
 import { createTabOrchestrator } from "../../src/orchestrator";
-import {
-	type FixtureServer,
-	startFixtureServer,
-} from "./helpers/serve-fixtures";
+import { type FixtureServer, startFixtureServer } from "./helpers/serve-fixtures";
 
 let server: FixtureServer;
 let browser: Browser;
@@ -79,17 +76,15 @@ describe("shared session across three audits (integration)", () => {
 		);
 		expect(hiddenByFooter?.screenshot).toBeInstanceOf(Uint8Array);
 
-		// unfocusedPair (focused + unfocused, stop 1 only) plus one screenshotClip
-		// from focus-not-obscured for the element hidden behind the sticky footer.
+		// unfocusedPair (focused + unfocused, stop 1 only) plus one screenshotClip from
+		// focus-not-obscured for the element hidden behind the sticky footer.
 		expect(clips).toBe(3);
-		// The session ends naturally once Tab lands on <body> (or revisits an
-		// already-seen element) with nothing left to tab to; detecting that
-		// requires one more real Tab press than there are real elements to
-		// report. This is deliberate, pre-existing orchestrator behaviour, not
-		// something this fixture can tune away: `orchestrator.test.ts`'s
-		// `loopAdaptor` helper encodes the same contract by defaulting its
-		// (N+1)th `probeActiveElementScript` response to `isBody: true` after
-		// N scripted real elements.
+		// The session ends naturally once Tab lands on <body> (or revisits an already-seen element)
+		// with nothing left to tab to; detecting that requires one more real Tab press than there are
+		// real elements to report. This is deliberate, pre-existing orchestrator behaviour, not
+		// something this fixture can tune away: `orchestrator.test.ts`'s `loopAdaptor` helper encodes
+		// the same contract by defaulting its (N+1)th `probeActiveElementScript` response to `isBody:
+		// true` after N scripted real elements.
 		expect(tabs).toBe(obscured.result.elements.length + 1);
 		await page.close();
 	});

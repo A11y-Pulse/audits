@@ -75,7 +75,7 @@ await orchestrator.run();
 console.log(notObscured.result);
 ```
 
-`notObscured.result` is only complete once `notObscured` has disconnected (by hitting one of its own limits) or the session has ended — reading it before then is undefined. See [`@a11y-pulse/tab-orchestrator`](../tab-orchestrator) for the full session lifecycle and capability model. This audit declares only the `"obscuring"` capability — it does not need `unfocusedPair` or `baselineStyles`, so it can run alongside `focus-appearance-audit` on the same orchestrator without either one paying for the other's measurements.
+`notObscured.result` is only complete once `notObscured` has disconnected (by hitting one of its own limits) or the session has ended. Reading it before then is undefined. See [`@a11y-pulse/tab-orchestrator`](../tab-orchestrator) for the full session lifecycle and capability model. This audit declares only the `"obscuring"` capability: it does not need `unfocusedPair` or `baselineStyles`, so it can run alongside `focus-appearance-audit` on the same orchestrator without either one paying for the other's measurements.
 
 ## Options
 
@@ -127,11 +127,11 @@ type FocusNotObscuredResult = {
 
 ### Buckets
 
-[2.4.11 Focus Not Obscured (Minimum)](https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum) is a Level AA criterion: when an element receives keyboard focus, it must not be **entirely** hidden by author-created content (partial coverage is allowed at this level — full protection from any coverage is [2.4.12 Focus Not Obscured (Enhanced)](https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-enhanced), a Level AAA criterion this audit does not check). Each element is placed in one of three buckets:
+[2.4.11 Focus Not Obscured (Minimum)](https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum) is a Level AA criterion: when an element receives keyboard focus, it must not be **entirely** hidden by author-created content (partial coverage is allowed at this level; full protection from any coverage is [2.4.12 Focus Not Obscured (Enhanced)](https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-enhanced), a Level AAA criterion this audit does not check). Each element is placed in one of three buckets:
 
-- **`violation`** — the element is entirely hidden behind opaque content while focused. Fails 2.4.11.
-- **`incomplete`** — the audit could not confirm compliance either way: the element was scrolled fully offscreen when focused, or it's entirely covered by something of unknown opacity (rare; usually SVG/canvas-painted overlays the audit can't classify).
-- **`pass`** — the element is not obscured at all, only partially obscured, or entirely covered by a semi-transparent overlay (still visible through the cover, so not "entirely hidden").
+- **`violation`**: the element is entirely hidden behind opaque content while focused. Fails 2.4.11.
+- **`incomplete`**: the audit could not confirm compliance either way: the element was scrolled fully offscreen when focused, or it's entirely covered by something of unknown opacity (rare; usually SVG/canvas-painted overlays the audit can't classify).
+- **`pass`**: the element is not obscured at all, only partially obscured, or entirely covered by a semi-transparent overlay (still visible through the cover, so not "entirely hidden").
 
 `summary.failed` counts only `"violation"` elements; `"incomplete"` elements count toward `summary.passed` since they are not confirmed failures.
 

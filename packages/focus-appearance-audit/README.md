@@ -76,7 +76,7 @@ await orchestrator.run();
 console.log(focus.result);
 ```
 
-`focus.result` is only complete once `focus` has disconnected (by hitting one of its own limits) or the session has ended — reading it before then is undefined. See [`@a11y-pulse/tab-orchestrator`](../tab-orchestrator) for the full session lifecycle and capability model.
+`focus.result` is only complete once `focus` has disconnected (by hitting one of its own limits) or the session has ended. Reading it before then is undefined. See [`@a11y-pulse/tab-orchestrator`](../tab-orchestrator) for the full session lifecycle and capability model.
 
 ## Options
 
@@ -85,7 +85,7 @@ The following options can be passed to `runFocusAppearanceAudit` as `FocusAppear
 | Option                    | Type      | Default             | Description                                                                                                                      |
 | ------------------------- | --------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | `elementLimit`            | `number`  | `1024`               | Max focusable elements to tab through.                                                                                           |
-| `baselineElementLimit`    | `number`  | `elementLimit * 2`   | How many focusable elements to snapshot baseline styles for up front. Not all focusable elements are tabbable (e.g. elements inside menus or hidden containers), so this acts as a floor — the effective baseline budget is `max(elementLimit, baselineElementLimit)`. |
+| `baselineElementLimit`    | `number`  | `elementLimit * 2`   | How many focusable elements to snapshot baseline styles for up front. Not all focusable elements are tabbable (e.g. elements inside menus or hidden containers), so this acts as a floor: the effective baseline budget is `max(elementLimit, baselineElementLimit)`. |
 | `screenshotSettleDelay`   | `number`  | `33`                 | How long to wait (in ms) after each Tab for focus styles/transitions to settle.                                                  |
 | `screenshotClipBuffer`    | `number`  | `10`                 | Padding (in px) around the element box for the pixel-diff screenshot.                                                            |
 | `screenshotDiffThreshold` | `number`  | `4`                  | Number of pixels that must differ to consider an indicator present. Floored at `1`.                                              |
@@ -168,7 +168,7 @@ The `BrowserAdaptor` interface itself lives in [`@a11y-pulse/tab-orchestrator`](
 | `disposeRef(ref)`       | Releases a handle previously returned by `evaluateHandle`.                                                                                           |
 | `pressTab()`            | Presses the Tab key, advancing focus to the next focusable element.                                                                                  |
 | `screenshotClip(clip)`  | Screenshots a clipped region of the page (`{ x, y, width, height }`) and returns PNG bytes.                                                          |
-| `ensureFocusReporting()`| Ensures the page reports focus for its lifetime — in particular that `document.hasFocus()` works and `:focus` styles apply, even when the page is not the foreground tab/window. Must not throw. |
+| `ensureFocusReporting()`| Ensures the page reports focus for its lifetime, in particular that `document.hasFocus()` works and `:focus` styles apply, even when the page is not the foreground tab/window. Must not throw. |
 
 ### Writing a new adaptor
 
@@ -183,13 +183,13 @@ class MyFrameworkAdaptor implements BrowserAdaptor {
 }
 ```
 
-Use [`@a11y-pulse/tab-orchestrator`'s `src/adaptors/puppeteer.ts`](../tab-orchestrator/src/adaptors/puppeteer.ts) as a reference implementation — it's a small, self-contained example of every method the audit needs.
+Use [`@a11y-pulse/tab-orchestrator`'s `src/adaptors/puppeteer.ts`](../tab-orchestrator/src/adaptors/puppeteer.ts) as a reference implementation. It's a small, self-contained example of every method the audit needs.
 
 ## Limitations
 
 - **Chromium focus emulation.** Accurate `:focus`/`document.hasFocus()` reporting for a backgrounded page relies on Chromium's CDP focus emulation (used by `PuppeteerAdaptor.ensureFocusReporting`). Other browser engines may not offer an equivalent, and results may be less reliable if the page genuinely loses focus during the audit.
 - **Tab order only.** The audit tabs through elements in native tab order. It does not yet exercise arrow-key composite widgets (menus, comboboxes, toolbars, etc.) where focus moves via `aria-activedescendant` or roving `tabindex` instead of native Tab.
-- **Heuristic accuracy.** Detection is heuristic and can produce false positives and false negatives — see [Accuracy](#accuracy) and [docs/accuracy.md](./docs/accuracy.md) for known cases.
+- **Heuristic accuracy.** Detection is heuristic and can produce false positives and false negatives. See [Accuracy](#accuracy) and [docs/accuracy.md](./docs/accuracy.md) for known cases.
 
 ## Releasing
 

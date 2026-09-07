@@ -1,8 +1,8 @@
 /**
- * IMPORTANT: Functions in this file that are serialized and injected into the
- * audited page must not reference any symbols outside their own scope. Shared
- * helpers used by unit tests are therefore duplicated inside each injected
- * function. Type-only imports are erased by the compiler, so they don't count.
+ * IMPORTANT: Functions in this file that are serialized and injected into the audited page must not
+ * reference any symbols outside their own scope. Shared helpers used by unit tests are therefore
+ * duplicated inside each injected function. Type-only imports are erased by the compiler, so they
+ * don't count.
  */
 
 import type { Rect } from "@a11y-pulse/browser-adaptor";
@@ -38,8 +38,7 @@ export function computeDocumentOverflowPx(
 	documentElement: { scrollWidth: number; clientWidth: number },
 	body: { scrollWidth: number; clientWidth: number },
 ): number {
-	const htmlOverflow =
-		documentElement.scrollWidth - documentElement.clientWidth;
+	const htmlOverflow = documentElement.scrollWidth - documentElement.clientWidth;
 	const bodyOverflow = body.scrollWidth - body.clientWidth;
 
 	return Math.max(0, htmlOverflow, bodyOverflow);
@@ -50,9 +49,9 @@ function clipsX(overflowX: string): boolean {
 }
 
 /**
- * Document overflow that the reader can actually scroll. `overflow-x: hidden`
- * on the viewport (including body overflow propagated onto html) clips rather
- * than scrolls, which v1 treats as no horizontal scroll.
+ * Document overflow that the reader can actually scroll. `overflow-x: hidden` on the viewport
+ * (including body overflow propagated onto html) clips rather than scrolls, which does not count as
+ * horizontal scroll.
  */
 export function scrollableDocumentOverflowPx(
 	documentElement: {
@@ -62,15 +61,10 @@ export function scrollableDocumentOverflowPx(
 	},
 	body: { scrollWidth: number; clientWidth: number; overflowX: string },
 ): number {
-	const htmlDelta = Math.max(
-		0,
-		documentElement.scrollWidth - documentElement.clientWidth,
-	);
+	const htmlDelta = Math.max(0, documentElement.scrollWidth - documentElement.clientWidth);
 	const bodyDelta = Math.max(0, body.scrollWidth - body.clientWidth);
 	const viewportOverflowX =
-		documentElement.overflowX === "visible"
-			? body.overflowX
-			: documentElement.overflowX;
+		documentElement.overflowX === "visible" ? body.overflowX : documentElement.overflowX;
 
 	let overflow = 0;
 
@@ -87,15 +81,7 @@ export function scrollableDocumentOverflowPx(
 
 const LAYOUT_TABLE_ROLES = new Set(["presentation", "none"]);
 const ARIA_TABLE_ROLES = new Set(["table", "grid", "treegrid"]);
-const EXEMPT_TAGS = new Set([
-	"svg",
-	"canvas",
-	"video",
-	"img",
-	"iframe",
-	"embed",
-	"object",
-]);
+const EXEMPT_TAGS = new Set(["svg", "canvas", "video", "img", "iframe", "embed", "object"]);
 const SLIDE_DESCRIPTIONS = new Set(["slide", "slides", "presentation"]);
 
 export function isExemptElement(el: Element): boolean {
@@ -117,9 +103,7 @@ export function isExemptElement(el: Element): boolean {
 		return true;
 	}
 
-	const description = (
-		el.getAttribute("aria-roledescription") ?? ""
-	).toLowerCase();
+	const description = (el.getAttribute("aria-roledescription") ?? "").toLowerCase();
 
 	return SLIDE_DESCRIPTIONS.has(description);
 }
@@ -148,22 +132,20 @@ export function pageDimensionsScript(): { width: number; height: number } {
 }
 
 /**
- * Measure document overflow and collect offenders. Serialized and run in the page;
- * must stay self-contained.
+ * Measure document overflow and collect offenders. Serialized and run in the page; must stay
+ * self-contained.
  */
 export function measureReflowScript(): ReflowMeasure {
 	const roundingTolerance = 2;
 	const viewportWidth = window.innerWidth;
 	const html = document.documentElement;
 	const body = document.body;
-	const clipsX = (overflowX: string): boolean =>
-		overflowX === "hidden" || overflowX === "clip";
+	const clipsX = (overflowX: string): boolean => overflowX === "hidden" || overflowX === "clip";
 	const htmlOverflowX = getComputedStyle(html).overflowX;
 	const bodyOverflowX = body ? getComputedStyle(body).overflowX : "visible";
 	const htmlDelta = Math.max(0, html.scrollWidth - html.clientWidth);
 	const bodyDelta = body ? Math.max(0, body.scrollWidth - body.clientWidth) : 0;
-	const viewportOverflowX =
-		htmlOverflowX === "visible" ? bodyOverflowX : htmlOverflowX;
+	const viewportOverflowX = htmlOverflowX === "visible" ? bodyOverflowX : htmlOverflowX;
 	let documentOverflowPx = 0;
 
 	if (!clipsX(viewportOverflowX)) {
@@ -176,15 +158,7 @@ export function measureReflowScript(): ReflowMeasure {
 
 	const layoutTableRoles = new Set(["presentation", "none"]);
 	const ariaTableRoles = new Set(["table", "grid", "treegrid"]);
-	const exemptTags = new Set([
-		"svg",
-		"canvas",
-		"video",
-		"img",
-		"iframe",
-		"embed",
-		"object",
-	]);
+	const exemptTags = new Set(["svg", "canvas", "video", "img", "iframe", "embed", "object"]);
 	const slideDescriptions = new Set(["slide", "slides", "presentation"]);
 	const layoutTags = new Set([
 		"div",
@@ -216,9 +190,7 @@ export function measureReflowScript(): ReflowMeasure {
 			return true;
 		}
 
-		const description = (
-			el.getAttribute("aria-roledescription") ?? ""
-		).toLowerCase();
+		const description = (el.getAttribute("aria-roledescription") ?? "").toLowerCase();
 
 		return slideDescriptions.has(description);
 	};
@@ -249,8 +221,7 @@ export function measureReflowScript(): ReflowMeasure {
 		return chain;
 	};
 
-	const isOrInsideExempt = (el: Element): boolean =>
-		ancestors(el).some(isExempt);
+	const isOrInsideExempt = (el: Element): boolean => ancestors(el).some(isExempt);
 
 	const isAriaHidden = (el: Element): boolean =>
 		ancestors(el).some((node) => node.getAttribute("aria-hidden") === "true");
@@ -272,9 +243,7 @@ export function measureReflowScript(): ReflowMeasure {
 
 		const cs = getComputedStyle(el);
 
-		return (
-			cs.display !== "none" && cs.visibility !== "hidden" && cs.opacity !== "0"
-		);
+		return cs.display !== "none" && cs.visibility !== "hidden" && cs.opacity !== "0";
 	};
 
 	const fitsViewportScroller = (el: Element): boolean => {
@@ -313,9 +282,7 @@ export function measureReflowScript(): ReflowMeasure {
 	const MAX_LENGTH = 128;
 
 	const esc = (value: string): string =>
-		typeof CSS !== "undefined" && typeof CSS.escape === "function"
-			? CSS.escape(value)
-			: value;
+		typeof CSS !== "undefined" && typeof CSS.escape === "function" ? CSS.escape(value) : value;
 
 	const tagName = (node: Node): string =>
 		node.nodeType === 1
@@ -323,9 +290,7 @@ export function measureReflowScript(): ReflowMeasure {
 			: node.nodeName.toUpperCase().replace(/^#/, "");
 
 	const rootOf = (element: Element): ParentNode | null => {
-		const node = (
-			element as Element & { getRootNode?: () => Node }
-		).getRootNode?.();
+		const node = (element as Element & { getRootNode?: () => Node }).getRootNode?.();
 
 		return node && typeof (node as ParentNode).querySelectorAll === "function"
 			? (node as ParentNode)
@@ -364,10 +329,7 @@ export function measureReflowScript(): ReflowMeasure {
 		sharedBy: (sibling) => Array.from(sibling.classList ?? []).includes(cls),
 	});
 
-	const rarestFeature = (
-		element: Element,
-		queryRoot: ParentNode | null,
-	): Feature | null => {
+	const rarestFeature = (element: Element, queryRoot: ParentNode | null): Feature | null => {
 		const classes = Array.from(element.classList).slice(0, 8);
 
 		if (!queryRoot) {
@@ -398,23 +360,16 @@ export function measureReflowScript(): ReflowMeasure {
 			}
 		}
 
-		const href =
-			typeof element.getAttribute === "function"
-				? element.getAttribute("href")
-				: null;
+		const href = typeof element.getAttribute === "function" ? element.getAttribute("href") : null;
 
 		if (href && href.length <= 100 && !/["\\?]/.test(href)) {
 			const feature = `[href="${href}"]`;
 
-			if (
-				safeMatches(element, feature) &&
-				matchCount(queryRoot, feature) < bestCount
-			) {
+			if (safeMatches(element, feature) && matchCount(queryRoot, feature) < bestCount) {
 				return {
 					feature,
 					sharedBy: (sibling) =>
-						typeof sibling.getAttribute === "function" &&
-						sibling.getAttribute("href") === href,
+						typeof sibling.getAttribute === "function" && sibling.getAttribute("href") === href,
 				};
 			}
 		}
@@ -491,17 +446,14 @@ export function measureReflowScript(): ReflowMeasure {
 	const getSelector = (root: Node | null): string => {
 		const segments: string[] = [];
 		let node: Node | null = root;
-		const queryRoot =
-			root && root.nodeType === 1 ? rootOf(root as Element) : null;
+		const queryRoot = root && root.nodeType === 1 ? rootOf(root as Element) : null;
 
 		try {
 			while (node && node.nodeType === 1) {
 				const element = node as Element;
 				let { segment, anchored } = segmentFor(element, queryRoot);
 				const joinedWith = (candidate: string): number =>
-					segments.length
-						? candidate.length + 1 + segments.join(">").length
-						: candidate.length;
+					segments.length ? candidate.length + 1 + segments.join(">").length : candidate.length;
 
 				if (joinedWith(segment) > MAX_LENGTH - 1) {
 					segment = degradedSegmentFor(element);
@@ -531,10 +483,7 @@ export function measureReflowScript(): ReflowMeasure {
 		return segments.join(">");
 	};
 
-	const collectElements = (
-		root: Document | ShadowRoot,
-		acc: Element[],
-	): void => {
+	const collectElements = (root: Document | ShadowRoot, acc: Element[]): void => {
 		for (const el of Array.from(root.querySelectorAll("*"))) {
 			acc.push(el);
 

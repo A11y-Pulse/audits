@@ -4,8 +4,8 @@
 export type ElementRef = unknown;
 
 /**
- * A framework-specific adaptor that provides the primitives needed by the audit. An adaptor wraps
- * a single page in a web browser.
+ * A framework-specific adaptor that provides the primitives needed by the audit. An adaptor wraps a
+ * single page in a web browser.
  */
 export interface SkipLinkAuditAdaptor {
 	/**
@@ -39,8 +39,7 @@ export interface SkipLinkAuditAdaptor {
 
 	/**
 	 * Ensure the page reports focus for its lifetime. In particular, `document.hasFocus()` must
-	 * function correctly and :focus styles must be applied, even when the page is not the
-	 * foreground.
+	 * function correctly and :focus styles must be applied, even when the page is not the foreground.
 	 *
 	 * This function must not throw.
 	 */

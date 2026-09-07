@@ -38,9 +38,7 @@ function executingAdaptor(): TextSpacingAuditAdaptor & {
 			fn: (...args: never[]) => T | Promise<T>,
 			...args: unknown[]
 		): Promise<T> => {
-			const result = await (fn as (...fnArgs: unknown[]) => T | Promise<T>)(
-				...args,
-			);
+			const result = await (fn as (...fnArgs: unknown[]) => T | Promise<T>)(...args);
 
 			if (document.querySelector('[data-a11y-pulse="ts-freeze"]')) {
 				record.sawFreeze = true;

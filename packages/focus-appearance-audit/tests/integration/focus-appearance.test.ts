@@ -6,10 +6,7 @@ import {
 	type FocusAppearanceResult,
 	runFocusAppearanceAudit,
 } from "../../src/index";
-import {
-	type FixtureServer,
-	startFixtureServer,
-} from "./helpers/serve-fixtures";
+import { type FixtureServer, startFixtureServer } from "./helpers/serve-fixtures";
 
 let server: FixtureServer;
 let browser: Browser;
@@ -75,8 +72,8 @@ describe("focus appearance audit (integration)", () => {
 	});
 
 	it("passes a filter-only indicator via the pixel-diff fallback", async () => {
-		// `filter` is not in the computed-style allowlist, so this can only pass
-		// via the screenshot/pixel-diff fallback.
+		// `filter` is not in the computed-style allowlist, so this can only pass via the
+		// screenshot/pixel-diff fallback.
 		const result = await runFixture("filter.html");
 		const passed = result.elements.filter((e) => e.passed);
 		expect(passed).toHaveLength(1);
@@ -99,9 +96,9 @@ describe("focus appearance audit (integration)", () => {
 	});
 
 	it("detects a shadow-DOM focus indicator via the style stage", async () => {
-		// The element lives in an open shadow root and has an outline focus style.
-		// Passing via "style" (not "pixel-diff") proves baselineScript snapshotted
-		// it, i.e. the style stage descends shadow roots.
+		// The element lives in an open shadow root and has an outline focus style. Passing via "style"
+		// (not "pixel-diff") proves baselineScript snapshotted it, i.e. the style stage descends shadow
+		// roots.
 		const result = await runFixture("shadow-dom-pass.html");
 		const passed = result.elements.filter((e) => e.passed);
 		expect(passed).toHaveLength(1);
@@ -109,9 +106,9 @@ describe("focus appearance audit (integration)", () => {
 	});
 
 	it("falls back to pixel diff for every element when skipStyleCheck is set", async () => {
-		// box-shadow.html passes via "style" by default. With the style stage
-		// skipped, the same visible indicator must instead be caught by the pixel
-		// diff, proving skipStyleCheck routes detection through the fallback.
+		// box-shadow.html passes via "style" by default. With the style stage skipped, the same visible
+		// indicator must instead be caught by the pixel diff, proving skipStyleCheck routes detection
+		// through the fallback.
 		const result = await runFixture("box-shadow.html", {
 			skipStyleCheck: true,
 		});
@@ -121,10 +118,10 @@ describe("focus appearance audit (integration)", () => {
 	});
 
 	it("detects a focus indicator inside a closed shadow root via the pixel diff", async () => {
-		// document.activeElement resolves to the host (closed roots can't be
-		// traversed), so the style stage can't see the inner button's outline. The
-		// pixel diff captures the focused frame before blurring, so the indicator
-		// is still caught even though the host can't be re-focused into the root.
+		// document.activeElement resolves to the host (closed roots can't be traversed), so the style
+		// stage can't see the inner button's outline. The pixel diff captures the focused frame before
+		// blurring, so the indicator is still caught even though the host can't be re-focused into the
+		// root.
 		const result = await runFixture("closed-shadow.html");
 		expect(result.summary.checked).toBe(1);
 		expect(result.summary.passed).toBe(1);
@@ -135,16 +132,16 @@ describe("focus appearance audit (integration)", () => {
 	});
 
 	it("keeps checking elements after a closed-shadow host", async () => {
-		// The closed-shadow host is caught by the pixel diff, which disturbs focus
-		// (blur, then a host re-focus that lands on <body>). This guards that the
-		// audit still reaches the elements after it rather than aborting the page.
+		// The closed-shadow host is caught by the pixel diff, which disturbs focus (blur, then a host
+		// re-focus that lands on <body>). This guards that the audit still reaches the elements after
+		// it rather than aborting the page.
 		const result = await runFixture("closed-shadow-then-buttons.html");
 		expect(result.summary.checked).toBe(3);
 
 		const bySelector = new Map(result.elements.map((e) => [e.selector, e]));
 		expect(bySelector.get("#host")?.detectionMethod).toBe("pixel-diff");
-		// The trailing buttons still match their baseline snapshot (captured before
-		// the host's blur/refocus churn) and pass via the style stage.
+		// The trailing buttons still match their baseline snapshot (captured before the host's
+		// blur/refocus churn) and pass via the style stage.
 		expect(bySelector.get("#after-1")?.detectionMethod).toBe("style");
 		expect(bySelector.get("#after-2")?.detectionMethod).toBe("style");
 	});
@@ -159,16 +156,15 @@ describe("focus appearance audit (integration)", () => {
 	});
 
 	it("never reports a failure for an element measured while the page has lost focus", async () => {
-		// Focus emulation normally keeps a backgrounded page reporting focus.
-		// Standing in for the case where it is unavailable: a non-Chromium
-		// adaptor, or the CDP call failing.
+		// Focus emulation normally keeps a backgrounded page reporting focus. Standing in for the case
+		// where it is unavailable: a non-Chromium adaptor, or the CDP call failing.
 		const page = await browser.newPage();
 		const foreground = await browser.newPage();
 
 		try {
 			await page.goto(`${server.url}/all-pass.html`, { waitUntil: "load" });
-			// The loss under test is the one pressTab introduces below, not a page
-			// that never had focus at all.
+			// The loss under test is the one pressTab introduces below, not a page that never had focus
+			// at all.
 			await page.bringToFront();
 
 			const adaptor = new PuppeteerAdaptor(page);
@@ -191,8 +187,8 @@ describe("focus appearance audit (integration)", () => {
 	});
 
 	it("runs on every navigation when one page is reused", async () => {
-		// Mirrors production: one page, multiple navigations, no manual re-focus.
-		// ensureFocusReporting must keep document.hasFocus() true across all of them.
+		// Mirrors production: one page, multiple navigations, no manual re-focus. ensureFocusReporting
+		// must keep document.hasFocus() true across all of them.
 		const page = await browser.newPage();
 
 		try {

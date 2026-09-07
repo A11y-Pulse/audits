@@ -41,11 +41,7 @@ const FOCUSED_STYLES: StyleSnapshot = {
 };
 const RECT: Rect = { x: 0, y: 0, width: 10, height: 10 };
 
-function solidPng(
-	width: number,
-	height: number,
-	rgb: [number, number, number],
-): Buffer {
+function solidPng(width: number, height: number, rgb: [number, number, number]): Buffer {
 	const png = new PNG({ width, height });
 
 	for (let i = 0; i < png.data.length; i += 4) {
@@ -262,11 +258,7 @@ describe("createFocusAppearanceAudit", () => {
 		});
 		const other = recordingConsumer();
 
-		const audit = await runWithOrchestrator(
-			adaptor,
-			{ failedElementLimit: 1 },
-			[other],
-		);
+		const audit = await runWithOrchestrator(adaptor, { failedElementLimit: 1 }, [other]);
 
 		expect(audit.result.summary.checked).toBe(1);
 		expect(audit.result.summary.failed).toBe(1);
@@ -284,9 +276,7 @@ describe("createFocusAppearanceAudit", () => {
 		});
 		const other = recordingConsumer();
 
-		const audit = await runWithOrchestrator(adaptor, { elementLimit: 1 }, [
-			other,
-		]);
+		const audit = await runWithOrchestrator(adaptor, { elementLimit: 1 }, [other]);
 
 		expect(audit.result.summary.checked).toBe(1);
 		expect(audit.result.summary.reachedLimit).toBe(true);
@@ -337,18 +327,14 @@ describe("createFocusAppearanceAudit", () => {
 		const failed = audit.result.elements[0];
 		expect(failed?.passed).toBe(false);
 		expect(failed?.detectionMethod).toBeNull();
-		expect(failed?.failureEvidence?.focusedScreenshot).toBeInstanceOf(
-			Uint8Array,
-		);
-		expect(failed?.failureEvidence?.unfocusedScreenshot).toBeInstanceOf(
-			Uint8Array,
-		);
+		expect(failed?.failureEvidence?.focusedScreenshot).toBeInstanceOf(Uint8Array);
+		expect(failed?.failureEvidence?.unfocusedScreenshot).toBeInstanceOf(Uint8Array);
 		expect(audit.result.summary.failed).toBe(1);
 		expect(audit.result.summary.sessionEnd).toBe("completed");
 	});
 });
 
-describe("createFocusAppearanceAudit — failedElementLimit", () => {
+describe("createFocusAppearanceAudit: failedElementLimit", () => {
 	it("never finishes early when the limit is 0", async () => {
 		const adaptor = loopAdaptor({
 			hasFocus: [true, true, true, true],
@@ -366,7 +352,7 @@ describe("createFocusAppearanceAudit — failedElementLimit", () => {
 	});
 });
 
-describe("createFocusAppearanceAudit — timeout", () => {
+describe("createFocusAppearanceAudit: timeout", () => {
 	it("returns results gathered so far when timeout fires during a hung settle", async () => {
 		const adaptor = loopAdaptor({
 			hasFocus: [true, true, true, true],
@@ -456,8 +442,8 @@ type AdaptorRecord = {
 };
 
 /**
- * A scripted in-memory adaptor. Dispatches on the identity of the injected
- * browser-script functions.
+ * A scripted in-memory adaptor. Dispatches on the identity of the injected browser-script
+ * functions.
  */
 function fakeAdaptor(script: AdaptorScript = {}): {
 	adaptor: FocusAppearanceAuditAdaptor;
@@ -532,11 +518,7 @@ function fakeAdaptor(script: AdaptorScript = {}): {
 				return EMPTY_STYLES;
 			}
 
-			if (
-				fn === blurScript ||
-				fn === focusScript ||
-				fn === clearMarkersScript
-			) {
+			if (fn === blurScript || fn === focusScript || fn === clearMarkersScript) {
 				return undefined;
 			}
 
@@ -575,8 +557,8 @@ describe("runFocusAppearanceAudit", () => {
 	});
 
 	it("does not finish early by default", async () => {
-		// Every white-on-white element fails the pixel diff, so the only thing
-		// keeping the audit going to all three tab stops is the disabled default.
+		// Every white-on-white element fails the pixel diff, so the only thing keeping the audit going
+		// to all three tab stops is the disabled default.
 		const { adaptor } = fakeAdaptor({ tabStops: 3 });
 
 		const result = await runFocusAppearanceAudit(adaptor, {});
@@ -589,8 +571,8 @@ describe("runFocusAppearanceAudit", () => {
 
 	it("attaches focused and unfocused screenshots and styles on failure", async () => {
 		const rect = { x: 100, y: 100, width: 40, height: 20 };
-		// Identical snapshots so the style stage does not short-circuit; the
-		// white-on-white pixel diff then fails and surfaces the evidence.
+		// Identical snapshots so the style stage does not short-circuit; the white-on-white pixel diff
+		// then fails and surfaces the evidence.
 		const styles: StyleSnapshot = {
 			element: { "outline-style": "none" },
 			before: {},
@@ -619,18 +601,10 @@ describe("runFocusAppearanceAudit", () => {
 		const failed = result.elements[0];
 		expect(failed?.passed).toBe(false);
 		expect(failed?.detectionMethod).toBeNull();
-		expect(failed?.failureEvidence?.focusedScreenshot).toBeInstanceOf(
-			Uint8Array,
-		);
-		expect(failed?.failureEvidence?.unfocusedScreenshot).toBeInstanceOf(
-			Uint8Array,
-		);
-		expect(
-			failed?.failureEvidence?.focusedScreenshot.byteLength,
-		).toBeGreaterThan(0);
-		expect(
-			failed?.failureEvidence?.unfocusedScreenshot.byteLength,
-		).toBeGreaterThan(0);
+		expect(failed?.failureEvidence?.focusedScreenshot).toBeInstanceOf(Uint8Array);
+		expect(failed?.failureEvidence?.unfocusedScreenshot).toBeInstanceOf(Uint8Array);
+		expect(failed?.failureEvidence?.focusedScreenshot.byteLength).toBeGreaterThan(0);
+		expect(failed?.failureEvidence?.unfocusedScreenshot.byteLength).toBeGreaterThan(0);
 		expect(failed?.failureEvidence?.focusedStyles).toEqual({
 			element: {},
 			before: {},
@@ -676,8 +650,8 @@ describe("runFocusAppearanceAudit", () => {
 	});
 
 	it("does not throw when an entry references a missing snapshot", async () => {
-		// Orchestrator skips dangling interned indexes instead of throwing; the
-		// style stage is skipped and detection falls through to the pixel diff.
+		// Orchestrator skips dangling interned indexes instead of throwing; the style stage is skipped
+		// and detection falls through to the pixel diff.
 		const { adaptor } = fakeAdaptor({
 			tabStops: 1,
 			baseline: {
@@ -709,16 +683,14 @@ describe("runFocusAppearanceAudit", () => {
 	});
 
 	it("resolves interned baseline snapshots for the style check", async () => {
-		// Two elements share one unique snapshot via styleIndex; the probed
-		// element's outline change must pass via the style check (no screenshots),
-		// proving the interned snapshot was resolved into the baseline map.
+		// Two elements share one unique snapshot via styleIndex; the probed element's outline change
+		// must pass via the style check (no screenshots), proving the interned snapshot was resolved
+		// into the baseline map.
 		const rect = { x: 100, y: 100, width: 40, height: 20 };
 		const { adaptor, record } = fakeAdaptor({
 			tabStops: 1,
 			baseline: {
-				styles: [
-					{ element: { "outline-style": "none" }, before: {}, after: {} },
-				],
+				styles: [{ element: { "outline-style": "none" }, before: {}, after: {} }],
 				entries: [
 					{ index: 0, styleIndex: 0, rect },
 					{ index: 1, styleIndex: 0, rect },
@@ -748,8 +720,8 @@ describe("runFocusAppearanceAudit", () => {
 	});
 
 	it("frames the unfocused screenshot from the rect measured after blur", async () => {
-		// A fixed-position element: its page-relative rect changes between the
-		// focused measurement (page scrolled down) and the post-blur measurement.
+		// A fixed-position element: its page-relative rect changes between the focused measurement
+		// (page scrolled down) and the post-blur measurement.
 		const focused = { x: 100, y: 2100, width: 40, height: 20 };
 		const unfocused = { x: 92, y: 96, width: 40, height: 20 };
 		const { adaptor, record } = fakeAdaptor({

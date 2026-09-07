@@ -24,7 +24,9 @@ export type ReflowOptions = {
 	settleDelayMs?: number;
 	/** Max fingerprint readings before measuring anyway and marking the result unsettled. */
 	settleAttempts?: number;
-	/** Vertical padding above/below an offender's row when clipping its screenshot. Defaults to 10. */
+	/**
+	 * Vertical padding above/below an offender's row when clipping its screenshot. Defaults to 10.
+	 */
 	screenshotClipBuffer?: number;
 	/** Max offenders to screenshot (each is a real page.screenshot() call). Defaults to 10. */
 	screenshotLimit?: number;
@@ -40,10 +42,7 @@ function delay(ms: number): Promise<void> {
 	});
 }
 
-function fingerprintsEqual(
-	left: LayoutFingerprint,
-	right: LayoutFingerprint,
-): boolean {
+function fingerprintsEqual(left: LayoutFingerprint, right: LayoutFingerprint): boolean {
 	return (
 		left.scrollWidth === right.scrollWidth &&
 		left.clientWidth === right.clientWidth &&
@@ -78,14 +77,12 @@ async function settle(
 }
 
 /**
- * Screenshot up to `limit` offenders. Each clip always spans the full
- * `viewportWidth` starting at x=0, rather than a box around the offender: this
- * frames the crop the same way the audit measured it (a 320px-wide viewport),
- * so an offender that extends past the edge is visibly cut off there instead
- * of being fully visible in a crop that just happens to be wider than the
- * viewport. Each clip is a real `page.screenshot()` call, so the count is
- * bounded; offenders past the limit get `undefined` rather than a truncated
- * array, so index alignment with `offenders` is preserved.
+ * Screenshot up to `limit` offenders. Each clip always spans the full `viewportWidth` starting at
+ * x=0, rather than a box around the offender: this frames the crop the same way the audit measured
+ * it (a 320px-wide viewport), so an offender that extends past the edge is visibly cut off there
+ * instead of being fully visible in a crop that just happens to be wider than the viewport. Each
+ * clip is a real `page.screenshot()` call, so the count is bounded; offenders past the limit get
+ * `undefined` rather than a truncated array, so index alignment with `offenders` is preserved.
  */
 async function captureOffenderScreenshots(
 	adaptor: ReflowAuditAdaptor,
@@ -162,9 +159,9 @@ function bucketFor(measure: ReflowMeasure, unsettled: boolean): ReflowBucket {
 }
 
 /**
- * Narrow the page to 320 CSS pixels (unless it is already that narrow), wait for
- * layout to settle, and measure whether content requires two-dimensional scrolling.
- * The incoming viewport is restored in a `finally` block even if measurement throws.
+ * Narrow the page to 320 CSS pixels (unless it is already that narrow), wait for layout to settle,
+ * and measure whether content requires two-dimensional scrolling. The incoming viewport is restored
+ * in a `finally` block even if measurement throws.
  */
 export async function runReflowAudit(
 	adaptor: ReflowAuditAdaptor,
@@ -172,8 +169,7 @@ export async function runReflowAudit(
 ): Promise<ReflowResult> {
 	const settleDelayMs = options.settleDelayMs ?? DEFAULT_SETTLE_DELAY_MS;
 	const settleAttempts = options.settleAttempts ?? DEFAULT_SETTLE_ATTEMPTS;
-	const screenshotClipBuffer =
-		options.screenshotClipBuffer ?? DEFAULT_SCREENSHOT_CLIP_BUFFER;
+	const screenshotClipBuffer = options.screenshotClipBuffer ?? DEFAULT_SCREENSHOT_CLIP_BUFFER;
 	const screenshotLimit = options.screenshotLimit ?? DEFAULT_SCREENSHOT_LIMIT;
 	const original = await adaptor.getViewport();
 	const alreadyNarrow = original.width <= REFLOW_WIDTH;
@@ -202,9 +198,8 @@ export async function runReflowAudit(
 		unsettled = await settle(adaptor, settleDelayMs, settleAttempts);
 		measure = await adaptor.evaluate(measureReflowScript);
 
-		// Screenshots must be captured here, at the narrow measurement viewport
-		// and before the offending elements' rects go stale, not after the
-		// viewport restore below.
+		// Screenshots must be captured here, at the narrow measurement viewport and before the
+		// offending elements' rects go stale, not after the viewport restore below.
 		screenshots = await captureOffenderScreenshots(
 			adaptor,
 			measure.offenders,
@@ -220,15 +215,13 @@ export async function runReflowAudit(
 		}
 	}
 
-	const offenders: ReflowOffender[] = measure.offenders.map(
-		(offender, index) => ({
-			selector: offender.selector,
-			html: truncateHtml(offender.html),
-			overflowPx: offender.overflowPx,
-			reason: offender.reason,
-			screenshot: screenshots[index],
-		}),
-	);
+	const offenders: ReflowOffender[] = measure.offenders.map((offender, index) => ({
+		selector: offender.selector,
+		html: truncateHtml(offender.html),
+		overflowPx: offender.overflowPx,
+		reason: offender.reason,
+		screenshot: screenshots[index],
+	}));
 
 	return {
 		viewport: measureViewport,

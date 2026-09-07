@@ -7,10 +7,7 @@ import {
 	type TextSpacingOptions,
 	type TextSpacingResult,
 } from "../../src/index";
-import {
-	type FixtureServer,
-	startFixtureServer,
-} from "./helpers/serve-fixtures";
+import { type FixtureServer, startFixtureServer } from "./helpers/serve-fixtures";
 
 let server: FixtureServer;
 let browser: Browser;
@@ -33,15 +30,11 @@ async function runFixture(
 
 	try {
 		await page.goto(`${server.url}/${name}`, { waitUntil: "load" });
-		const result = await runTextSpacingAudit(
-			new PuppeteerAdaptor(page),
-			options,
-		);
+		const result = await runTextSpacingAudit(new PuppeteerAdaptor(page), options);
 		const leftoverStyles = await page.evaluate(
 			() =>
-				document.querySelectorAll(
-					'[data-a11y-pulse="ts-freeze"], [data-a11y-pulse="ts-override"]',
-				).length,
+				document.querySelectorAll('[data-a11y-pulse="ts-freeze"], [data-a11y-pulse="ts-override"]')
+					.length,
 		);
 
 		return { result, leftoverStyles };
@@ -66,24 +59,17 @@ describe("text spacing audit (integration)", () => {
 	});
 
 	it("flags a fixed-height overflow-hidden box as clipped", async () => {
-		const { result, leftoverStyles } = await runFixture(
-			"clipped-fixed-height.html",
-		);
+		const { result, leftoverStyles } = await runFixture("clipped-fixed-height.html");
 
-		expect(result.findings.some((finding) => finding.kind === "clipped")).toBe(
-			true,
-		);
+		expect(result.findings.some((finding) => finding.kind === "clipped")).toBe(true);
 		expect(
-			result.findings.find((finding) => finding.kind === "clipped")?.metrics
-				.afterOverflowPx,
+			result.findings.find((finding) => finding.kind === "clipped")?.metrics.afterOverflowPx,
 		).toBeGreaterThan(2);
 		expect(result.summary.clipped).toBeGreaterThan(0);
 		expect(result.restored).toBe(true);
 		expect(leftoverStyles).toBe(0);
 
-		const clipped = result.findings.find(
-			(finding) => finding.kind === "clipped",
-		);
+		const clipped = result.findings.find((finding) => finding.kind === "clipped");
 		expect(clipped?.screenshot).toBeInstanceOf(Uint8Array);
 		expect(clipped?.screenshot?.length ?? 0).toBeGreaterThan(100);
 		// PNG magic number.
@@ -93,10 +79,9 @@ describe("text spacing audit (integration)", () => {
 	});
 
 	it("captures the screenshot at the adaptor's fixed scale", async () => {
-		// Puppeteer's clip.scale multiplies against the page's current
-		// deviceScaleFactor rather than replacing it (verified directly against
-		// real Puppeteer in the reflow-audit integration suite), so this only
-		// comes out matching the clip's own CSS-pixel size given the page's own
+		// Puppeteer's clip.scale multiplies against the page's current deviceScaleFactor rather than
+		// replacing it (verified directly against real Puppeteer in the reflow-audit integration
+		// suite), so this only comes out matching the clip's own CSS-pixel size given the page's own
 		// deviceScaleFactor is 1, as it is by default here.
 		const page: Page = await browser.newPage();
 
@@ -121,9 +106,7 @@ describe("text spacing audit (integration)", () => {
 			};
 
 			const result = await runTextSpacingAudit(spy);
-			const clipped = result.findings.find(
-				(finding) => finding.kind === "clipped",
-			);
+			const clipped = result.findings.find((finding) => finding.kind === "clipped");
 
 			expect(clipped?.screenshot).toBeInstanceOf(Uint8Array);
 			expect(calls).toHaveLength(1);
@@ -141,15 +124,9 @@ describe("text spacing audit (integration)", () => {
 	it("routes deeper ellipsis truncation to incomplete, never a violation", async () => {
 		const { result, leftoverStyles } = await runFixture("ellipsis.html");
 
-		expect(result.findings.some((finding) => finding.kind === "clipped")).toBe(
-			false,
-		);
+		expect(result.findings.some((finding) => finding.kind === "clipped")).toBe(false);
 		expect(result.summary.clipped).toBe(0);
-		expect(
-			result.findings.every(
-				(finding) => finding.kind === "truncation-increased",
-			),
-		).toBe(true);
+		expect(result.findings.every((finding) => finding.kind === "truncation-increased")).toBe(true);
 		expect(result.summary.truncationIncreased).toBeGreaterThan(0);
 		expect(result.restored).toBe(true);
 		expect(leftoverStyles).toBe(0);
@@ -158,14 +135,10 @@ describe("text spacing audit (integration)", () => {
 	it("reports overlapping text blocks as overlap incomplete", async () => {
 		const { result, leftoverStyles } = await runFixture("overlap.html");
 
-		expect(result.findings.some((finding) => finding.kind === "overlap")).toBe(
-			true,
-		);
+		expect(result.findings.some((finding) => finding.kind === "overlap")).toBe(true);
 		expect(result.summary.overlaps).toBeGreaterThan(0);
 		expect(result.summary.clipped).toBe(0);
-		expect(
-			result.findings.find((finding) => finding.kind === "overlap"),
-		).toEqual(
+		expect(result.findings.find((finding) => finding.kind === "overlap")).toEqual(
 			expect.objectContaining({
 				kind: "overlap",
 				overlapsWith: expect.any(String),

@@ -33,12 +33,9 @@ describe("truncateHtml", () => {
 	});
 
 	it("truncates multiple long attributes independently", () => {
-		const html =
-			'<div data-a="aaaaaaaaaaaa" data-b="bbbbbbbbbbbb" data-c="short">';
+		const html = '<div data-a="aaaaaaaaaaaa" data-b="bbbbbbbbbbbb" data-c="short">';
 		const result = truncateHtml(html, { maxAttributeValueLength: 5 });
-		expect(result).toBe(
-			'<div data-a="aaaaa..." data-b="bbbbb..." data-c="short">',
-		);
+		expect(result).toBe('<div data-a="aaaaa..." data-b="bbbbb..." data-c="short">');
 	});
 
 	it("applies an overall length cap as a final guard", () => {

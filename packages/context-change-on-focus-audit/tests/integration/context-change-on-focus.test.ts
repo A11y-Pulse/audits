@@ -6,10 +6,7 @@ import {
 	type ContextChangeOnFocusResult,
 	runContextChangeOnFocusAudit,
 } from "../../src/index";
-import {
-	type FixtureServer,
-	startFixtureServer,
-} from "./helpers/serve-fixtures";
+import { type FixtureServer, startFixtureServer } from "./helpers/serve-fixtures";
 
 let server: FixtureServer;
 let browser: Browser;
@@ -31,10 +28,7 @@ async function runFixture(
 	const page: Page = await browser.newPage();
 	await page.goto(`${server.url}/${name}`, { waitUntil: "load" });
 
-	const result = await runContextChangeOnFocusAudit(
-		new PuppeteerAdaptor(page),
-		options,
-	);
+	const result = await runContextChangeOnFocusAudit(new PuppeteerAdaptor(page), options);
 
 	return { result, page };
 }
@@ -55,24 +49,18 @@ describe("context change on focus audit (integration)", () => {
 		});
 
 		try {
-			const result = await runContextChangeOnFocusAudit(
-				new PuppeteerAdaptor(page),
-			);
+			const result = await runContextChangeOnFocusAudit(new PuppeteerAdaptor(page));
 
 			expect(
 				findings(result).some(
-					(finding) =>
-						finding.kind === "new-window" && finding.bucket === "violation",
+					(finding) => finding.kind === "new-window" && finding.bucket === "violation",
 				),
 			).toBe(true);
 
-			// Race the popup event against a short timeout: the orchestrator's
-			// window.open interception (installContextObserverScript) should
-			// prevent a real popup from ever firing.
+			// Race the popup event against a short timeout: the orchestrator's window.open interception
+			// (installContextObserverScript) should prevent a real popup from ever firing.
 			const raced = await Promise.race([
-				new Promise<boolean>((resolve) =>
-					setTimeout(() => resolve(popupOpened), 500),
-				),
+				new Promise<boolean>((resolve) => setTimeout(() => resolve(popupOpened), 500)),
 			]);
 			expect(raced).toBe(false);
 		} finally {
@@ -86,33 +74,29 @@ describe("context change on focus audit (integration)", () => {
 		try {
 			expect(
 				findings(result).some(
-					(finding) =>
-						finding.kind === "auto-submit" && finding.bucket === "violation",
+					(finding) => finding.kind === "auto-submit" && finding.bucket === "violation",
 				),
 			).toBe(true);
 
-			// The orchestrator's capture-phase submit listener prevents the form
-			// from actually submitting/navigating away.
+			// The orchestrator's capture-phase submit listener prevents the form from actually
+			// submitting/navigating away.
 			expect(page.url()).toContain("auto-submit-on-focus.html");
 		} finally {
 			await page.close();
 		}
 	});
 
-	// Previously a KNOWN GAP: the tab-orchestrator's "done tabbing" exit
-	// used to run before context signals were drained for a stop, so
-	// `focus-removal.html`'s self-blurring element was indistinguishable
-	// from genuinely running out of focusable elements. Fixed by
-	// 08867a8 and 02bbefe, which notify consumers of F55 focus-removal
-	// before the isBody session-end exit.
+	// Previously a KNOWN GAP: the tab-orchestrator's "done tabbing" exit used to run before context
+	// signals were drained for a stop, so `focus-removal.html`'s self-blurring element was
+	// indistinguishable from genuinely running out of focusable elements. Fixed by 08867a8 and
+	// 02bbefe, which notify consumers of F55 focus-removal before the isBody session-end exit.
 	it("flags focus being removed (blurred) on focus", async () => {
 		const { result, page } = await runFixture("focus-removal.html");
 
 		try {
 			expect(
 				findings(result).some(
-					(finding) =>
-						finding.kind === "focus-removed" && finding.bucket === "violation",
+					(finding) => finding.kind === "focus-removed" && finding.bucket === "violation",
 				),
 			).toBe(true);
 		} finally {
@@ -127,8 +111,7 @@ describe("context change on focus audit (integration)", () => {
 			expect(
 				findings(result).some(
 					(finding) =>
-						finding.kind === "focus-redirected-outside" &&
-						finding.bucket === "violation",
+						finding.kind === "focus-redirected-outside" && finding.bucket === "violation",
 				),
 			).toBe(true);
 		} finally {
@@ -141,69 +124,43 @@ describe("context change on focus audit (integration)", () => {
 
 		try {
 			const allFindings = findings(result);
-			expect(
-				allFindings.filter((finding) => finding.bucket === "violation"),
-			).toHaveLength(0);
-			expect(
-				allFindings.some(
-					(finding) => finding.kind === "focus-redirected-outside",
-				),
-			).toBe(false);
+			expect(allFindings.filter((finding) => finding.bucket === "violation")).toHaveLength(0);
+			expect(allFindings.some((finding) => finding.kind === "focus-redirected-outside")).toBe(
+				false,
+			);
 		} finally {
 			await page.close();
 		}
 	});
 
-	// This fixture is the real end-to-end validation of Task 10's
-	// navigation-detection fix: before that fix, a synchronous
-	// `location.assign` on focus (where the new document has typically
-	// already loaded by the time the orchestrator probes the active
-	// element) would silently misclassify the session as `sessionEnd:
-	// "completed"` instead of `"navigation"`, because the freshly-navigated
-	// document's `document.activeElement` defaults to `<body>` — exactly
-	// like ordinary "we're done tabbing." Confirmed here: `sessionEnd` is
-	// correctly `"navigation"`, not `"completed"`.
+	// A synchronous `location.assign` on focus usually completes before the orchestrator probes the
+	// active element, and the new document's `document.activeElement` defaults to `<body>`, which is
+	// indistinguishable from ordinary "done tabbing". The session end must therefore come from the
+	// href diff, not from the probe.
 	it("flags navigation triggered on focus and ends the session as navigation", async () => {
 		const { result, page } = await runFixture("navigation-on-focus.html");
 
 		try {
 			expect(result.summary.sessionEnd).toBe("navigation");
-			expect(
-				findings(result).some((finding) => finding.kind === "navigation"),
-			).toBe(false);
+			expect(findings(result).some((finding) => finding.kind === "navigation")).toBe(false);
 		} finally {
 			await page.close();
 		}
 	});
 
-	// KNOWN GAP (see task-11-report.md): unlike the `sessionEnd` outcome
-	// above, per-element attribution of *which* element triggered the
-	// navigation is not available in this (the common/fast) race outcome.
-	// The orchestrator's proactive href-diff check
-	// (`checkContextNavigation` / `if (outcome.navigation) { end("navigation");
-	// break; }` in packages/tab-orchestrator/src/orchestrator.ts, currently
-	// ~line 312-317) runs before the triggering stop's snapshot is ever
-	// built, so no consumer's `onTabStop` is called for it — this is
-	// deliberate, tested behavior in tab-orchestrator's own
-	// orchestrator.test.ts ("detects navigation via href diff even when the
-	// post-navigation probe would otherwise report isBody", which asserts
-	// `stops` has length 0), not a bug introduced here. A `navigation`
-	// finding is only attributable in the much narrower race where the full
-	// context-signal drain (not the proactive href check) is the one that
-	// discovers the destroyed execution context — see "classifies
-	// navigation when the context drain call throws a destroyed-context
-	// error" in that same suite. Flagged loudly per this task's
-	// instructions rather than silently weakened away; `it.fails` keeps
-	// this test suite green while ensuring a future orchestrator change
-	// that starts attributing the finding causes a loud failure here.
+	// Known gap: the orchestrator's proactive href-diff check runs before the triggering stop's
+	// snapshot is built, so no consumer's `onTabStop` fires for it and the navigation cannot be
+	// attributed to an element. A `navigation` finding is only attributable in the narrower race
+	// where the context-signal drain, rather than the href check, is what discovers the destroyed
+	// execution context. `it.fails` keeps the suite green while making an orchestrator change that
+	// starts attributing the finding fail loudly here.
 	it.fails("attributes a navigation finding to the element that triggered it", async () => {
 		const { result, page } = await runFixture("navigation-on-focus.html");
 
 		try {
 			expect(
 				findings(result).some(
-					(finding) =>
-						finding.kind === "navigation" && finding.bucket === "violation",
+					(finding) => finding.kind === "navigation" && finding.bucket === "violation",
 				),
 			).toBe(true);
 		} finally {
