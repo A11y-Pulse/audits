@@ -1,13 +1,12 @@
-import type { JSHandle, Page } from "puppeteer";
+import type { CDPSession, JSHandle, Page } from "puppeteer";
 import type { BrowserAdaptor, ElementRef, Rect } from "../adaptor";
 
-// Pages that already have focus emulation enabled. A fresh adaptor is created per
-// audit run, but a page is often reused across runs (e.g. one page per snapshot,
-// many checks), so without this each run would open another CDP session that is
-// never detached. The emulation persists for the page's lifetime, so enabling it
-// once is enough. (Detaching the session instead is not an option — Chrome clears
-// the emulation when the CDP client disconnects.)
-const focusEmulationEnabled = new WeakSet<Page>();
+// The CDP session holding focus emulation for each page. A fresh adaptor is
+// created per audit run, but a page is often reused across runs (e.g. one page
+// per snapshot, many checks), so without this each run would open another CDP
+// session that is never detached. The session is kept attached for the page's
+// lifetime: Chrome clears the emulation when the CDP client disconnects.
+const focusEmulationSessions = new WeakMap<Page, CDPSession>();
 
 /** A BrowserAdaptor backed by a Puppeteer Page. */
 export class PuppeteerAdaptor implements BrowserAdaptor {
@@ -53,16 +52,26 @@ export class PuppeteerAdaptor implements BrowserAdaptor {
 		// results.
 		//
 		// Note this function does not throw if enabling emulation fails; it is a best-effort.
-		if (focusEmulationEnabled.has(this.page)) {
-			return;
-		}
-
 		try {
+			const existing = focusEmulationSessions.get(this.page);
+
+			if (existing) {
+				// Chromium ignores a redundant enable, so re-asserting has to toggle.
+				await existing.send("Emulation.setFocusEmulationEnabled", {
+					enabled: false,
+				});
+				await existing.send("Emulation.setFocusEmulationEnabled", {
+					enabled: true,
+				});
+
+				return;
+			}
+
 			const client = await this.page.createCDPSession();
 			await client.send("Emulation.setFocusEmulationEnabled", {
 				enabled: true,
 			});
-			focusEmulationEnabled.add(this.page);
+			focusEmulationSessions.set(this.page, client);
 		} catch (error) {
 			console.warn(
 				"Could not enable focus emulation for the tab orchestrator",

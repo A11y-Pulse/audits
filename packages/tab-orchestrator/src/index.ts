@@ -20,6 +20,7 @@ export {
 	elementRectScript,
 	elementStylesScript,
 	focusScript,
+	hasFocusScript,
 	isCenterObscuredScript,
 	pageDimensionsScript,
 	probeActiveElementScript,
