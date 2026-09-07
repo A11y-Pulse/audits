@@ -8,4 +8,6 @@ Chromium stops matching `:focus` and `:focus-visible` the moment a document lose
 
 The loop now re-checks at the point of measurement and re-asserts focus reporting once before giving up, ending the session as `lostFocus` rather than recording a measurement taken without focus.
 
+The check exempts a stop that probes as `<body>`. The tab press that leaves the last element takes focus out of the document with it, so the end of the tab order is indistinguishable from a stolen focus by `document.hasFocus()` alone, and focus emulation cannot restore it. Only a real element measured without focus ends the session; running out of elements to tab to still ends it as `completed`.
+
 Adds a `hasFocusScript` export so adaptors and tests can address the check directly.

@@ -339,12 +339,11 @@ export function createTabOrchestrator(
 
 					// Chromium only matches :focus while the document reports focus, so
 					// an element measured after a loss reads as having no indicator
-					// however correct its CSS is. Re-checked here, at the point of
-					// measurement, rather than relying on the pre-tab check.
-					if (!(await documentHasFocus())) {
-						end("lostFocus");
-						break;
-					}
+					// however correct its CSS is. Read here, at the point of
+					// measurement, rather than relying on the pre-tab check. Acted on
+					// below, once the probe has said whether there was anything to
+					// measure.
+					const focusedAtMeasurement = await documentHasFocus();
 
 					let base: ActiveElementBase | null;
 
@@ -369,6 +368,17 @@ export function createTabOrchestrator(
 						}
 
 						throw error;
+					}
+
+					// The press that leaves the last element takes focus out of the
+					// document with it, so an unfocused page probing as <body> is the
+					// tab order running out, not a stolen focus. Re-asserting focus
+					// emulation cannot bring that back either. Leave it to the isBody
+					// exit below and treat only a real element measured without focus
+					// as a genuine loss.
+					if (!focusedAtMeasurement && base !== null && !base.isBody) {
+						end("lostFocus");
+						break;
 					}
 
 					// Primary navigation detection layer, run before the isBody exit:

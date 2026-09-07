@@ -311,6 +311,26 @@ describe("tab loop", () => {
 		expect(adaptor.ensureFocusReporting).toHaveBeenCalledTimes(2);
 	});
 
+	it("ends as completed when the last tab press walks off the end of the tab order", async () => {
+		// Tabbing past the final element moves focus out of the document: the page
+		// reports no focus and the probe reports <body>. That is the ordinary end
+		// of a session, not a stolen focus, and re-asserting focus emulation
+		// cannot bring it back.
+		const a = recordingConsumer();
+		const orchestrator = createTabOrchestrator(
+			loopAdaptor({
+				hasFocus: [true, true, true],
+				hasFocusAfterTab: [true, true, false],
+				active: [info(0), info(1)],
+			}),
+			{ screenshotSettleDelay: 0 },
+		);
+		orchestrator.attach(a);
+		await orchestrator.run();
+		expect(a.stops.map((s) => s.activeElement.index)).toEqual([0, 1]);
+		expect(a.sessionEnds).toEqual(["completed"]);
+	});
+
 	it("stops notifying a consumer after disconnect() and continues for others", async () => {
 		const a = recordingConsumer([], async (_s, disconnect) => {
 			disconnect();

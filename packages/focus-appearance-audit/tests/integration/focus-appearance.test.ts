@@ -149,6 +149,15 @@ describe("focus appearance audit (integration)", () => {
 		expect(bySelector.get("#after-2")?.detectionMethod).toBe("style");
 	});
 
+	it("ends as completed once the page has been tabbed to the end", async () => {
+		// The tab press that leaves the last element takes focus out of the
+		// document entirely, which reads identically to a stolen focus. Ending
+		// such a session as `lostFocus` would demote every genuine failure on a
+		// fully-walked page to `incomplete`.
+		const result = await runFixture("all-pass.html");
+		expect(result.summary.sessionEnd).toBe("completed");
+	});
+
 	it("never reports a failure for an element measured while the page has lost focus", async () => {
 		// Focus emulation normally keeps a backgrounded page reporting focus.
 		// Standing in for the case where it is unavailable: a non-Chromium
