@@ -25,13 +25,13 @@ export type BaseAuditSummary = {
 	/** True if the audit stopped early after hitting `failedElementLimit`. */
 	reachedFailedElementLimit: boolean;
 	/**
-	 * True if the audit returned early because `timeout` elapsed. The results
-	 * are whatever had been gathered when the deadline hit.
+	 * True if the audit returned early because `timeout` elapsed. The results are whatever had been
+	 * gathered when the deadline hit.
 	 */
 	timedOut: boolean;
 	/**
-	 * Why the tab session ended, or `null` when this consumer disconnected
-	 * itself (element limit, failed-element limit, or timeout).
+	 * Why the tab session ended, or `null` when this consumer disconnected itself (element limit,
+	 * failed-element limit, or timeout).
 	 */
 	sessionEnd: SessionEndReason | null;
 };
@@ -40,11 +40,7 @@ export type AuditSelfDisconnect = {
 	/** True once this consumer has disconnected itself from the session. */
 	readonly disconnectedSelf: boolean;
 	/** Arm a timeout that calls `onTimeout` then disconnects, if `timeout` is greater than 0. */
-	armTimeout(
-		timeout: number,
-		session: TabSessionHandle,
-		onTimeout: () => void,
-	): void;
+	armTimeout(timeout: number, session: TabSessionHandle, onTimeout: () => void): void;
 	/** Disconnect the session and record that this consumer initiated it. */
 	disconnect(session: TabSessionHandle): void;
 	/** Clear any pending timeout without disconnecting. */
@@ -52,9 +48,8 @@ export type AuditSelfDisconnect = {
 };
 
 /**
- * Arms an optional self-disconnecting timeout and tracks whether this
- * consumer initiated its own disconnect, so `onSessionEnd` can tell that
- * apart from an external end.
+ * Arms an optional self-disconnecting timeout and tracks whether this consumer initiated its own
+ * disconnect, so `onSessionEnd` can tell that apart from an external end.
  */
 export function createAuditSelfDisconnect(): AuditSelfDisconnect {
 	let timer: ReturnType<typeof setTimeout> | undefined;

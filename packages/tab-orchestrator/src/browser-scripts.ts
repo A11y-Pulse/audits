@@ -1,7 +1,7 @@
 /**
- * IMPORTANT: Functions in this file are serialized and injected into the audited page, so they
- * must not reference any symbols outside their own scope. This also means they cannot share code,
- * so any common logic (like descending into shadow roots) must be duplicated.
+ * IMPORTANT: Functions in this file are serialized and injected into the audited page, so they must
+ * not reference any symbols outside their own scope. This also means they cannot share code, so any
+ * common logic (like descending into shadow roots) must be duplicated.
  */
 
 import type { Rect } from "./adaptor";
@@ -34,10 +34,10 @@ export function baselineScript(
 	markerAttr: string,
 	limit: number,
 ): BaselinePayload {
-	// Bound oversized computed values (data-URI background images can run to hundreds of KB)
-	// while preserving inequality via the length and a fingerprint of the full value. Must be
-	// byte-identical to the copy in probeActiveElementScript, or every oversized value would
-	// "change" on focus and produce a false style-check pass.
+	// Bound oversized computed values (data-URI background images can run to hundreds of KB) while
+	// preserving inequality via the length and a fingerprint of the full value. Must be
+	// byte-identical to the copy in probeActiveElementScript, or every oversized value would "change"
+	// on focus and produce a false style-check pass.
 	const truncateValue = (value: string): string => {
 		const MAX_STYLE_VALUE_LENGTH = 512;
 
@@ -115,21 +115,20 @@ export function baselineScript(
 		}
 
 		if (el.hasAttribute("disabled")) {
-			// Skip disabled elements
 			continue;
 		}
 
 		if ((el as HTMLElement).tabIndex < 0) {
-			// Skip elements that are focusable but not in the tab order (negative
-			// tabindex). The audit tabs through the page, so it never lands on them,
-			// and counting them would waste the element-limit budget.
+			// Skip elements that are focusable but not in the tab order (negative tabindex). The audit
+			// tabs through the page, so it never lands on them, and counting them would waste the
+			// element-limit budget.
 			continue;
 		}
 
-		// Skip non-visible elements so they don't consume the marker budget (e.g.
-		// links inside a closed mega-menu). checkVisibility sees hiding applied by
-		// ancestors, which per-element computed styles don't (`display` doesn't
-		// inherit); fall back to the element's own styles where it's unavailable.
+		// Skip non-visible elements so they don't consume the marker budget (e.g. links inside a closed
+		// mega-menu). checkVisibility sees hiding applied by ancestors, which per-element computed
+		// styles don't (`display` doesn't inherit); fall back to the element's own styles where it's
+		// unavailable.
 		const visibilityCheck = el as Element & {
 			checkVisibility?: (options?: { checkVisibilityCSS?: boolean }) => boolean;
 		};
@@ -146,14 +145,14 @@ export function baselineScript(
 			}
 		}
 
-		// Mark before measuring: the probe reads styles and rects while the marker
-		// is present, so the baseline must be captured in the same DOM state.
+		// Mark before measuring: the probe reads styles and rects while the marker is present, so the
+		// baseline must be captured in the same DOM state.
 		el.setAttribute(markerAttr, String(idx));
 
 		const rect = el.getBoundingClientRect();
 
-		// Intern the snapshot: the JSON key is deterministic because every
-		// snapshot is built with the same property insertion order.
+		// Intern the snapshot: the JSON key is deterministic because every snapshot is built with the
+		// same property insertion order.
 		const snap = snapshot(el);
 		const key = JSON.stringify(snap);
 		let styleIndex = styleIndexByKey.get(key);
@@ -184,9 +183,9 @@ export type ActiveElementBase = {
 	index: number | null;
 	isBody: boolean;
 	/**
-	 * The focused element is an <iframe>. Tabbing into a frame passes focus into
-	 * its embedded document, but the parent's document.activeElement is the frame
-	 * element itself, so the loop uses this to skip the frame as a tab stop.
+	 * The focused element is an <iframe>. Tabbing into a frame passes focus into its embedded
+	 * document, but the parent's document.activeElement is the frame element itself, so the loop uses
+	 * this to skip the frame as a tab stop.
 	 */
 	isIframe: boolean;
 	html: string;
@@ -195,14 +194,10 @@ export type ActiveElementBase = {
 };
 
 /**
- * Read the currently focused element (descending open shadow roots), returning
- * its marker index, opening-tag HTML (marker attribute stripped), focus-relevant
- * styles, and page-relative rect.
+ * Read the currently focused element (descending open shadow roots), returning its marker index,
+ * opening-tag HTML (marker attribute stripped), focus-relevant styles, and page-relative rect.
  */
-export function probeActiveElementScript(
-	props: string[],
-	markerAttr: string,
-): ActiveElementBase {
+export function probeActiveElementScript(props: string[], markerAttr: string): ActiveElementBase {
 	let el = document.activeElement;
 
 	while (el?.shadowRoot?.activeElement) {
@@ -256,8 +251,8 @@ export function probeActiveElementScript(
 	const idxAttr = el.getAttribute(markerAttr);
 	const rect = el.getBoundingClientRect();
 
-	// Shallow clone so only the opening tag is serialised, not the whole subtree;
-	// drop the internal marker attribute so it never leaks into the snippet.
+	// Shallow clone so only the opening tag is serialised, not the whole subtree; drop the internal
+	// marker attribute so it never leaks into the snippet.
 	const openingTag = el.cloneNode(false) as Element;
 	openingTag.removeAttribute(markerAttr);
 
@@ -313,8 +308,8 @@ export function elementRectScript(el: Element | null): Rect {
 }
 
 /**
- * Whether something unrelated (e.g. a fixed cookie banner) covers the element's centre point, so
- * a screenshot of the element's box would show the covering element instead.
+ * Whether something unrelated (e.g. a fixed cookie banner) covers the element's centre point, so a
+ * screenshot of the element's box would show the covering element instead.
  */
 export function isCenterObscuredScript(el: Element | null): boolean {
 	if (!el) {
@@ -322,14 +317,8 @@ export function isCenterObscuredScript(el: Element | null): boolean {
 	}
 
 	const rect = el.getBoundingClientRect();
-	const x = Math.min(
-		Math.max(rect.left + rect.width / 2, 0),
-		window.innerWidth - 1,
-	);
-	const y = Math.min(
-		Math.max(rect.top + rect.height / 2, 0),
-		window.innerHeight - 1,
-	);
+	const x = Math.min(Math.max(rect.left + rect.width / 2, 0), window.innerWidth - 1);
+	const y = Math.min(Math.max(rect.top + rect.height / 2, 0), window.innerHeight - 1);
 
 	let hit = document.elementFromPoint(x, y);
 
@@ -363,36 +352,26 @@ export function scrollToCenterScript(el: Element | null): void {
 	});
 }
 
-/**
- * Blur (unfocus) an element
- */
 export function blurScript(el: Element | null): void {
 	(el as HTMLElement | null)?.blur();
 }
 
-/**
- * Focus an element
- */
 export function focusScript(el: Element | null): void {
 	(el as HTMLElement | null)?.focus({ preventScroll: true });
 }
 
 /**
- * Read focus-relevant computed styles from a given element. Unlike
- * `probeActiveElementScript`, this does not use `document.activeElement`, so it
- * still works after the node has been blurred.
+ * Read focus-relevant computed styles from a given element. Unlike `probeActiveElementScript`, this
+ * does not use `document.activeElement`, so it still works after the node has been blurred.
  */
-export function elementStylesScript(
-	el: Element | null,
-	props: string[],
-): StyleSnapshot {
+export function elementStylesScript(el: Element | null, props: string[]): StyleSnapshot {
 	if (!el) {
 		return { element: {}, before: {}, after: {} };
 	}
 
-	// Must be byte-identical to the copies in baselineScript and
-	// probeActiveElementScript: snapshots from the scripts are compared for
-	// equality, so they have to truncate oversized values the same way.
+	// Must be byte-identical to the copies in baselineScript and probeActiveElementScript: snapshots
+	// from the scripts are compared for equality, so they have to truncate oversized values the same
+	// way.
 	const truncateValue = (value: string): string => {
 		const MAX_STYLE_VALUE_LENGTH = 512;
 
@@ -432,11 +411,10 @@ export function elementStylesScript(
 }
 
 /**
- * Remove the marker attribute from all elements, blur the active element, and
- * scroll back to the top. This is a best-effort attempt to reset state between
- * audits: the tab loop scrolls later elements into view as it walks the page
- * (see scrollToCenterScript), and nothing else undoes that once the session
- * ends.
+ * Remove the marker attribute from all elements, blur the active element, and scroll back to the
+ * top. This is a best-effort attempt to reset state between audits: the tab loop scrolls later
+ * elements into view as it walks the page (see scrollToCenterScript), and nothing else undoes that
+ * once the session ends.
  */
 export function clearMarkersScript(markerAttr: string): void {
 	const clear = (root: Document | ShadowRoot): void => {
@@ -470,9 +448,9 @@ export type MeasureObscuringResult = {
 };
 
 /**
- * Hit-test whether author-created content entirely hides the focused element.
- * Marks a single covering element with `obscurerAttr` when containment confirms
- * a full cover, so the host can resolve its selector via getSelector.
+ * Hit-test whether author-created content entirely hides the focused element. Marks a single
+ * covering element with `obscurerAttr` when containment confirms a full cover, so the host can
+ * resolve its selector via getSelector.
  */
 export function measureObscuringScript(
 	el: Element | null,
@@ -491,9 +469,7 @@ export function measureObscuringScript(
 		return empty;
 	}
 
-	for (const marked of Array.from(
-		document.querySelectorAll(`[${obscurerAttr}]`),
-	)) {
+	for (const marked of Array.from(document.querySelectorAll(`[${obscurerAttr}]`))) {
 		marked.removeAttribute(obscurerAttr);
 	}
 
@@ -523,10 +499,7 @@ export function measureObscuringScript(
 		{ x: left + width / 2, y: top + height / 2 },
 	];
 
-	if (
-		width > LARGE_ELEMENT_THRESHOLD_PX ||
-		height > LARGE_ELEMENT_THRESHOLD_PX
-	) {
+	if (width > LARGE_ELEMENT_THRESHOLD_PX || height > LARGE_ELEMENT_THRESHOLD_PX) {
 		points.push(
 			{ x: left + width * 0.25, y: top + height * 0.25 },
 			{ x: left + width * 0.75, y: top + height * 0.25 },
@@ -558,11 +531,7 @@ export function measureObscuringScript(
 				continue;
 			}
 
-			if (
-				candidate === el ||
-				el.contains(candidate) ||
-				candidate.contains(el)
-			) {
+			if (candidate === el || el.contains(candidate) || candidate.contains(el)) {
 				return null;
 			}
 
@@ -632,9 +601,7 @@ export function measureObscuringScript(
 		};
 	}
 
-	const classifyOpacity = (
-		node: Element,
-	): "opaque" | "semi-transparent" | "unknown" => {
+	const classifyOpacity = (node: Element): "opaque" | "semi-transparent" | "unknown" => {
 		const cs = getComputedStyle(node);
 		const opacity = Number.parseFloat(cs.opacity);
 
@@ -689,9 +656,7 @@ export function obscurerHandleScript(): Element | null {
 }
 
 export function clearObscurerScript(obscurerAttr: string): void {
-	for (const marked of Array.from(
-		document.querySelectorAll(`[${obscurerAttr}]`),
-	)) {
+	for (const marked of Array.from(document.querySelectorAll(`[${obscurerAttr}]`))) {
 		marked.removeAttribute(obscurerAttr);
 	}
 }
@@ -713,8 +678,8 @@ declare global {
 }
 
 /**
- * Install once: wrap window.open (record + inert stub), capture-phase submit
- * (record + preventDefault), track focusin and soft URL changes.
+ * Install once: wrap window.open (record + inert stub), capture-phase submit (record +
+ * preventDefault), track focusin and soft URL changes.
  */
 export function installContextObserverScript(): void {
 	if (window.__a11yContextObserver?.installed) {
@@ -810,13 +775,11 @@ export type DrainContextObserverResult = {
 };
 
 /**
- * Drain observer signals for the current tab stop and reset per-stop flags.
- * Classification of focus removal / redirection uses the post-Tab settle
- * activeElement and the focusin history from this stop only.
+ * Drain observer signals for the current tab stop and reset per-stop flags. Classification of focus
+ * removal / redirection uses the post-Tab settle activeElement and the focusin history from this
+ * stop only.
  */
-export function drainContextObserverScript(
-	markerAttr: string,
-): DrainContextObserverResult {
+export function drainContextObserverScript(markerAttr: string): DrainContextObserverResult {
 	// Must be a string literal inside this function: it is serialized into the page.
 	const attributedAttr = "data-a11y-ctx-attr";
 
@@ -837,9 +800,7 @@ export function drainContextObserverScript(
 		return empty;
 	}
 
-	for (const marked of Array.from(
-		document.querySelectorAll(`[${attributedAttr}]`),
-	)) {
+	for (const marked of Array.from(document.querySelectorAll(`[${attributedAttr}]`))) {
 		marked.removeAttribute(attributedAttr);
 	}
 
@@ -860,9 +821,7 @@ export function drainContextObserverScript(
 	}
 
 	const intended =
-		focusIns.find(
-			(el) => el !== document.body && el !== document.documentElement,
-		) ?? null;
+		focusIns.find((el) => el !== document.body && el !== document.documentElement) ?? null;
 
 	const openingHtml = (node: Element): string => {
 		const clone = node.cloneNode(false) as Element;
@@ -877,8 +836,7 @@ export function drainContextObserverScript(
 	let attributedHtml: string | null = null;
 	let hasAttributed = false;
 
-	const bodyOrNone =
-		!active || active === document.body || active === document.documentElement;
+	const bodyOrNone = !active || active === document.body || active === document.documentElement;
 
 	if (intended && bodyOrNone) {
 		focusRemoved = true;
@@ -912,8 +870,7 @@ export function drainContextObserverScript(
 			return false;
 		};
 
-		const same =
-			composedContains(intended, active) || composedContains(active, intended);
+		const same = composedContains(intended, active) || composedContains(active, intended);
 
 		redirect = same ? "same-subtree" : "outside";
 		attributedHtml = openingHtml(intended);
@@ -933,23 +890,23 @@ export function drainContextObserverScript(
 	};
 }
 
-/** Return the element marked as attributed by drainContextObserverScript (the
- * element that received a focus event this stop and then lost it), if any. */
+/**
+ * Return the element marked as attributed by drainContextObserverScript (the element that received
+ * a focus event this stop and then lost it), if any.
+ */
 export function attributedHandleScript(): Element | null {
 	return document.querySelector("[data-a11y-ctx-attr]");
 }
 
 export function clearAttributedScript(): void {
-	for (const marked of Array.from(
-		document.querySelectorAll("[data-a11y-ctx-attr]"),
-	)) {
+	for (const marked of Array.from(document.querySelectorAll("[data-a11y-ctx-attr]"))) {
 		marked.removeAttribute("data-a11y-ctx-attr");
 	}
 }
 
 /**
- * Drop focusin history accumulated after drain (e.g. pixel-diff blur/refocus)
- * so the next tab stop does not mis-attribute F55 or redirects.
+ * Drop focusin history accumulated after drain (e.g. pixel-diff blur/refocus) so the next tab stop
+ * does not mis-attribute F55 or redirects.
  */
 export function clearContextFocusInsScript(): void {
 	const state = window.__a11yContextObserver;
@@ -967,9 +924,6 @@ export function locationHrefScript(): string {
 	return location.href;
 }
 
-/**
- * Whether the document reports focus.
- */
 export function hasFocusScript(): boolean {
 	return document.hasFocus();
 }

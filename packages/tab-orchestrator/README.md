@@ -4,7 +4,7 @@
 [![CI](https://github.com/A11y-Pulse/audits/actions/workflows/ci.yml/badge.svg)](https://github.com/A11y-Pulse/audits/actions/workflows/ci.yml)
 [![License: PolyForm Shield 1.0.0](https://img.shields.io/badge/license-PolyForm%20Shield%201.0.0-blue)](./LICENSE.md)
 
-A shared Tab-session runner for A11y Pulse's keyboard-driven accessibility audits. It drives a page through its focusable elements once — pressing Tab, tracking visited elements, capturing screenshots and styles on demand — while one or more **consumers** each score the tab stops for their own WCAG success criterion. This lets audits like [`@a11y-pulse/focus-appearance-audit`](../focus-appearance-audit) (WCAG 2.4.7) share a single tab loop with sibling audits instead of each re-tabbing the page from scratch.
+A shared Tab-session runner for A11y Pulse's keyboard-driven accessibility audits. It drives a page through its focusable elements once (pressing Tab, tracking visited elements, capturing screenshots and styles on demand) while one or more **consumers** each score the tab stops for their own WCAG success criterion. This lets audits like [`@a11y-pulse/focus-appearance-audit`](../focus-appearance-audit) (WCAG 2.4.7) share a single tab loop with sibling audits instead of each re-tabbing the page from scratch.
 
 It is not an audit itself: it has no opinion on what "passing" means. It only owns the mechanics of moving focus, tracking cycle completion, and capturing the primitives (computed styles, clipped screenshots, unfocused/focused pairs) that consumers need.
 
@@ -35,9 +35,9 @@ await orchestrator.run();
 - `.attach(consumer)` registers a `TabConsumer`. Attaching after `run()` has started throws.
 - `.run()` presses Tab repeatedly, dispatching each `TabStopSnapshot` to every still-attached consumer, until either a full tab cycle completes, focus is lost, navigation happens, or every consumer has disconnected. Calling it twice throws; calling it with zero attached consumers returns immediately without tabbing.
 
-Each consumer declares the `capabilities` it needs (e.g. `baselineStyles`, `unfocusedPair`) and can disconnect independently once it has what it needs (say, after hitting its own element limit) — the orchestrator keeps driving the remaining consumers. Per-stop work like unfocused-pair screenshots is only captured if a still-attached consumer actually asks for it that stop.
+Each consumer declares the `capabilities` it needs (e.g. `baselineStyles`, `unfocusedPair`) and can disconnect independently once it has what it needs (say, after hitting its own element limit). The orchestrator keeps driving the remaining consumers. Per-stop work like unfocused-pair screenshots is only captured if a still-attached consumer actually asks for it that stop.
 
-Most callers won't build a `TabConsumer` by hand — audit packages export a `createXAudit(options)` helper that returns one, plus a `runXAudit(adaptor, options)` convenience wrapper that builds a private single-consumer orchestrator for you. See [`@a11y-pulse/focus-appearance-audit`'s "Shared tab session"](../focus-appearance-audit#shared-tab-session) section for a worked example.
+Most callers won't build a `TabConsumer` by hand. Audit packages export a `createXAudit(options)` helper that returns one, plus a `runXAudit(adaptor, options)` convenience wrapper that builds a private single-consumer orchestrator for you. See [`@a11y-pulse/focus-appearance-audit`'s "Shared tab session"](../focus-appearance-audit#shared-tab-session) section for a worked example.
 
 ## `BrowserAdaptor`
 
@@ -50,7 +50,7 @@ The orchestrator drives a page through an **adaptor**: a small interface of prim
 | `disposeRef(ref)`        | Releases a handle previously returned by `evaluateHandle`.                                                                                           |
 | `pressTab()`             | Presses the Tab key, advancing focus to the next focusable element.                                                                                  |
 | `screenshotClip(clip)`   | Screenshots a clipped region of the page (`{ x, y, width, height }`) and returns PNG bytes.                                                          |
-| `ensureFocusReporting()` | Ensures the page reports focus for its lifetime — in particular that `document.hasFocus()` works and `:focus` styles apply, even when the page is not the foreground tab/window. Must not throw. |
+| `ensureFocusReporting()` | Ensures the page reports focus for its lifetime, in particular that `document.hasFocus()` works and `:focus` styles apply, even when the page is not the foreground tab/window. Must not throw. |
 
 The orchestrator is the only thing that mutates the page through this adaptor during a session; consumers score snapshots, they don't call `pressTab`, take screenshots, or install observers themselves.
 

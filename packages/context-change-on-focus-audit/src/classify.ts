@@ -22,9 +22,7 @@ export type ContextChangeFinding = {
 	bucket: ContextChangeBucket;
 };
 
-export function classifyContextSignals(
-	signals: ContextChangeSignals,
-): ContextChangeFinding[] {
+export function classifyContextSignals(signals: ContextChangeSignals): ContextChangeFinding[] {
 	const findings: ContextChangeFinding[] = [];
 
 	if (signals.openedWindow) {

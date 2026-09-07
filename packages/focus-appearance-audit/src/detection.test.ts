@@ -8,9 +8,7 @@ import {
 	stylesIndicateFocus,
 } from "./detection";
 
-function snapshot(
-	overrides: Partial<Record<string, string>> = {},
-): StyleSnapshot {
+function snapshot(overrides: Partial<Record<string, string>> = {}): StyleSnapshot {
 	const base = {
 		"outline-style": "none",
 		"box-shadow": "none",
@@ -24,11 +22,7 @@ function snapshot(
 	};
 }
 
-function solidPng(
-	width: number,
-	height: number,
-	rgb: [number, number, number],
-): Buffer {
+function solidPng(width: number, height: number, rgb: [number, number, number]): Buffer {
 	const png = new PNG({ width, height });
 
 	for (let i = 0; i < png.data.length; i += 4) {
@@ -43,17 +37,12 @@ function solidPng(
 
 describe("stylesIndicateFocus", () => {
 	it("is true when the outline style changes", () => {
-		expect(
-			stylesIndicateFocus(snapshot(), snapshot({ "outline-style": "solid" })),
-		).toBe(true);
+		expect(stylesIndicateFocus(snapshot(), snapshot({ "outline-style": "solid" }))).toBe(true);
 	});
 
 	it("is true when a box-shadow appears", () => {
 		expect(
-			stylesIndicateFocus(
-				snapshot(),
-				snapshot({ "box-shadow": "rgb(0,0,255) 0px 0px 3px" }),
-			),
+			stylesIndicateFocus(snapshot(), snapshot({ "box-shadow": "rgb(0,0,255) 0px 0px 3px" })),
 		).toBe(true);
 	});
 
@@ -263,14 +252,7 @@ describe("omitIdleStyleSnapshot", () => {
 
 describe("FOCUS_STYLE_PROPERTIES", () => {
 	it("excludes layout properties", () => {
-		for (const layout of [
-			"margin",
-			"padding",
-			"width",
-			"height",
-			"position",
-			"transform",
-		]) {
+		for (const layout of ["margin", "padding", "width", "height", "position", "transform"]) {
 			expect(FOCUS_STYLE_PROPERTIES).not.toContain(layout);
 		}
 	});
@@ -317,19 +299,17 @@ describe("alignedRegionsDiffer", () => {
 	});
 
 	it("aligns the regions on their anchors before comparing", () => {
-		// The same mark drawn relative to each anchor: a pure positional shift of
-		// the element between the two screenshots, which is not an indicator.
+		// The same mark drawn relative to each anchor: a pure positional shift of the element between
+		// the two screenshots, which is not an indicator.
 		const a = dotAt(solidPng(20, 20, [255, 255, 255]), 6, 7);
 		const b = dotAt(solidPng(20, 20, [255, 255, 255]), 2, 3);
 
-		expect(alignedRegionsDiffer(a, { x: 6, y: 7 }, b, { x: 2, y: 3 }, 1)).toBe(
-			false,
-		);
+		expect(alignedRegionsDiffer(a, { x: 6, y: 7 }, b, { x: 2, y: 3 }, 1)).toBe(false);
 	});
 
 	it("compares only the overlap when the images differ in size", () => {
-		// One screenshot was clamped smaller (e.g. at a page edge); the area both
-		// cover is identical, so no indicator is detected.
+		// One screenshot was clamped smaller (e.g. at a page edge); the area both cover is identical,
+		// so no indicator is detected.
 		const a = solidPng(8, 8, [255, 255, 255]);
 		const b = solidPng(8, 10, [255, 255, 255]);
 		expect(alignedRegionsDiffer(a, ORIGIN, b, ORIGIN, 1)).toBe(false);

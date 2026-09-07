@@ -54,9 +54,9 @@ function resolveOptions(options: SkipLinkOptions): ResolvedSkipLinkOptions {
 }
 
 /**
- * Tab through the first few stops looking for skip-link-like fragment anchors,
- * then activate each candidate and check that keyboard focus moves. Enables
- * focus reporting up front, then drives the loop.
+ * Tab through the first few stops looking for skip-link-like fragment anchors, then activate each
+ * candidate and check that keyboard focus moves. Enables focus reporting up front, then drives the
+ * loop.
  */
 export async function runSkipLinkAudit(
 	adaptor: SkipLinkAuditAdaptor,
@@ -110,11 +110,7 @@ export async function runSkipLinkLoop(
 			await probe.focusHandle(found.handle);
 			await probe.pressEnter();
 
-			let passed = await pollFocusInsideTarget(
-				probe,
-				found.fragment,
-				options.activationPollMs,
-			);
+			let passed = await pollFocusInsideTarget(probe, found.fragment, options.activationPollMs);
 
 			if (!passed) {
 				await probe.pressTab();

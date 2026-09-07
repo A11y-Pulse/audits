@@ -4,9 +4,9 @@ export default defineConfig({
 	resolve: {
 		tsconfigPaths: true,
 		alias: {
-			// Self-alias so the audit packages' own internal imports of this
-			// package (resolved through their node_modules symlink) hit the same
-			// fresh source this test file uses, not a possibly-stale dist/.
+			// Self-alias so the audit packages' own internal imports of this package (resolved through
+			// their node_modules symlink) hit the same fresh source this test file uses, not a
+			// possibly-stale dist/.
 			"@a11y-pulse/tab-orchestrator/puppeteer": new URL(
 				"./src/adaptors/puppeteer.ts",
 				import.meta.url,

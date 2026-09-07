@@ -69,9 +69,9 @@ await orchestrator.run();
 console.log(contextChange.result);
 ```
 
-`contextChange.result` is only complete once `contextChange` has disconnected (by hitting one of its own limits) or the session has ended — reading it before then is undefined. See [`@a11y-pulse/tab-orchestrator`](../tab-orchestrator) for the full session lifecycle and capability model. This audit declares only the `"contextSignals"` capability — it does not need `obscuring`, `unfocusedPair`, or `baselineStyles`, so it can run alongside the other audits on the same orchestrator without paying for their measurements.
+`contextChange.result` is only complete once `contextChange` has disconnected (by hitting one of its own limits) or the session has ended. Reading it before then is undefined. See [`@a11y-pulse/tab-orchestrator`](../tab-orchestrator) for the full session lifecycle and capability model. This audit declares only the `"contextSignals"` capability: it does not need `obscuring`, `unfocusedPair`, or `baselineStyles`, so it can run alongside the other audits on the same orchestrator without paying for their measurements.
 
-Because a genuine navigation ends the whole shared session (`summary.sessionEnd === "navigation"`), any other consumers attached to the same orchestrator also stop receiving tab stops once one occurs — this is a property of the shared session, not something this audit can opt out of.
+Because a genuine navigation ends the whole shared session (`summary.sessionEnd === "navigation"`), any other consumers attached to the same orchestrator also stop receiving tab stops once one occurs. This is a property of the shared session, not something this audit can opt out of.
 
 ## Options
 
@@ -134,13 +134,13 @@ type ContextChangeOnFocusResult = {
 
 [3.2.1 On Focus](https://www.w3.org/WAI/WCAG22/Understanding/on-focus) is a Level A criterion: receiving focus must not, by itself, trigger a change of context. Each tab stop can carry zero or more findings:
 
-- **`new-window`** (`violation`) — focusing the element opened a new window/tab (`window.open`). The audit intercepts the call so no real popup opens.
-- **`auto-submit`** (`violation`) — focusing the element submitted a form. The audit prevents the actual submission/navigation.
-- **`focus-removed`** (`violation`) — focusing the element caused focus to be removed entirely (no longer on any element).
-- **`focus-redirected-outside`** (`violation`) — focusing the element moved focus to a different element outside its own DOM subtree (focus theft).
-- **`focus-redirected-same-subtree`** (`incomplete`) — focus moved to a descendant/ancestor of the intended element (e.g. a composite widget delegating focus to an inner control). This is legitimate delegation, not a failure, but is recorded since it changes which element ends up focused.
-- **`url-changed`** (`incomplete`) — the URL changed (hash or `pushState`/`replaceState`) without a full navigation. Not necessarily a failure on its own, but worth reviewing.
-- **`navigation`** (`violation`) — focusing the element triggered a full page navigation.
+- **`new-window`** (`violation`): focusing the element opened a new window/tab (`window.open`). The audit intercepts the call so no real popup opens.
+- **`auto-submit`** (`violation`): focusing the element submitted a form. The audit prevents the actual submission/navigation.
+- **`focus-removed`** (`violation`): focusing the element caused focus to be removed entirely (no longer on any element).
+- **`focus-redirected-outside`** (`violation`): focusing the element moved focus to a different element outside its own DOM subtree (focus theft).
+- **`focus-redirected-same-subtree`** (`incomplete`): focus moved to a descendant/ancestor of the intended element (e.g. a composite widget delegating focus to an inner control). This is legitimate delegation, not a failure, but is recorded since it changes which element ends up focused.
+- **`url-changed`** (`incomplete`): the URL changed (hash or `pushState`/`replaceState`) without a full navigation. Not necessarily a failure on its own, but worth reviewing.
+- **`navigation`** (`violation`): focusing the element triggered a full page navigation.
 
 `summary.failed` counts only elements with at least one `"violation"`-bucket finding; `"incomplete"` findings do not count as failures.
 
@@ -157,7 +157,7 @@ Use [`@a11y-pulse/tab-orchestrator`'s `src/adaptors/puppeteer.ts`](../tab-orches
 ## Limitations
 
 - **Tab order only.** The audit tabs through elements in native tab order. It does not yet exercise arrow-key composite widgets (menus, comboboxes, toolbars, etc.) where focus moves via `aria-activedescendant` or roving `tabindex` instead of native Tab.
-- **Navigation ends the session.** Once a full navigation is detected, the whole shared tab session ends (there is no more original page to tab through), so this audit — and any others sharing the same orchestrator — stop after that stop.
+- **Navigation ends the session.** Once a full navigation is detected, the whole shared tab session ends (there is no more original page to tab through), so this audit (and any others sharing the same orchestrator) stops after that stop.
 - **Best-effort interception.** `window.open` and form submission are intercepted so the audit does not actually leave the page or open real popups, but unusual navigation mechanisms (e.g. a service worker or extension-driven redirect) may not be caught.
 
 ## Releasing

@@ -35,9 +35,7 @@ describe("PuppeteerAdaptor", () => {
 		const page = { evaluate } as unknown as Page;
 		const fn = () => 7;
 
-		await expect(new PuppeteerAdaptor(page).evaluate(fn, "arg")).resolves.toBe(
-			7,
-		);
+		await expect(new PuppeteerAdaptor(page).evaluate(fn, "arg")).resolves.toBe(7);
 		expect(evaluate).toHaveBeenCalledWith(fn, "arg");
 	});
 });

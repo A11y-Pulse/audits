@@ -7,8 +7,8 @@ export type Rect = { x: number; y: number; width: number; height: number };
 export type ElementRef = unknown;
 
 /**
- * A framework-specific adaptor that provides the primitives needed by tab-loop audits. An
- * adaptor wraps a single page in a web browser.
+ * A framework-specific adaptor that provides the primitives needed by tab-loop audits. An adaptor
+ * wraps a single page in a web browser.
  */
 export interface BrowserAdaptor {
 	/**
@@ -47,8 +47,7 @@ export interface BrowserAdaptor {
 
 	/**
 	 * Ensure the page reports focus for its lifetime. In particular, `document.hasFocus()` must
-	 * function correctly and :focus styles must be applied, even when the page is not the
-	 * foreground.
+	 * function correctly and :focus styles must be applied, even when the page is not the foreground.
 	 *
 	 * This function must not throw.
 	 */

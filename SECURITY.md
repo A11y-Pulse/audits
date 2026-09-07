@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-If you believe you've found a security vulnerability in this project, please report it privately — **do not open a public GitHub issue** for undisclosed vulnerabilities.
+If you believe you've found a security vulnerability in this project, please report it privately. **Do not open a public GitHub issue** for undisclosed vulnerabilities.
 
 Email **[info@a11ypulse.com](mailto:info@a11ypulse.com)** with:
 

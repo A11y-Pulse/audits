@@ -5,7 +5,10 @@ export type ReflowOffender = {
 	html: string;
 	overflowPx: number;
 	reason: "element-overflow" | "fixed-width-container";
-	/** PNG bytes of the offending element, clipped at the 320px measurement viewport. Omitted past `screenshotLimit`. */
+	/**
+	 * PNG bytes of the offending element, clipped at the 320px measurement viewport. Omitted past
+	 * `screenshotLimit`.
+	 */
 	screenshot?: Uint8Array;
 };
 

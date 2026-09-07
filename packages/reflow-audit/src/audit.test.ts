@@ -62,9 +62,7 @@ function createFake(opts: {
 			setCalls.push({ ...v });
 			viewport = { ...v };
 		},
-		evaluate: async <T>(
-			fn: (...args: never[]) => T | Promise<T>,
-		): Promise<T> => {
+		evaluate: async <T>(fn: (...args: never[]) => T | Promise<T>): Promise<T> => {
 			if (fn === readLayoutFingerprintScript) {
 				const list = opts.fingerprints ?? [SETTLED];
 				const next = list[Math.min(fingerprintIndex, list.length - 1)];
@@ -126,9 +124,7 @@ describe("runReflowAudit viewport restore", () => {
 			throwOnMeasure: new Error("measure failed"),
 		});
 
-		await expect(runReflowAudit(fake.adaptor, OPTIONS)).rejects.toThrow(
-			"measure failed",
-		);
+		await expect(runReflowAudit(fake.adaptor, OPTIONS)).rejects.toThrow("measure failed");
 
 		expect(fake.setCalls.at(-1)).toEqual(WIDE);
 		expect(fake.current()).toEqual(WIDE);
@@ -306,9 +302,7 @@ describe("runReflowAudit already-narrow viewport", () => {
 	});
 });
 
-function offender(
-	overrides: Partial<ReflowMeasureOffender> = {},
-): ReflowMeasureOffender {
+function offender(overrides: Partial<ReflowMeasureOffender> = {}): ReflowMeasureOffender {
 	return {
 		selector: overrides.selector ?? "#el",
 		html: overrides.html ?? "<div id='el'>",
@@ -324,9 +318,7 @@ describe("runReflowAudit screenshots", () => {
 			viewport: WIDE,
 			measure: emptyMeasure({
 				documentOverflowPx: 80,
-				offenders: [
-					offender({ rect: { x: 10, y: 20, width: 100, height: 30 } }),
-				],
+				offenders: [offender({ rect: { x: 10, y: 20, width: 100, height: 30 } })],
 			}),
 		});
 
@@ -334,9 +326,9 @@ describe("runReflowAudit screenshots", () => {
 
 		expect(result.offenders[0]?.screenshot).toEqual(new Uint8Array([1, 2, 3]));
 		expect(fake.screenshotCalls).toHaveLength(1);
-		// Always the full 320px measurement viewport, starting at x=0, so an
-		// offender that extends past the edge is visibly cut off there. Vertically
-		// buffered by the default 10px clip, clamped to the 1024px-tall page.
+		// Always the full 320px measurement viewport, starting at x=0, so an offender that extends past
+		// the edge is visibly cut off there. Vertically buffered by the default 10px clip, clamped to
+		// the 1024px-tall page.
 		expect(fake.screenshotCalls[0]?.clip).toEqual({
 			x: 0,
 			y: 10,
@@ -353,9 +345,7 @@ describe("runReflowAudit screenshots", () => {
 			screenshotClipScale: 2,
 			measure: emptyMeasure({
 				documentOverflowPx: 80,
-				offenders: [
-					offender({ rect: { x: 10, y: 20, width: 100, height: 30 } }),
-				],
+				offenders: [offender({ rect: { x: 10, y: 20, width: 100, height: 30 } })],
 			}),
 		});
 
@@ -369,9 +359,7 @@ describe("runReflowAudit screenshots", () => {
 			viewport: WIDE,
 			measure: emptyMeasure({
 				documentOverflowPx: 80,
-				offenders: [
-					offender({ rect: { x: 10, y: 20, width: 100, height: 30 } }),
-				],
+				offenders: [offender({ rect: { x: 10, y: 20, width: 100, height: 30 } })],
 			}),
 		});
 
@@ -385,9 +373,7 @@ describe("runReflowAudit screenshots", () => {
 			viewport: WIDE,
 			measure: emptyMeasure({
 				documentOverflowPx: 80,
-				offenders: [
-					offender({ rect: { x: 250, y: 0, width: 150, height: 20 } }),
-				],
+				offenders: [offender({ rect: { x: 250, y: 0, width: 150, height: 20 } })],
 			}),
 		});
 
@@ -402,9 +388,8 @@ describe("runReflowAudit screenshots", () => {
 	});
 
 	it(`omits screenshots past screenshotLimit (${DEFAULT_SCREENSHOT_LIMIT}) but keeps every offender`, async () => {
-		const offenders = Array.from(
-			{ length: DEFAULT_SCREENSHOT_LIMIT + 2 },
-			(_, i) => offender({ selector: `#el-${i}` }),
+		const offenders = Array.from({ length: DEFAULT_SCREENSHOT_LIMIT + 2 }, (_, i) =>
+			offender({ selector: `#el-${i}` }),
 		);
 		const fake = createFake({
 			measure: emptyMeasure({ documentOverflowPx: 80, offenders }),
@@ -414,15 +399,11 @@ describe("runReflowAudit screenshots", () => {
 
 		expect(result.offenders).toHaveLength(DEFAULT_SCREENSHOT_LIMIT + 2);
 		expect(fake.screenshotCalls).toHaveLength(DEFAULT_SCREENSHOT_LIMIT);
+		expect(result.offenders.slice(0, DEFAULT_SCREENSHOT_LIMIT).every((o) => o.screenshot)).toBe(
+			true,
+		);
 		expect(
-			result.offenders
-				.slice(0, DEFAULT_SCREENSHOT_LIMIT)
-				.every((o) => o.screenshot),
-		).toBe(true);
-		expect(
-			result.offenders
-				.slice(DEFAULT_SCREENSHOT_LIMIT)
-				.every((o) => o.screenshot === undefined),
+			result.offenders.slice(DEFAULT_SCREENSHOT_LIMIT).every((o) => o.screenshot === undefined),
 		).toBe(true);
 	});
 

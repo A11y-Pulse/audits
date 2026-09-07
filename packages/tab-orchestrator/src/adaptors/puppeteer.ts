@@ -1,11 +1,10 @@
 import type { CDPSession, JSHandle, Page } from "puppeteer";
 import type { BrowserAdaptor, ElementRef, Rect } from "../adaptor";
 
-// The CDP session holding focus emulation for each page. A fresh adaptor is
-// created per audit run, but a page is often reused across runs (e.g. one page
-// per snapshot, many checks), so without this each run would open another CDP
-// session that is never detached. The session is kept attached for the page's
-// lifetime: Chrome clears the emulation when the CDP client disconnects.
+// The CDP session holding focus emulation for each page. A fresh adaptor is created per audit run,
+// but a page often outlives one run, so without this each run would open another CDP session that
+// is never detached. The session is kept attached for the page's lifetime: Chrome clears the
+// emulation when the CDP client disconnects.
 const focusEmulationSessions = new WeakMap<Page, CDPSession>();
 
 /** A BrowserAdaptor backed by a Puppeteer Page. */
@@ -47,9 +46,8 @@ export class PuppeteerAdaptor implements BrowserAdaptor {
 	}
 
 	async ensureFocusReporting(): Promise<void> {
-		// Pages only report focus while they are the foreground tab. Since this browser instance
-		// is likely running in the background, we need to enable focus emulation to get accurate
-		// results.
+		// Pages only report focus while they are the foreground tab. Since this browser instance is
+		// likely running in the background, we need to enable focus emulation to get accurate results.
 		//
 		// Note this function does not throw if enabling emulation fails; it is a best-effort.
 		try {
@@ -73,10 +71,7 @@ export class PuppeteerAdaptor implements BrowserAdaptor {
 			});
 			focusEmulationSessions.set(this.page, client);
 		} catch (error) {
-			console.warn(
-				"Could not enable focus emulation for the tab orchestrator",
-				{ error },
-			);
+			console.warn("Could not enable focus emulation for the tab orchestrator", { error });
 		}
 	}
 }

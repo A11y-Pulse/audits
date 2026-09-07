@@ -6,22 +6,16 @@ export { bufferedClip } from "@a11y-pulse/tab-orchestrator";
 export type { Rect, StyleSnapshot };
 
 /**
- * Collapse the colour/width of a decoration (outline, each border edge) that is
- * not actually painted — its style is `none` or `hidden`, or its width is `0px`. This keeps a
- * change to a non-rendered property (e.g. `outline-color` while `outline-style`
- * stays `none`) from being mistaken for a visible focus indicator.
+ * Collapse the colour/width of a decoration (outline, each border edge) that is not actually
+ * painted: its style is `none` or `hidden`, or its width is `0px`. This keeps a change to a
+ * non-rendered property (e.g. `outline-color` while `outline-style` stays `none`) from being
+ * mistaken for a visible focus indicator.
  */
-function renderedStyles(
-	record: Record<string, string>,
-): Record<string, string> {
+function renderedStyles(record: Record<string, string>): Record<string, string> {
 	const out = { ...record };
 
 	const collapse = (style: string, width: string, color: string): void => {
-		if (
-			out[style] === "none" ||
-			out[style] === "hidden" ||
-			out[width] === "0px"
-		) {
+		if (out[style] === "none" || out[style] === "hidden" || out[width] === "0px") {
 			delete out[width];
 			delete out[color];
 		}
@@ -30,11 +24,7 @@ function renderedStyles(
 	collapse("outline-style", "outline-width", "outline-color");
 
 	for (const side of ["top", "right", "bottom", "left"]) {
-		collapse(
-			`border-${side}-style`,
-			`border-${side}-width`,
-			`border-${side}-color`,
-		);
+		collapse(`border-${side}-style`, `border-${side}-width`, `border-${side}-color`);
 	}
 
 	return out;
@@ -74,10 +64,7 @@ function omitIdleComputedStyles(
 	record: Record<string, string>,
 	dropUnusedPseudo: boolean,
 ): Record<string, string> {
-	if (
-		dropUnusedPseudo &&
-		isIdleComputedValue("content", record.content ?? "none")
-	) {
+	if (dropUnusedPseudo && isIdleComputedValue("content", record.content ?? "none")) {
 		return {};
 	}
 
@@ -95,9 +82,7 @@ function omitIdleComputedStyles(
 const BORDER_SIDES = ["top", "right", "bottom", "left"] as const;
 const BORDER_FACETS = ["color", "style", "width"] as const;
 
-function collapseUniformBorderSides(
-	record: Record<string, string>,
-): Record<string, string> {
+function collapseUniformBorderSides(record: Record<string, string>): Record<string, string> {
 	const out = { ...record };
 
 	for (const facet of BORDER_FACETS) {
@@ -120,9 +105,9 @@ function collapseUniformBorderSides(
 }
 
 /**
- * Drop computed values that do not paint, so evidence only keeps styles that
- * could be a visible indicator. `getComputedStyle` cannot tell authored from
- * initial; this is the used-value equivalent of "none".
+ * Drop computed values that do not paint, so evidence only keeps styles that could be a visible
+ * indicator. `getComputedStyle` cannot tell authored from initial; this is the used-value
+ * equivalent of "none".
  */
 export function omitIdleStyleSnapshot(snapshot: StyleSnapshot): StyleSnapshot {
 	return {
@@ -132,19 +117,13 @@ export function omitIdleStyleSnapshot(snapshot: StyleSnapshot): StyleSnapshot {
 	};
 }
 
-/**
- * Determine whether style differences indicate a focus appearance
- */
-export function stylesIndicateFocus(
-	baseline: StyleSnapshot,
-	focused: StyleSnapshot,
-): boolean {
+export function stylesIndicateFocus(baseline: StyleSnapshot, focused: StyleSnapshot): boolean {
 	for (const layer of ["element", "before", "after"] as const) {
 		const base = renderedStyles(baseline[layer]);
 		const next = renderedStyles(focused[layer]);
 
-		// Iterate the union of both snapshots' keys so a property that is removed
-		// on focus still counts as a difference.
+		// Iterate the union of both snapshots' keys so a property that is removed on focus still counts
+		// as a difference.
 		const props = new Set([...Object.keys(base), ...Object.keys(next)]);
 
 		for (const prop of props) {
@@ -161,12 +140,12 @@ export function stylesIndicateFocus(
 export type ClipAnchor = { x: number; y: number };
 
 /**
- * Determine whether two screenshots differ by at least `minDiffPixels` pixels once aligned on
- * their anchors (the element's offset within each clip). Aligning first keeps a :focus rule that
- * moves the element (e.g. a margin change), or a fixed-position element whose page-relative rect
- * changed with the scroll position, from registering as a difference. Only the region both
- * screenshots cover is compared; without any overlap the comparison is inconclusive, which does
- * not count as a difference.
+ * Determine whether two screenshots differ by at least `minDiffPixels` pixels once aligned on their
+ * anchors (the element's offset within each clip). Aligning first keeps a :focus rule that moves
+ * the element (e.g. a margin change), or a fixed-position element whose page-relative rect changed
+ * with the scroll position, from registering as a difference. Only the region both screenshots
+ * cover is compared; without any overlap the comparison is inconclusive, which does not count as a
+ * difference.
  */
 export function alignedRegionsDiffer(
 	pngA: Buffer,
@@ -200,35 +179,18 @@ export function alignedRegionsDiffer(
 	const croppedA = crop(a, startA, width, height);
 	const croppedB = crop(b, startB, width, height);
 
-	const diffPixels = pixelmatch(
-		croppedA.data,
-		croppedB.data,
-		undefined,
-		width,
-		height,
-		{
-			threshold: 0.1,
-			// Preserve pre-v7 blending (white) so semitransparent pixels do not
-			// introduce checkerboard noise into focus/unfocus diffs.
-			checkerboard: false,
-		},
-	);
+	const diffPixels = pixelmatch(croppedA.data, croppedB.data, undefined, width, height, {
+		threshold: 0.1,
+		// Blend semitransparent pixels against white so they do not introduce checkerboard noise into
+		// focus/unfocus diffs.
+		checkerboard: false,
+	});
 
 	return diffPixels >= minDiffPixels;
 }
 
-function crop(
-	png: PNG,
-	start: { x: number; y: number },
-	width: number,
-	height: number,
-): PNG {
-	if (
-		start.x === 0 &&
-		start.y === 0 &&
-		png.width === width &&
-		png.height === height
-	) {
+function crop(png: PNG, start: { x: number; y: number }, width: number, height: number): PNG {
+	if (start.x === 0 && start.y === 0 && png.width === width && png.height === height) {
 		return png;
 	}
 

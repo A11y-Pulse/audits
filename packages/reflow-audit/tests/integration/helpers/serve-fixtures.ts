@@ -3,9 +3,7 @@ import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const fixturesDir = path.resolve(
-	fileURLToPath(new URL("../fixtures", import.meta.url)),
-);
+const fixturesDir = path.resolve(fileURLToPath(new URL("../fixtures", import.meta.url)));
 
 export type FixtureServer = {
 	url: string;

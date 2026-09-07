@@ -30,11 +30,9 @@ describe("getSelector", () => {
 	});
 
 	it("uses the tag and a single class when there is no id", () => {
-		// Without a queryable root there is no rarity information, so the first
-		// class is used. Concatenating every class is what made selectors long.
-		expect(selectorOf(el({ nodeName: "DIV", classList: ["b", "a"] }))).toBe(
-			"div.b",
-		);
+		// Without a queryable root there is no rarity information, so the first class is used.
+		// Concatenating every class is what made selectors long.
+		expect(selectorOf(el({ nodeName: "DIV", classList: ["b", "a"] }))).toBe("div.b");
 	});
 
 	it("walks up to and anchors on the nearest ancestor id", () => {
@@ -77,22 +75,15 @@ describe("getSelector", () => {
 
 		try {
 			expect(selectorOf(el({ nodeName: "DIV", id: "col:1" }))).toBe("#col\\:1");
-			expect(selectorOf(el({ nodeName: "DIV", classList: ["a:b"] }))).toBe(
-				"div.a\\:b",
-			);
-			expect(selectorOf(el({ nodeName: "DIV", classList: ["c.d"] }))).toBe(
-				"div.c\\.d",
-			);
+			expect(selectorOf(el({ nodeName: "DIV", classList: ["a:b"] }))).toBe("div.a\\:b");
+			expect(selectorOf(el({ nodeName: "DIV", classList: ["c.d"] }))).toBe("div.c\\.d");
 		} finally {
 			globalThis.CSS = original;
 		}
 	});
 
 	it("falls back to the bare tag when the element's own segment exceeds the budget", () => {
-		// A single class longer than the whole selector budget must not produce
-		// an empty selector.
-		expect(
-			selectorOf(el({ nodeName: "BUTTON", classList: ["x".repeat(200)] })),
-		).toBe("button");
+		// A single class longer than the whole selector budget must not produce an empty selector.
+		expect(selectorOf(el({ nodeName: "BUTTON", classList: ["x".repeat(200)] }))).toBe("button");
 	});
 });

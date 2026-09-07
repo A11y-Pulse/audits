@@ -18,10 +18,7 @@ import {
 	installContextObserverScript,
 	locationHrefScript,
 } from "../../tab-orchestrator/src/browser-scripts";
-import {
-	type ContextChangeOnFocusOptions,
-	createContextChangeOnFocusAudit,
-} from "./audit";
+import { type ContextChangeOnFocusOptions, createContextChangeOnFocusAudit } from "./audit";
 
 const EMPTY_STYLES = { element: {}, before: {}, after: {} };
 
@@ -53,9 +50,9 @@ function recordingConsumer(): TabConsumer & { stops: TabStopSnapshot[] } {
 }
 
 /**
- * Duplicated from `@a11y-pulse/tab-orchestrator`'s own `orchestrator.test.ts`
- * fake-adaptor helper (not exported by the package's public API). Dispatches
- * on the identity of the injected browser-script functions.
+ * Duplicated from `@a11y-pulse/tab-orchestrator`'s own `orchestrator.test.ts` fake-adaptor helper
+ * (not exported by the package's public API). Dispatches on the identity of the injected
+ * browser-script functions.
  */
 function loopAdaptor(script: {
 	hasFocus?: boolean[];
@@ -133,11 +130,10 @@ function emptyDrain(): DrainContextObserverResult {
 }
 
 /**
- * `loopAdaptor` plus `drainContextObserverScript` dispatch: serves the queued
- * signals for the *current* tab stop, keeps `locationHrefScript` constant so
- * the orchestrator's proactive href-diff navigation check never fires (it
- * would otherwise short-circuit before `onTabStop` for a stop whose fake
- * drain reports `navigation: true`), and no-ops `installContextObserverScript`.
+ * `loopAdaptor` plus `drainContextObserverScript` dispatch: serves the queued signals for the
+ * *current* tab stop, keeps `locationHrefScript` constant so the orchestrator's proactive href-diff
+ * navigation check never fires (it would otherwise short-circuit before `onTabStop` for a stop
+ * whose fake drain reports `navigation: true`), and no-ops `installContextObserverScript`.
  */
 function contextAdaptor(
 	drains: DrainContextObserverResult[],
@@ -242,9 +238,7 @@ describe("createContextChangeOnFocusAudit", () => {
 		const element = audit.result.elements[0];
 		expect(element?.selector).toBe("#fake");
 		expect(element?.tabIndex).toBe(1);
-		expect(element?.findings).toEqual([
-			{ kind: "focus-removed", bucket: "violation" },
-		]);
+		expect(element?.findings).toEqual([{ kind: "focus-removed", bucket: "violation" }]);
 	});
 
 	it("reports a navigation finding and ends the session as navigation", async () => {
@@ -284,10 +278,7 @@ describe("createContextChangeOnFocusAudit", () => {
 	it("never finishes early when failedElementLimit is 0 (default)", async () => {
 		const audit = createContextChangeOnFocusAudit();
 		const orchestrator = createTabOrchestrator(
-			contextAdaptor([
-				drainWith({ openedWindow: true }),
-				drainWith({ submittedForm: true }),
-			]),
+			contextAdaptor([drainWith({ openedWindow: true }), drainWith({ submittedForm: true })]),
 			{ screenshotSettleDelay: 0 },
 		);
 		orchestrator.attach(audit);
@@ -320,10 +311,9 @@ describe("createContextChangeOnFocusAudit", () => {
 
 	it("does not time out when timeout is 0 (default)", async () => {
 		const audit = createContextChangeOnFocusAudit({ timeout: 0 });
-		const orchestrator = createTabOrchestrator(
-			contextAdaptor([emptyDrain(), emptyDrain()]),
-			{ screenshotSettleDelay: 0 },
-		);
+		const orchestrator = createTabOrchestrator(contextAdaptor([emptyDrain(), emptyDrain()]), {
+			screenshotSettleDelay: 0,
+		});
 		orchestrator.attach(audit);
 		await orchestrator.run();
 		expect(audit.result.summary.timedOut).toBe(false);
@@ -346,9 +336,7 @@ describe("createContextChangeOnFocusAudit", () => {
 	});
 });
 
-function drainWith(
-	partial: Partial<DrainContextObserverResult>,
-): DrainContextObserverResult {
+function drainWith(partial: Partial<DrainContextObserverResult>): DrainContextObserverResult {
 	return { ...emptyDrain(), ...partial };
 }
 
@@ -360,10 +348,6 @@ describe("createContextChangeOnFocusAudit options type", () => {
 			timeout: 100,
 			screenshotSettleDelay: 10,
 		};
-		expect(
-			createContextChangeOnFocusAudit(options).capabilities.has(
-				"contextSignals",
-			),
-		).toBe(true);
+		expect(createContextChangeOnFocusAudit(options).capabilities.has("contextSignals")).toBe(true);
 	});
 });

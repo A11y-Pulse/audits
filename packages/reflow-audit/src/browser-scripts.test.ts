@@ -37,10 +37,7 @@ function mockRect(
 		}) as DOMRect;
 }
 
-function mockBox(
-	target: Element,
-	sizes: { scrollWidth: number; clientWidth: number },
-): void {
+function mockBox(target: Element, sizes: { scrollWidth: number; clientWidth: number }): void {
 	Object.defineProperty(target, "scrollWidth", {
 		configurable: true,
 		get: () => sizes.scrollWidth,
@@ -116,23 +113,17 @@ describe("scrollableDocumentOverflowPx", () => {
 describe("isExemptElement", () => {
 	it("exempts a data table", () => {
 		document.body.innerHTML = `<table id="data"><tr><td>a</td></tr></table>`;
-		expect(isExemptElement(document.getElementById("data") as Element)).toBe(
-			true,
-		);
+		expect(isExemptElement(document.getElementById("data") as Element)).toBe(true);
 	});
 
 	it("does not exempt a layout table with role=presentation", () => {
 		document.body.innerHTML = `<table id="layout" role="presentation"><tr><td>a</td></tr></table>`;
-		expect(isExemptElement(document.getElementById("layout") as Element)).toBe(
-			false,
-		);
+		expect(isExemptElement(document.getElementById("layout") as Element)).toBe(false);
 	});
 
 	it("does not exempt a layout table with role=none", () => {
 		document.body.innerHTML = `<table id="layout" role="none"><tr><td>a</td></tr></table>`;
-		expect(isExemptElement(document.getElementById("layout") as Element)).toBe(
-			false,
-		);
+		expect(isExemptElement(document.getElementById("layout") as Element)).toBe(false);
 	});
 
 	it("exempts ARIA tables, grids, media, and toolbars", () => {
@@ -163,9 +154,7 @@ describe("isExemptElement", () => {
 			"tools",
 			"slide",
 		]) {
-			expect(isExemptElement(document.getElementById(id) as Element), id).toBe(
-				true,
-			);
+			expect(isExemptElement(document.getElementById(id) as Element), id).toBe(true);
 		}
 	});
 });
@@ -201,9 +190,7 @@ describe("measureReflowScript offenders", () => {
 		expect(measure.offenders).toHaveLength(1);
 		expect(measure.offenders[0]?.selector).toContain("wide");
 		expect(measure.offenders[0]?.reason).toBe("element-overflow");
-		expect(measure.offenders[0]?.overflowPx).toBeGreaterThan(
-			ROUNDING_TOLERANCE,
-		);
+		expect(measure.offenders[0]?.overflowPx).toBeGreaterThan(ROUNDING_TOLERANCE);
 		expect(measure.explainedByExempt).toBe(false);
 	});
 
@@ -272,9 +259,7 @@ describe("measureReflowScript offenders", () => {
 
 		const measure = measureReflowScript();
 
-		expect(measure.offenders.some((o) => o.selector.includes("layout"))).toBe(
-			true,
-		);
+		expect(measure.offenders.some((o) => o.selector.includes("layout"))).toBe(true);
 		expect(measure.explainedByExempt).toBe(false);
 	});
 
@@ -346,9 +331,7 @@ describe("measureReflowScript offenders", () => {
 
 		const measure = measureReflowScript();
 
-		expect(measure.offenders.some((o) => o.selector.includes("wide"))).toBe(
-			true,
-		);
+		expect(measure.offenders.some((o) => o.selector.includes("wide"))).toBe(true);
 	});
 
 	it("reports only the outermost offender in a nested chain", () => {
@@ -387,9 +370,7 @@ describe("measureReflowScript offenders", () => {
 
 		const measure = measureReflowScript();
 
-		expect(
-			measure.offenders.some((o) => o.reason === "fixed-width-container"),
-		).toBe(true);
+		expect(measure.offenders.some((o) => o.reason === "fixed-width-container")).toBe(true);
 	});
 });
 

@@ -57,14 +57,12 @@ function scriptedProbe(script: {
 			record.enters++;
 			probe.enters = record.enters;
 		},
-		probeTabStop: async () =>
-			script.stops[stopCall++] ?? stop({ isBody: true, identity: "body" }),
+		probeTabStop: async () => script.stops[stopCall++] ?? stop({ isBody: true, identity: "body" }),
 		focusHandle: async (ref) => {
 			record.focused.push(ref);
 			probe.focused = record.focused;
 		},
-		isFocusInsideTarget: async () =>
-			script.focusInside?.[focusInsideCall++] ?? false,
+		isFocusInsideTarget: async () => script.focusInside?.[focusInsideCall++] ?? false,
 		disposeRef: async (ref) => {
 			record.disposed.push(ref);
 			probe.disposed = record.disposed;

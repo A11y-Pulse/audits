@@ -23,11 +23,7 @@ export type Capability =
 	| "screenshot"
 	| "unfocusedPair";
 
-export type SessionEndReason =
-	| "completed"
-	| "lostFocus"
-	| "navigation"
-	| "failed";
+export type SessionEndReason = "completed" | "lostFocus" | "navigation" | "failed";
 
 export type UnfocusedPair = {
 	focusedScreenshot: Uint8Array;
@@ -73,9 +69,9 @@ export type TabSessionHandle = {
 	disconnect(): void;
 	ensureUnfocusedPair(): Promise<UnfocusedPair>;
 	/**
-	 * Screenshot the currently focused element, clipped and padded. Requires the
-	 * `screenshot` capability. Cached per stop, so multiple consumers calling
-	 * this on the same stop only trigger one capture.
+	 * Screenshot the currently focused element, clipped and padded. Requires the `screenshot`
+	 * capability. Cached per stop, so multiple consumers calling this on the same stop only trigger
+	 * one capture.
 	 */
 	screenshotClip(): Promise<Uint8Array>;
 };
@@ -83,9 +79,6 @@ export type TabSessionHandle = {
 export type TabConsumer = {
 	readonly capabilities: ReadonlySet<Capability>;
 	onSessionStart?(session: TabSessionHandle): void | Promise<void>;
-	onTabStop(
-		snapshot: TabStopSnapshot,
-		session: TabSessionHandle,
-	): void | Promise<void>;
+	onTabStop(snapshot: TabStopSnapshot, session: TabSessionHandle): void | Promise<void>;
 	onSessionEnd?(reason: SessionEndReason): void;
 };

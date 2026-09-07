@@ -2,10 +2,7 @@ import puppeteer, { type Browser, type Page } from "puppeteer";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PuppeteerAdaptor } from "../../src/adaptors/puppeteer";
 import { type ReflowResult, runReflowAudit } from "../../src/index";
-import {
-	type FixtureServer,
-	startFixtureServer,
-} from "./helpers/serve-fixtures";
+import { type FixtureServer, startFixtureServer } from "./helpers/serve-fixtures";
 
 let server: FixtureServer;
 let browser: Browser;
@@ -64,9 +61,7 @@ describe("reflow audit (integration)", () => {
 
 		expect(result.bucket).toBe("violation");
 		expect(result.documentOverflowPx).toBeGreaterThan(20);
-		expect(result.offenders.some((o) => o.reason === "element-overflow")).toBe(
-			true,
-		);
+		expect(result.offenders.some((o) => o.reason === "element-overflow")).toBe(true);
 	});
 
 	it("does not flag a wide data table", async () => {
@@ -85,9 +80,7 @@ describe("reflow audit (integration)", () => {
 		const result = await runFixture("overflowing-element.html");
 
 		expect(result.bucket).toBe("violation");
-		expect(result.offenders.some((o) => o.selector.includes("poke"))).toBe(
-			true,
-		);
+		expect(result.offenders.some((o) => o.selector.includes("poke"))).toBe(true);
 	});
 
 	it("captures a real PNG screenshot of the offending element", async () => {
@@ -103,13 +96,11 @@ describe("reflow audit (integration)", () => {
 	});
 
 	it("captures the screenshot at the measurement viewport's width in real pixels", async () => {
-		// Puppeteer's clip.scale multiplies against the page's current
-		// deviceScaleFactor rather than replacing it (verified directly against
-		// real Puppeteer), so this only comes out at exactly 320px given the
-		// page's own deviceScaleFactor is 1, as it is by default here. A caller
-		// that leaves deviceScaleFactor at something else beforehand (the
-		// a11y-pulse driver briefly does, for its own unrelated thumbnail) is
-		// responsible for restoring it before invoking this audit.
+		// Puppeteer's clip.scale multiplies against the page's current deviceScaleFactor rather than
+		// replacing it (verified directly against real Puppeteer), so this only comes out at exactly
+		// 320px given the page's own deviceScaleFactor is 1, as it is by default here. A caller that
+		// leaves deviceScaleFactor at something else beforehand is responsible for restoring it before
+		// invoking this audit.
 		const result = await runFixture("overflowing-element.html");
 		const offender = result.offenders.find((o) => o.selector.includes("poke"));
 
@@ -138,7 +129,7 @@ describe("reflow audit (integration)", () => {
 		expect(result.documentOverflowPx).toBeLessThanOrEqual(20);
 	});
 
-	it("does not flag clipped overflow:hidden content (v1 gap)", async () => {
+	it("does not flag clipped overflow:hidden content", async () => {
 		const result = await runFixture("clipped.html");
 
 		expect(result.bucket).not.toBe("violation");
@@ -188,8 +179,6 @@ describe("reflow audit (integration)", () => {
 		const result = await runFixture("nested-table-in-fixed-shell.html");
 
 		expect(result.bucket).toBe("violation");
-		expect(result.offenders.some((o) => o.selector.includes("shell"))).toBe(
-			true,
-		);
+		expect(result.offenders.some((o) => o.selector.includes("shell"))).toBe(true);
 	});
 });

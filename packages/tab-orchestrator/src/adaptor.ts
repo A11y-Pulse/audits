@@ -6,8 +6,8 @@ export type Rect = { x: number; y: number; width: number; height: number };
 export type ElementRef = unknown;
 
 /**
- * A framework-specific adaptor that provides the primitives needed by the audit. An adaptor wraps
- * a single page in a web browser.
+ * A framework-specific adaptor that provides the primitives needed by the audit. An adaptor wraps a
+ * single page in a web browser.
  */
 export interface BrowserAdaptor {
 	/**
@@ -35,10 +35,9 @@ export interface BrowserAdaptor {
 	pressTab(): Promise<void>;
 
 	/**
-	 * Screenshot a clipped region of the page. `scale` is the device scale
-	 * factor (bitmap pixels per CSS pixel), multiplied against whatever
-	 * deviceScaleFactor the page itself currently has (Puppeteer does not
-	 * replace it). The caller is responsible for the page being at a known
+	 * Screenshot a clipped region of the page. `scale` is the device scale factor (bitmap pixels per
+	 * CSS pixel), multiplied against whatever deviceScaleFactor the page itself currently has
+	 * (Puppeteer does not replace it). The caller is responsible for the page being at a known
 	 * deviceScaleFactor before invoking this.
 	 */
 	screenshotClip(clip: Rect, scale?: number): Promise<Uint8Array>;
@@ -48,8 +47,7 @@ export interface BrowserAdaptor {
 
 	/**
 	 * Ensure the page reports focus for its lifetime. In particular, `document.hasFocus()` must
-	 * function correctly and :focus styles must be applied, even when the page is not the
-	 * foreground.
+	 * function correctly and :focus styles must be applied, even when the page is not the foreground.
 	 *
 	 * This function must not throw.
 	 */

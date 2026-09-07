@@ -19,10 +19,8 @@ type ResolvedOptions = Required<ContextChangeOnFocusOptions>;
 function resolveOptions(options: ContextChangeOnFocusOptions): ResolvedOptions {
 	return {
 		elementLimit: options.elementLimit ?? DEFAULT_ELEMENT_LIMIT,
-		screenshotSettleDelay:
-			options.screenshotSettleDelay ?? DEFAULT_SCREENSHOT_SETTLE_DELAY,
-		failedElementLimit:
-			options.failedElementLimit ?? DEFAULT_FAILED_ELEMENT_LIMIT,
+		screenshotSettleDelay: options.screenshotSettleDelay ?? DEFAULT_SCREENSHOT_SETTLE_DELAY,
+		failedElementLimit: options.failedElementLimit ?? DEFAULT_FAILED_ELEMENT_LIMIT,
 		timeout: options.timeout ?? DEFAULT_TIMEOUT,
 	};
 }
@@ -50,12 +48,10 @@ function recount(result: ContextChangeOnFocusResult): void {
 }
 
 /**
- * Tab through focusable elements and report whether focusing any of them
- * triggers a context change (WCAG 3.2.1 On Focus): a new window, an
- * auto-submitted form, focus being removed or redirected outside the
- * intended element's subtree, or a navigation. Attach to a
- * `createTabOrchestrator` session, or use `runContextChangeOnFocusAudit` to
- * run as the sole consumer.
+ * Tab through focusable elements and report whether focusing any of them triggers a context change
+ * (WCAG 3.2.1 On Focus): a new window, an auto-submitted form, focus being removed or redirected
+ * outside the intended element's subtree, or a navigation. Attach to a `createTabOrchestrator`
+ * session, or use `runContextChangeOnFocusAudit` to run as the sole consumer.
  */
 export function createContextChangeOnFocusAudit(
 	options: ContextChangeOnFocusOptions = {},
@@ -80,8 +76,8 @@ export function createContextChangeOnFocusAudit(
 			const drain = snapshot.contextSignals;
 
 			if (drain === undefined) {
-				// Should not happen: this consumer declares the "contextSignals"
-				// capability, so the orchestrator always populates it.
+				// Should not happen: this consumer declares the "contextSignals" capability, so the
+				// orchestrator always populates it.
 				return;
 			}
 
@@ -102,10 +98,7 @@ export function createContextChangeOnFocusAudit(
 
 			recount(result);
 
-			if (
-				resolved.failedElementLimit > 0 &&
-				failures >= resolved.failedElementLimit
-			) {
+			if (resolved.failedElementLimit > 0 && failures >= resolved.failedElementLimit) {
 				result.summary.reachedFailedElementLimit = true;
 				selfDisconnect.disconnect(session);
 
@@ -128,9 +121,8 @@ export function createContextChangeOnFocusAudit(
 }
 
 /**
- * Tab through focusable elements and report whether focusing any of them
- * triggers a context change. Builds a private tab session, drives the loop,
- * and hands back this consumer's result.
+ * Tab through focusable elements and report whether focusing any of them triggers a context change.
+ * Builds a private tab session, drives the loop, and hands back this consumer's result.
  */
 export async function runContextChangeOnFocusAudit(
 	adaptor: BrowserAdaptor,
