@@ -13,6 +13,7 @@ import {
 	elementRectScript,
 	elementStylesScript,
 	focusScript,
+	hasFocusScript,
 	installContextObserverScript,
 	isCenterObscuredScript,
 	locationHrefScript,
@@ -125,19 +126,29 @@ function recordingConsumer(
 const STABLE_HREF = "https://example.test/";
 
 function loopAdaptor(script: {
+	// Focus state per tab stop, read before that stop's tab press.
 	hasFocus?: boolean[];
+	// Focus state per tab stop after the tab press. Defaults to hasFocus.
+	hasFocusAfterTab?: boolean[];
+	// Whether ensureFocusReporting() restores a page that has lost focus.
+	restoresFocus?: boolean;
 	active?: Array<Omit<ActiveElementInfo, "selector"> | null>;
 }): BrowserAdaptor {
-	let focusCall = 0;
 	let activeCall = 0;
+	let stopIndex = -1;
+	let tabbed = false;
+	let postTabReads = 0;
 
 	return {
+		ensureFocusReporting: vi.fn(async () => {}),
 		evaluate: (async (fn, ..._args) => {
 			if (fn === baselineScript) {
 				return { styles: [EMPTY_STYLES], entries: [] };
 			}
 
 			if (fn === probeActiveElementScript) {
+				tabbed = false;
+
 				return (
 					script.active?.[activeCall++] ?? {
 						index: null,
@@ -166,7 +177,24 @@ function loopAdaptor(script: {
 				return STABLE_HREF;
 			}
 
-			return script.hasFocus?.[focusCall++] ?? false;
+			if (fn === hasFocusScript) {
+				if (!tabbed) {
+					return script.hasFocus?.[stopIndex + 1] ?? false;
+				}
+
+				// A second read in the same stop only follows a re-assertion.
+				if (postTabReads++ > 0) {
+					return script.restoresFocus ?? false;
+				}
+
+				return (
+					script.hasFocusAfterTab?.[stopIndex] ??
+					script.hasFocus?.[stopIndex] ??
+					false
+				);
+			}
+
+			return false;
 		}) as BrowserAdaptor["evaluate"],
 		async evaluateHandle(fn) {
 			if (fn === activeElementHandleScript) {
@@ -176,11 +204,14 @@ function loopAdaptor(script: {
 			return {};
 		},
 		async disposeRef() {},
-		async pressTab() {},
+		async pressTab() {
+			stopIndex++;
+			tabbed = true;
+			postTabReads = 0;
+		},
 		async screenshotClip() {
 			return new Uint8Array([1]);
 		},
-		async ensureFocusReporting() {},
 	};
 }
 
@@ -244,6 +275,60 @@ describe("tab loop", () => {
 		await orchestrator.run();
 		expect(a.stops).toHaveLength(0);
 		expect(a.sessionEnds).toEqual(["lostFocus"]);
+	});
+
+	it("aborts when the document loses focus after the tab press", async () => {
+		const a = recordingConsumer();
+		const orchestrator = createTabOrchestrator(
+			loopAdaptor({
+				hasFocus: [true, true],
+				hasFocusAfterTab: [false],
+				active: [info(0), info(1)],
+			}),
+			{ screenshotSettleDelay: 0 },
+		);
+		orchestrator.attach(a);
+		await orchestrator.run();
+		expect(a.stops).toHaveLength(0);
+		expect(a.sessionEnds).toEqual(["lostFocus"]);
+	});
+
+	it("re-asserts focus reporting and continues when focus is restored after the tab press", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true, true],
+			hasFocusAfterTab: [false],
+			restoresFocus: true,
+			active: [info(0), info(1)],
+		});
+		const a = recordingConsumer();
+		const orchestrator = createTabOrchestrator(adaptor, {
+			screenshotSettleDelay: 0,
+		});
+		orchestrator.attach(a);
+		await orchestrator.run();
+		expect(a.stops.map((s) => s.activeElement.index)).toEqual([0, 1]);
+		expect(a.sessionEnds).toEqual(["completed"]);
+		expect(adaptor.ensureFocusReporting).toHaveBeenCalledTimes(2);
+	});
+
+	it("ends as completed when the last tab press walks off the end of the tab order", async () => {
+		// Tabbing past the final element moves focus out of the document: the page
+		// reports no focus and the probe reports <body>. That is the ordinary end
+		// of a session, not a stolen focus, and re-asserting focus emulation
+		// cannot bring it back.
+		const a = recordingConsumer();
+		const orchestrator = createTabOrchestrator(
+			loopAdaptor({
+				hasFocus: [true, true, true],
+				hasFocusAfterTab: [true, true, false],
+				active: [info(0), info(1)],
+			}),
+			{ screenshotSettleDelay: 0 },
+		);
+		orchestrator.attach(a);
+		await orchestrator.run();
+		expect(a.stops.map((s) => s.activeElement.index)).toEqual([0, 1]);
+		expect(a.sessionEnds).toEqual(["completed"]);
 	});
 
 	it("stops notifying a consumer after disconnect() and continues for others", async () => {

@@ -10,6 +10,7 @@ import {
 	elementStylesScript,
 	focusScript,
 	getSelector,
+	hasFocusScript,
 	isCenterObscuredScript,
 	pageDimensionsScript,
 	probeActiveElementScript,
@@ -108,7 +109,8 @@ function loopAdaptor(script: {
 	baseline?: BaselinePayload;
 	pngs?: Uint8Array[];
 }): BrowserAdaptor & { clipCalls: number } {
-	let focusCall = 0;
+	let stopIndex = -1;
+	let tabbed = false;
 	let activeCall = 0;
 	let lastIndex: number | null = null;
 	let pngCall = 0;
@@ -120,6 +122,8 @@ function loopAdaptor(script: {
 			}
 
 			if (fn === probeActiveElementScript) {
+				tabbed = false;
+
 				const next = script.active?.[activeCall++] ?? {
 					index: null,
 					isBody: true,
@@ -162,13 +166,20 @@ function loopAdaptor(script: {
 				return undefined;
 			}
 
-			return script.hasFocus?.[focusCall++] ?? false;
+			if (fn === hasFocusScript) {
+				return script.hasFocus?.[tabbed ? stopIndex : stopIndex + 1] ?? false;
+			}
+
+			return false;
 		}) as BrowserAdaptor["evaluate"],
 		async evaluateHandle() {
 			return {};
 		},
 		async disposeRef() {},
-		async pressTab() {},
+		async pressTab() {
+			stopIndex++;
+			tabbed = true;
+		},
 		async screenshotClip() {
 			adaptor.clipCalls++;
 			const pngs = script.pngs;
@@ -446,8 +457,7 @@ type AdaptorRecord = {
 
 /**
  * A scripted in-memory adaptor. Dispatches on the identity of the injected
- * browser-script functions; the inline `document.hasFocus()` arrow is the only
- * unknown function, so it lands in the fallthrough branch.
+ * browser-script functions.
  */
 function fakeAdaptor(script: AdaptorScript = {}): {
 	adaptor: FocusAppearanceAuditAdaptor;
@@ -460,7 +470,8 @@ function fakeAdaptor(script: AdaptorScript = {}): {
 	};
 
 	const tabStops = script.tabStops ?? 1;
-	let hasFocusCalls = 0;
+	let stopIndex = -1;
+	let tabbed = false;
 	let obscuredCalls = 0;
 	let rectCalls = 0;
 
@@ -483,6 +494,8 @@ function fakeAdaptor(script: AdaptorScript = {}): {
 			}
 
 			if (fn === probeActiveElementScript) {
+				tabbed = false;
+
 				return active;
 			}
 
@@ -527,14 +540,20 @@ function fakeAdaptor(script: AdaptorScript = {}): {
 				return undefined;
 			}
 
-			// The only remaining evaluate is the inline `document.hasFocus()` check.
-			return hasFocusCalls++ < tabStops;
+			if (fn === hasFocusScript) {
+				return (tabbed ? stopIndex : stopIndex + 1) < tabStops;
+			}
+
+			return undefined;
 		},
 		async evaluateHandle() {
 			return {};
 		},
 		async disposeRef() {},
-		async pressTab() {},
+		async pressTab() {
+			stopIndex++;
+			tabbed = true;
+		},
 		async screenshotClip(clip: Rect, _scale?: number) {
 			record.clips.push(clip);
 
