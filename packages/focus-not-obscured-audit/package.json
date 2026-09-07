@@ -4,7 +4,7 @@
 	"description": "WCAG 2.4.11 Focus Not Obscured (Minimum) audit that tabs through a page and detects focused elements entirely hidden behind other content.",
 	"type": "module",
 	"license": "SEE LICENSE IN LICENSE.md",
-	"author": "A11y Pulse Limited",
+	"author": "A11y Pulse",
 	"homepage": "https://github.com/A11y-Pulse/audits/tree/main/packages/focus-not-obscured-audit#readme",
 	"repository": {
 		"type": "git",

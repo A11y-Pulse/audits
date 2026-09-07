@@ -1,4 +1,4 @@
-Copyright (c) 2026-present, A11y Pulse Limited (https://www.a11ypulse.com/). All rights reserved.
+Copyright (c) 2026-present, A11y Pulse (https://www.a11ypulse.com/). All rights reserved.
 
 # PolyForm Shield License 1.0.0
 

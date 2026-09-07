@@ -4,7 +4,7 @@
 	"description": "WCAG 1.4.10 Reflow audit that narrows the viewport to 320px and measures whether the page requires two-dimensional scrolling.",
 	"type": "module",
 	"license": "SEE LICENSE IN LICENSE.md",
-	"author": "A11y Pulse Limited",
+	"author": "A11y Pulse",
 	"homepage": "https://github.com/A11y-Pulse/audits/tree/main/packages/reflow-audit#readme",
 	"repository": {
 		"type": "git",
