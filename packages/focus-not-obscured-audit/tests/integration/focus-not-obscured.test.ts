@@ -6,10 +6,7 @@ import {
 	type FocusNotObscuredResult,
 	runFocusNotObscuredAudit,
 } from "../../src/index";
-import {
-	type FixtureServer,
-	startFixtureServer,
-} from "./helpers/serve-fixtures";
+import { type FixtureServer, startFixtureServer } from "./helpers/serve-fixtures";
 
 let server: FixtureServer;
 let browser: Browser;
@@ -43,13 +40,9 @@ describe("focus not obscured audit (integration)", () => {
 	it("flags an element entirely hidden behind a sticky footer", async () => {
 		const result = await runFixture("sticky-footer-obscures.html");
 
-		const violations = result.elements.filter(
-			(element) => element.bucket === "violation",
-		);
+		const violations = result.elements.filter((element) => element.bucket === "violation");
 		expect(violations.length).toBeGreaterThanOrEqual(1);
-		expect(violations[0]?.measurement.obscuredBy?.html).toMatch(
-			/sticky-footer/,
-		);
+		expect(violations[0]?.measurement.obscuredBy?.html).toMatch(/sticky-footer/);
 
 		expect(violations[0]?.screenshot).toBeInstanceOf(Uint8Array);
 		expect(violations[0]?.screenshot?.length ?? 0).toBeGreaterThan(100);
@@ -63,25 +56,17 @@ describe("focus not obscured audit (integration)", () => {
 		const result = await runFixture("obscuring-clean.html");
 
 		expect(result.elements.length).toBeGreaterThanOrEqual(2);
-		expect(
-			result.elements.filter((element) => element.bucket === "violation"),
-		).toHaveLength(0);
-		expect(
-			result.elements.filter((element) => element.bucket === "incomplete"),
-		).toHaveLength(0);
+		expect(result.elements.filter((element) => element.bucket === "violation")).toHaveLength(0);
+		expect(result.elements.filter((element) => element.bucket === "incomplete")).toHaveLength(0);
 		expect(result.elements.every((element) => !element.screenshot)).toBe(true);
 	});
 
 	it("does not flag a semi-transparent overlay as a violation", async () => {
 		const result = await runFixture("semi-transparent-overlay.html");
 
-		expect(
-			result.elements.filter((element) => element.bucket === "violation"),
-		).toHaveLength(0);
+		expect(result.elements.filter((element) => element.bucket === "violation")).toHaveLength(0);
 
-		const fullyCovered = result.elements.find(
-			(element) => element.measurement.fullyObscured,
-		);
+		const fullyCovered = result.elements.find((element) => element.measurement.fullyObscured);
 		expect(fullyCovered?.measurement.opacity).toBe("semi-transparent");
 	});
 });

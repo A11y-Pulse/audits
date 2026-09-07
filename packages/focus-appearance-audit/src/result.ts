@@ -26,8 +26,8 @@ export type FocusFailureEvidence = {
 	/** Allowlisted computed styles while focused. */
 	focusedStyles: StyleSnapshot;
 	/**
-	 * Allowlisted computed styles in the unfocused baseline. Empty when the
-	 * element was not in the baseline set (e.g. reached via Tab but unmarked).
+	 * Allowlisted computed styles in the unfocused baseline. Empty when the element was not in the
+	 * baseline set (e.g. reached via Tab but unmarked).
 	 */
 	unfocusedStyles: StyleSnapshot;
 };

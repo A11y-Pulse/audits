@@ -39,17 +39,13 @@ describe("resolveFragmentTargetScript", () => {
 	it("resolves a target by id", () => {
 		document.body.innerHTML = `<main id="main">hello</main>`;
 
-		expect(resolveFragmentTargetScript("#main")).toBe(
-			document.getElementById("main"),
-		);
+		expect(resolveFragmentTargetScript("#main")).toBe(document.getElementById("main"));
 	});
 
 	it("resolves a target by name attribute", () => {
 		document.body.innerHTML = `<a name="content">anchor</a>`;
 
-		expect(resolveFragmentTargetScript("#content")).toBe(
-			document.getElementsByName("content")[0],
-		);
+		expect(resolveFragmentTargetScript("#content")).toBe(document.getElementsByName("content")[0]);
 	});
 
 	it("returns null when nothing matches", () => {

@@ -51,9 +51,7 @@ describe("PuppeteerAdaptor.ensureFocusReporting", () => {
 			},
 		} as unknown as Page;
 
-		await expect(
-			new PuppeteerAdaptor(page).ensureFocusReporting(),
-		).resolves.toBeUndefined();
+		await expect(new PuppeteerAdaptor(page).ensureFocusReporting()).resolves.toBeUndefined();
 	});
 });
 

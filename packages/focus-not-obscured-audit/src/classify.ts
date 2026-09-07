@@ -7,8 +7,8 @@ export type { ObscuredMeasurement } from "@a11y-pulse/tab-orchestrator";
 import type { ObscuredMeasurement } from "@a11y-pulse/tab-orchestrator";
 
 /**
- * AA bucket for 2.4.11. Partial covers are recorded on the element but are not
- * failures under the Minimum criterion (that is AAA / 2.4.12).
+ * AA bucket for 2.4.11. Partial covers are recorded on the element but are not failures under the
+ * Minimum criterion (that is AAA / 2.4.12).
  */
 export type ObscuringBucket = "violation" | "incomplete" | "pass";
 

@@ -1,7 +1,4 @@
-import type {
-	BaseAuditSummary,
-	ObscuredMeasurement,
-} from "@a11y-pulse/tab-orchestrator";
+import type { BaseAuditSummary, ObscuredMeasurement } from "@a11y-pulse/tab-orchestrator";
 
 import type { ObscuringBucket } from "./classify";
 
@@ -19,15 +16,17 @@ export type FocusNotObscuredElementResult = {
 	measurement: ObscuredMeasurement;
 
 	/**
-	 * The AA bucket for this element. `"violation"` fails 2.4.11; `"incomplete"`
-	 * means the audit could not confirm one way or the other (offscreen, or
-	 * fully covered by something of unknown opacity); `"pass"` covers both
-	 * unobscured elements and partial/semi-transparent covers, which are not
-	 * failures under the Minimum criterion.
+	 * The AA bucket for this element. `"violation"` fails 2.4.11; `"incomplete"` means the audit
+	 * could not confirm one way or the other (offscreen, or fully covered by something of unknown
+	 * opacity); `"pass"` covers both unobscured elements and partial/semi-transparent covers, which
+	 * are not failures under the Minimum criterion.
 	 */
 	bucket: ObscuringBucket;
 
-	/** PNG bytes of this element, clipped and padded. Only captured for a non-"pass" bucket, and omitted past `screenshotLimit`. */
+	/**
+	 * PNG bytes of this element, clipped and padded. Only captured for a non-"pass" bucket, and
+	 * omitted past `screenshotLimit`.
+	 */
 	screenshot?: Uint8Array;
 };
 

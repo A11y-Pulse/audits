@@ -10,18 +10,12 @@ import {
 
 const TOLERANCE = 2;
 
-function rect(
-	x: number,
-	y: number,
-	width: number,
-	height: number,
-): CandidateSnapshot["rect"] {
+function rect(x: number, y: number, width: number, height: number): CandidateSnapshot["rect"] {
 	return { x, y, width, height };
 }
 
 function snapshot(
-	overrides: Partial<CandidateSnapshot> &
-		Pick<CandidateSnapshot, "index" | "selector">,
+	overrides: Partial<CandidateSnapshot> & Pick<CandidateSnapshot, "index" | "selector">,
 ): CandidateSnapshot {
 	return {
 		html: overrides.html ?? "<p>",
@@ -33,11 +27,9 @@ function snapshot(
 		overflowX: overrides.overflowX ?? "visible",
 		overflowY: overrides.overflowY ?? "visible",
 		clipScrollWidth: overrides.clipScrollWidth ?? overrides.scrollWidth ?? 100,
-		clipScrollHeight:
-			overrides.clipScrollHeight ?? overrides.scrollHeight ?? 20,
+		clipScrollHeight: overrides.clipScrollHeight ?? overrides.scrollHeight ?? 20,
 		clipClientWidth: overrides.clipClientWidth ?? overrides.clientWidth ?? 100,
-		clipClientHeight:
-			overrides.clipClientHeight ?? overrides.clientHeight ?? 20,
+		clipClientHeight: overrides.clipClientHeight ?? overrides.clientHeight ?? 20,
 		clipOverflowX: overrides.clipOverflowX ?? overrides.overflowX ?? "visible",
 		clipOverflowY: overrides.clipOverflowY ?? overrides.overflowY ?? "visible",
 		truncated: overrides.truncated ?? false,
@@ -58,9 +50,7 @@ describe("classifyTextSpacing", () => {
 			}),
 		];
 
-		expect(
-			classifyTextSpacing(before, before, { clipTolerancePx: TOLERANCE }),
-		).toEqual([]);
+		expect(classifyTextSpacing(before, before, { clipTolerancePx: TOLERANCE })).toEqual([]);
 	});
 
 	it("ignores growth without a clipping context", () => {
@@ -86,9 +76,7 @@ describe("classifyTextSpacing", () => {
 			}),
 		];
 
-		expect(
-			classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE }),
-		).toEqual([]);
+		expect(classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE })).toEqual([]);
 	});
 
 	it("flags clipped when overflow appears inside overflow hidden beyond tolerance", () => {
@@ -119,9 +107,7 @@ describe("classifyTextSpacing", () => {
 			}),
 		];
 
-		expect(
-			classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE }),
-		).toEqual([
+		expect(classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE })).toEqual([
 			{
 				selector: "#card",
 				html: '<div id="card">',
@@ -157,9 +143,7 @@ describe("classifyTextSpacing", () => {
 			}),
 		];
 
-		expect(
-			classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE }),
-		).toEqual([]);
+		expect(classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE })).toEqual([]);
 	});
 
 	it("flags overflow clip the same way as overflow hidden", () => {
@@ -184,9 +168,7 @@ describe("classifyTextSpacing", () => {
 			}),
 		];
 
-		expect(
-			classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE })[0],
-		).toMatchObject({
+		expect(classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE })[0]).toMatchObject({
 			kind: "clipped",
 			metrics: { beforeOverflowPx: 0, afterOverflowPx: 40 },
 		});
@@ -218,9 +200,7 @@ describe("classifyTextSpacing", () => {
 			}),
 		];
 
-		expect(
-			classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE }),
-		).toEqual([]);
+		expect(classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE })).toEqual([]);
 	});
 
 	it("routes baseline-truncated growth to truncation-increased, never clipped", () => {
@@ -253,9 +233,7 @@ describe("classifyTextSpacing", () => {
 			}),
 		];
 
-		expect(
-			classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE }),
-		).toEqual([
+		expect(classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE })).toEqual([
 			{
 				selector: "#title",
 				html: '<p id="title">',
@@ -293,9 +271,7 @@ describe("classifyTextSpacing", () => {
 			}),
 		];
 
-		expect(
-			classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE }),
-		).toEqual([]);
+		expect(classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE })).toEqual([]);
 	});
 
 	it("flags overlap with the counterpart selector when nearby rects newly intersect", () => {
@@ -332,9 +308,7 @@ describe("classifyTextSpacing", () => {
 			}),
 		];
 
-		expect(
-			classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE }),
-		).toEqual([
+		expect(classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE })).toEqual([
 			{
 				selector: "#a",
 				html: '<p id="a">',
@@ -373,9 +347,7 @@ describe("classifyTextSpacing", () => {
 			}),
 		];
 
-		expect(
-			classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE }),
-		).toEqual([]);
+		expect(classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE })).toEqual([]);
 	});
 
 	it("does not compare pairs whose baseline vertical gap exceeds one line box", () => {
@@ -408,9 +380,7 @@ describe("classifyTextSpacing", () => {
 			}),
 		];
 
-		expect(
-			classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE }),
-		).toEqual([]);
+		expect(classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE })).toEqual([]);
 	});
 
 	it("excludes unstable candidates from every finding kind", () => {
@@ -447,9 +417,7 @@ describe("classifyTextSpacing", () => {
 			}),
 		];
 
-		expect(
-			classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE }),
-		).toEqual([]);
+		expect(classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE })).toEqual([]);
 	});
 });
 
@@ -552,9 +520,9 @@ describe("runTextSpacingAudit", () => {
 			restore: { restored: false },
 		});
 
-		await expect(
-			runTextSpacingAudit(adaptor, { settleMs: 0 }),
-		).resolves.toMatchObject({ restored: false });
+		await expect(runTextSpacingAudit(adaptor, { settleMs: 0 })).resolves.toMatchObject({
+			restored: false,
+		});
 	});
 
 	it("reports restored false without throwing when restore itself throws", async () => {
@@ -565,17 +533,15 @@ describe("runTextSpacingAudit", () => {
 			throwOnRestore: new Error("boom"),
 		});
 
-		await expect(
-			runTextSpacingAudit(adaptor, { settleMs: 0 }),
-		).resolves.toMatchObject({ restored: false });
+		await expect(runTextSpacingAudit(adaptor, { settleMs: 0 })).resolves.toMatchObject({
+			restored: false,
+		});
 	});
 
 	it("restores injected styles even when remeasure throws", async () => {
 		const calls: string[] = [];
 		const adaptor: TextSpacingAuditAdaptor = {
-			evaluate: async <T>(
-				fn: (...args: never[]) => T | Promise<T>,
-			): Promise<T> => {
+			evaluate: async <T>(fn: (...args: never[]) => T | Promise<T>): Promise<T> => {
 				calls.push(fn.name);
 
 				if (fn.name === "collectBaselineScript") {
@@ -595,9 +561,7 @@ describe("runTextSpacingAudit", () => {
 			screenshotClip: async () => new Uint8Array([1, 2, 3]),
 		};
 
-		await expect(runTextSpacingAudit(adaptor, { settleMs: 0 })).rejects.toThrow(
-			"remeasure failed",
-		);
+		await expect(runTextSpacingAudit(adaptor, { settleMs: 0 })).rejects.toThrow("remeasure failed");
 		expect(calls).toContain("restoreAndVerifyScript");
 	});
 
@@ -807,15 +771,11 @@ describe("runTextSpacingAudit screenshots", () => {
 
 		expect(result.findings).toHaveLength(DEFAULT_SCREENSHOT_LIMIT + 2);
 		expect(adaptor.screenshotCalls).toHaveLength(DEFAULT_SCREENSHOT_LIMIT);
+		expect(result.findings.slice(0, DEFAULT_SCREENSHOT_LIMIT).every((f) => f.screenshot)).toBe(
+			true,
+		);
 		expect(
-			result.findings
-				.slice(0, DEFAULT_SCREENSHOT_LIMIT)
-				.every((f) => f.screenshot),
-		).toBe(true);
-		expect(
-			result.findings
-				.slice(DEFAULT_SCREENSHOT_LIMIT)
-				.every((f) => f.screenshot === undefined),
+			result.findings.slice(DEFAULT_SCREENSHOT_LIMIT).every((f) => f.screenshot === undefined),
 		).toBe(true);
 	});
 

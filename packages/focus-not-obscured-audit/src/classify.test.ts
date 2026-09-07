@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { classifyObscuring, type ObscuredMeasurement } from "./classify";
 
-function measurement(
-	partial: Partial<ObscuredMeasurement>,
-): ObscuredMeasurement {
+function measurement(partial: Partial<ObscuredMeasurement>): ObscuredMeasurement {
 	return {
 		coveredFraction: 0,
 		fullyObscured: false,
@@ -41,9 +39,7 @@ describe("classifyObscuring", () => {
 	});
 
 	it("routes offscreen focus to incomplete", () => {
-		expect(classifyObscuring(measurement({ offscreen: true }))).toBe(
-			"incomplete",
-		);
+		expect(classifyObscuring(measurement({ offscreen: true }))).toBe("incomplete");
 	});
 
 	it("treats semi-transparent full cover as pass for AA", () => {

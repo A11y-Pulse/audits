@@ -1,15 +1,8 @@
 import { PuppeteerAdaptor } from "@a11y-pulse/browser-adaptor/puppeteer";
 import puppeteer, { type Browser, type Page } from "puppeteer";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import {
-	runSkipLinkAudit,
-	type SkipLinkOptions,
-	type SkipLinkResult,
-} from "../../src/index";
-import {
-	type FixtureServer,
-	startFixtureServer,
-} from "./helpers/serve-fixtures";
+import { runSkipLinkAudit, type SkipLinkOptions, type SkipLinkResult } from "../../src/index";
+import { type FixtureServer, startFixtureServer } from "./helpers/serve-fixtures";
 
 let server: FixtureServer;
 let browser: Browser;
@@ -24,10 +17,7 @@ afterAll(async () => {
 	await server.close();
 });
 
-async function runFixture(
-	name: string,
-	options?: SkipLinkOptions,
-): Promise<SkipLinkResult> {
+async function runFixture(name: string, options?: SkipLinkOptions): Promise<SkipLinkResult> {
 	const page: Page = await browser.newPage();
 
 	try {
@@ -104,10 +94,7 @@ describe("skip link audit (integration)", () => {
 		const result = await runFixture("multiple-skip-links.html");
 
 		expect(result.skipLinks).toHaveLength(2);
-		expect(result.skipLinks.map((link) => link.fragment)).toEqual([
-			"#main",
-			"#nav",
-		]);
+		expect(result.skipLinks.map((link) => link.fragment)).toEqual(["#main", "#nav"]);
 		expect(result.summary).toEqual({ found: 2, passed: 2, failed: 0 });
 	});
 

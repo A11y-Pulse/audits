@@ -9,11 +9,7 @@ import {
 	DEFAULT_TIMEOUT,
 	type TabConsumer,
 } from "@a11y-pulse/tab-orchestrator";
-import {
-	alignedRegionsDiffer,
-	omitIdleStyleSnapshot,
-	stylesIndicateFocus,
-} from "./detection";
+import { alignedRegionsDiffer, omitIdleStyleSnapshot, stylesIndicateFocus } from "./detection";
 import type { FocusAppearanceResult, FocusElementResult } from "./result";
 
 export const DEFAULT_SCREENSHOT_CLIP_BUFFER = 10;
@@ -21,12 +17,10 @@ export const DEFAULT_SCREENSHOT_DIFF_THRESHOLD = 4;
 
 export type FocusAppearanceOptions = BaseAuditOptions & {
 	/**
-	 * The audit calculates the baseline styles for focusable elements up-front, before it begins
-	 * tabbing through elements. `elementLimit` controls how many elements the audit will tab
-	 * through, however not all focusable elements are tabbable, for example elements inside menus
-	 * or hidden containers. The baseline element limit therefore ensures enough focusable elements
-	 * have a baseline snapshot. The effective baseline budget is `max(elementLimit,
-	 * baselineElementLimit)`, so it also acts as a floor. Defaults to `elementLimit * 2`.
+	 * How many focusable elements to snapshot baseline styles for, before tabbing starts. Runs ahead
+	 * of `elementLimit` because not every focusable element is tabbable (menus, hidden containers),
+	 * and acts as a floor: the effective budget is `max(elementLimit, baselineElementLimit)`.
+	 * Defaults to `elementLimit * 2`.
 	 */
 	baselineElementLimit?: number;
 
@@ -37,8 +31,8 @@ export type FocusAppearanceOptions = BaseAuditOptions & {
 	screenshotDiffThreshold?: number;
 
 	/**
-	 * Whether to skip the style check and perform a pixel diff for every element. Warning: this
-	 * will cause the audit to be much slower, but may reduce false positives in some rare cases
+	 * Whether to skip the style check and perform a pixel diff for every element. Warning: this will
+	 * cause the audit to be much slower, but may reduce false positives in some rare cases
 	 */
 	skipStyleCheck?: boolean;
 };
@@ -51,19 +45,16 @@ function resolveOptions(options: FocusAppearanceOptions): ResolvedOptions {
 	return {
 		elementLimit,
 		baselineElementLimit: options.baselineElementLimit ?? elementLimit * 2,
-		screenshotSettleDelay:
-			options.screenshotSettleDelay ?? DEFAULT_SCREENSHOT_SETTLE_DELAY,
-		screenshotClipBuffer:
-			options.screenshotClipBuffer ?? DEFAULT_SCREENSHOT_CLIP_BUFFER,
-		// Floor at 1: regionsDiffer uses `diffPixels >= threshold`, so a threshold
-		// of 0 would report every region (even identical ones) as differing.
+		screenshotSettleDelay: options.screenshotSettleDelay ?? DEFAULT_SCREENSHOT_SETTLE_DELAY,
+		screenshotClipBuffer: options.screenshotClipBuffer ?? DEFAULT_SCREENSHOT_CLIP_BUFFER,
+		// Floor at 1: regionsDiffer uses `diffPixels >= threshold`, so a threshold of 0 would report
+		// every region (even identical ones) as differing.
 		screenshotDiffThreshold: Math.max(
 			1,
 			options.screenshotDiffThreshold ?? DEFAULT_SCREENSHOT_DIFF_THRESHOLD,
 		),
 		skipStyleCheck: options.skipStyleCheck ?? false,
-		failedElementLimit:
-			options.failedElementLimit ?? DEFAULT_FAILED_ELEMENT_LIMIT,
+		failedElementLimit: options.failedElementLimit ?? DEFAULT_FAILED_ELEMENT_LIMIT,
 		timeout: options.timeout ?? DEFAULT_TIMEOUT,
 	};
 }
@@ -91,9 +82,8 @@ function recount(result: FocusAppearanceResult): void {
 }
 
 /**
- * Tab through focusable elements and report whether each shows a visible focus
- * indicator. Attach to a `createTabOrchestrator` session, or use
- * `runFocusAppearanceAudit` to run as the sole consumer.
+ * Tab through focusable elements and report whether each shows a visible focus indicator. Attach to
+ * a `createTabOrchestrator` session, or use `runFocusAppearanceAudit` to run as the sole consumer.
  */
 export function createFocusAppearanceAudit(
 	options: FocusAppearanceOptions = {},
@@ -172,10 +162,7 @@ export function createFocusAppearanceAudit(
 
 			recount(result);
 
-			if (
-				resolved.failedElementLimit > 0 &&
-				failures >= resolved.failedElementLimit
-			) {
+			if (resolved.failedElementLimit > 0 && failures >= resolved.failedElementLimit) {
 				result.summary.reachedFailedElementLimit = true;
 				selfDisconnect.disconnect(session);
 
@@ -198,8 +185,8 @@ export function createFocusAppearanceAudit(
 }
 
 /**
- * Tab through focusable elements and report whether each shows a visible focus
- * indicator. Enables focus reporting up front, then drives the loop.
+ * Tab through focusable elements and report whether each shows a visible focus indicator. Enables
+ * focus reporting up front, then drives the loop.
  */
 export async function runFocusAppearanceAudit(
 	adaptor: BrowserAdaptor,

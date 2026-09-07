@@ -2,9 +2,7 @@ import type { ContextChangeSignals } from "@a11y-pulse/tab-orchestrator";
 import { describe, expect, it } from "vitest";
 import { classifyContextSignals } from "./classify";
 
-function signals(
-	partial: Partial<ContextChangeSignals> = {},
-): ContextChangeSignals {
+function signals(partial: Partial<ContextChangeSignals> = {}): ContextChangeSignals {
 	return {
 		openedWindow: false,
 		submittedForm: false,
@@ -42,9 +40,7 @@ describe("classifyContextSignals", () => {
 	});
 
 	it("flags same-subtree redirect as incomplete", () => {
-		expect(
-			classifyContextSignals(signals({ redirect: "same-subtree" })),
-		).toEqual([
+		expect(classifyContextSignals(signals({ redirect: "same-subtree" }))).toEqual([
 			{ kind: "focus-redirected-same-subtree", bucket: "incomplete" },
 		]);
 	});
@@ -66,10 +62,8 @@ describe("classifyContextSignals", () => {
 	});
 
 	it("prefers navigation over soft URL change when both are set", () => {
-		expect(
-			classifyContextSignals(
-				signals({ navigation: true, softUrlChange: true }),
-			),
-		).toEqual([{ kind: "navigation", bucket: "violation" }]);
+		expect(classifyContextSignals(signals({ navigation: true, softUrlChange: true }))).toEqual([
+			{ kind: "navigation", bucket: "violation" },
+		]);
 	});
 });

@@ -1,8 +1,7 @@
 /**
- * IMPORTANT: Functions in this file that are serialized and injected into the
- * audited page must not reference any symbols outside their own scope. Shared
- * helpers used by unit tests are therefore duplicated inside each injected
- * function.
+ * IMPORTANT: Functions in this file that are serialized and injected into the audited page must not
+ * reference any symbols outside their own scope. Shared helpers used by unit tests are therefore
+ * duplicated inside each injected function.
  */
 
 import type { CandidateSnapshot, TextSpacingRect } from "./result";
@@ -43,9 +42,7 @@ function clipsOverflow(value: string): boolean {
 }
 
 function styleClips(cs: CSSStyleDeclaration): boolean {
-	return [cs.overflowX, cs.overflowY, ...cs.overflow.split(/\s+/)].some(
-		clipsOverflow,
-	);
+	return [cs.overflowX, cs.overflowY, ...cs.overflow.split(/\s+/)].some(clipsOverflow);
 }
 
 function parentCrossingShadow(el: Element): Element | null {
@@ -92,11 +89,7 @@ export function isVisibleTextContainer(el: Element): boolean {
 	return box.width > 0 && box.height > 0;
 }
 
-function walkCandidates(
-	root: Document | ShadowRoot,
-	acc: Element[],
-	limit: number,
-): void {
+function walkCandidates(root: Document | ShadowRoot, acc: Element[], limit: number): void {
 	const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
 	let node = walker.nextNode() as Element | null;
 
@@ -172,26 +165,15 @@ export function injectOverrideStyles(): void {
 
 export function removeInjectedStyles(): void {
 	for (const el of Array.from(
-		document.querySelectorAll(
-			'[data-a11y-pulse="ts-freeze"], [data-a11y-pulse="ts-override"]',
-		),
+		document.querySelectorAll('[data-a11y-pulse="ts-freeze"], [data-a11y-pulse="ts-override"]'),
 	)) {
 		el.remove();
 	}
 }
 
-export function intersectionArea(
-	a: TextSpacingRect,
-	b: TextSpacingRect,
-): number {
-	const x = Math.max(
-		0,
-		Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x),
-	);
-	const y = Math.max(
-		0,
-		Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y),
-	);
+export function intersectionArea(a: TextSpacingRect, b: TextSpacingRect): number {
+	const x = Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x));
+	const y = Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
 
 	return x * y;
 }
@@ -217,9 +199,7 @@ export function findOverlapPairs(
 	after: OverlapInput[],
 	overlapAreaTolerancePx2 = DEFAULT_OVERLAP_AREA_PX2,
 ): OverlapPair[] {
-	const afterByIndex = new Map(
-		after.map((candidate) => [candidate.index, candidate]),
-	);
+	const afterByIndex = new Map(after.map((candidate) => [candidate.index, candidate]));
 	const pairs: OverlapPair[] = [];
 
 	for (let i = 0; i < baseline.length; i++) {
@@ -257,10 +237,7 @@ export function findOverlapPairs(
 			const beforeArea = intersectionArea(left.rect, right.rect);
 			const afterArea = intersectionArea(leftAfter.rect, rightAfter.rect);
 
-			if (
-				beforeArea <= overlapAreaTolerancePx2 &&
-				afterArea > overlapAreaTolerancePx2
-			) {
+			if (beforeArea <= overlapAreaTolerancePx2 && afterArea > overlapAreaTolerancePx2) {
 				pairs.push({
 					selector: left.selector,
 					overlapsWith: right.selector,
@@ -278,21 +255,17 @@ type PageState = {
 };
 
 /**
- * Wait on fonts, freeze motion, collect candidate text containers, and
- * double-sample rects so JS-driven movement can be marked unstable.
- * Serialized and run in the page; must stay self-contained.
+ * Wait on fonts, freeze motion, collect candidate text containers, and double-sample rects so
+ * JS-driven movement can be marked unstable. Serialized and run in the page; must stay
+ * self-contained.
  */
-export async function collectBaselineScript(
-	limit: number,
-): Promise<BaselinePayload> {
+export async function collectBaselineScript(limit: number): Promise<BaselinePayload> {
 	const cap = typeof limit === "number" && limit >= 0 ? limit : 500;
 	const freezeCss =
 		"*, *::before, *::after { animation: none !important; transition: none !important; }";
 	const skipTags = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE"]);
 
-	const fonts = (
-		document as Document & { fonts?: { ready?: Promise<unknown> } }
-	).fonts;
+	const fonts = (document as Document & { fonts?: { ready?: Promise<unknown> } }).fonts;
 
 	if (fonts?.ready) {
 		await fonts.ready;
@@ -305,8 +278,7 @@ export async function collectBaselineScript(
 		(document.head ?? document.documentElement).appendChild(style);
 	}
 
-	const clips = (value: string): boolean =>
-		value === "hidden" || value === "clip";
+	const clips = (value: string): boolean => value === "hidden" || value === "clip";
 	const axisOverflow = (cs: CSSStyleDeclaration, axis: "x" | "y"): string => {
 		const specific = axis === "x" ? cs.overflowX : cs.overflowY;
 
@@ -385,9 +357,7 @@ export async function collectBaselineScript(
 	const MAX_LENGTH = 128;
 
 	const esc = (value: string): string =>
-		typeof CSS !== "undefined" && typeof CSS.escape === "function"
-			? CSS.escape(value)
-			: value;
+		typeof CSS !== "undefined" && typeof CSS.escape === "function" ? CSS.escape(value) : value;
 
 	const tagName = (node: Node): string =>
 		node.nodeType === 1
@@ -395,9 +365,7 @@ export async function collectBaselineScript(
 			: node.nodeName.toUpperCase().replace(/^#/, "");
 
 	const rootOf = (element: Element): ParentNode | null => {
-		const node = (
-			element as Element & { getRootNode?: () => Node }
-		).getRootNode?.();
+		const node = (element as Element & { getRootNode?: () => Node }).getRootNode?.();
 
 		return node && typeof (node as ParentNode).querySelectorAll === "function"
 			? (node as ParentNode)
@@ -436,10 +404,7 @@ export async function collectBaselineScript(
 		sharedBy: (sibling) => Array.from(sibling.classList ?? []).includes(cls),
 	});
 
-	const rarestFeature = (
-		element: Element,
-		queryRoot: ParentNode | null,
-	): Feature | null => {
+	const rarestFeature = (element: Element, queryRoot: ParentNode | null): Feature | null => {
 		const classes = Array.from(element.classList).slice(0, 8);
 
 		if (!queryRoot) {
@@ -470,23 +435,16 @@ export async function collectBaselineScript(
 			}
 		}
 
-		const href =
-			typeof element.getAttribute === "function"
-				? element.getAttribute("href")
-				: null;
+		const href = typeof element.getAttribute === "function" ? element.getAttribute("href") : null;
 
 		if (href && href.length <= 100 && !/["\\?]/.test(href)) {
 			const feature = `[href="${href}"]`;
 
-			if (
-				safeMatches(element, feature) &&
-				matchCount(queryRoot, feature) < bestCount
-			) {
+			if (safeMatches(element, feature) && matchCount(queryRoot, feature) < bestCount) {
 				return {
 					feature,
 					sharedBy: (sibling) =>
-						typeof sibling.getAttribute === "function" &&
-						sibling.getAttribute("href") === href,
+						typeof sibling.getAttribute === "function" && sibling.getAttribute("href") === href,
 				};
 			}
 		}
@@ -563,17 +521,14 @@ export async function collectBaselineScript(
 	const getSelector = (root: Node | null): string => {
 		const segments: string[] = [];
 		let node: Node | null = root;
-		const queryRoot =
-			root && root.nodeType === 1 ? rootOf(root as Element) : null;
+		const queryRoot = root && root.nodeType === 1 ? rootOf(root as Element) : null;
 
 		try {
 			while (node && node.nodeType === 1) {
 				const element = node as Element;
 				let { segment, anchored } = segmentFor(element, queryRoot);
 				const joinedWith = (candidate: string): number =>
-					segments.length
-						? candidate.length + 1 + segments.join(">").length
-						: candidate.length;
+					segments.length ? candidate.length + 1 + segments.join(">").length : candidate.length;
 
 				if (joinedWith(segment) > MAX_LENGTH - 1) {
 					segment = degradedSegmentFor(element);
@@ -699,9 +654,10 @@ export async function collectBaselineScript(
 		return measure(el, index, second, rectsDiffer(first, second));
 	});
 
-	(
-		window as Window & { __a11yPulseTextSpacing?: PageState }
-	).__a11yPulseTextSpacing = { elements, snapshots };
+	(window as Window & { __a11yPulseTextSpacing?: PageState }).__a11yPulseTextSpacing = {
+		elements,
+		snapshots,
+	};
 
 	return { candidates: snapshots };
 }
@@ -742,15 +698,13 @@ export async function waitTwoFramesScript(): Promise<void> {
  * Re-measure the page-side candidate list after the override. Serialized.
  */
 export function remeasureScript(): RemeasurePayload {
-	const state = (window as Window & { __a11yPulseTextSpacing?: PageState })
-		.__a11yPulseTextSpacing;
+	const state = (window as Window & { __a11yPulseTextSpacing?: PageState }).__a11yPulseTextSpacing;
 
 	if (!state) {
 		return { candidates: [] };
 	}
 
-	const clips = (value: string): boolean =>
-		value === "hidden" || value === "clip";
+	const clips = (value: string): boolean => value === "hidden" || value === "clip";
 	const axisOverflow = (cs: CSSStyleDeclaration, axis: "x" | "y"): string => {
 		const specific = axis === "x" ? cs.overflowX : cs.overflowY;
 
@@ -832,15 +786,13 @@ export function remeasureScript(): RemeasurePayload {
 }
 
 /**
- * Remove injected styles and spot-check that a sample of rects match baseline.
- * Never throws. Serialized; self-contained.
+ * Remove injected styles and spot-check that a sample of rects match baseline. Never throws.
+ * Serialized; self-contained.
  */
 export function restoreAndVerifyScript(): RestorePayload {
 	try {
 		for (const el of Array.from(
-			document.querySelectorAll(
-				'[data-a11y-pulse="ts-freeze"], [data-a11y-pulse="ts-override"]',
-			),
+			document.querySelectorAll('[data-a11y-pulse="ts-freeze"], [data-a11y-pulse="ts-override"]'),
 		)) {
 			el.remove();
 		}
@@ -876,21 +828,18 @@ export function restoreAndVerifyScript(): RestorePayload {
 			}
 		}
 
-		delete (window as Window & { __a11yPulseTextSpacing?: PageState })
-			.__a11yPulseTextSpacing;
+		delete (window as Window & { __a11yPulseTextSpacing?: PageState }).__a11yPulseTextSpacing;
 
 		return { restored };
 	} catch {
 		try {
 			for (const el of Array.from(
-				document.querySelectorAll(
-					'[data-a11y-pulse="ts-freeze"], [data-a11y-pulse="ts-override"]',
-				),
+				document.querySelectorAll('[data-a11y-pulse="ts-freeze"], [data-a11y-pulse="ts-override"]'),
 			)) {
 				el.remove();
 			}
 		} catch {
-			// The runner contract is satisfied by best-effort removal.
+			// Removal is best effort: this function must not throw.
 		}
 
 		return { restored: false };

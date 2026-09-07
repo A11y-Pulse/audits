@@ -19,10 +19,7 @@ import {
 	type MeasureObscuringResult,
 	measureObscuringScript,
 } from "../../tab-orchestrator/src/browser-scripts";
-import {
-	createFocusNotObscuredAudit,
-	type FocusNotObscuredOptions,
-} from "./audit";
+import { createFocusNotObscuredAudit, type FocusNotObscuredOptions } from "./audit";
 
 const EMPTY_STYLES = { element: {}, before: {}, after: {} };
 
@@ -54,9 +51,9 @@ function recordingConsumer(): TabConsumer & { stops: TabStopSnapshot[] } {
 }
 
 /**
- * Duplicated from `@a11y-pulse/tab-orchestrator`'s own `orchestrator.test.ts`
- * fake-adaptor helper (not exported by the package's public API). Dispatches
- * on the identity of the injected browser-script functions.
+ * Duplicated from `@a11y-pulse/tab-orchestrator`'s own `orchestrator.test.ts` fake-adaptor helper
+ * (not exported by the package's public API). Dispatches on the identity of the injected
+ * browser-script functions.
  */
 function loopAdaptor(script: {
 	hasFocus?: boolean[];
@@ -129,12 +126,11 @@ function loopAdaptor(script: {
 }
 
 /**
- * `loopAdaptor` plus `measureObscuringScript` dispatch: serves the queued
- * measurement for the *current* tab stop on every `measureObscuringScript`
- * call within that stop (the orchestrator re-measures once, after a 250ms
- * delay, whenever the first read reports `fullyObscured`, to rule out
- * transient layout — see Task 8's obscuring re-check), and no-ops the
- * obscurer-marker teardown call so it doesn't consume a `hasFocus` slot.
+ * `loopAdaptor` plus `measureObscuringScript` dispatch: serves the queued measurement for the
+ * *current* tab stop on every `measureObscuringScript` call within that stop (the orchestrator
+ * re-measures once, after a delay, whenever the first read reports `fullyObscured`, to rule out
+ * transient layout), and no-ops the obscurer-marker teardown call so it doesn't consume a
+ * `hasFocus` slot.
  */
 function obscuringAdaptor(
 	measurements: MeasureObscuringResult[],
@@ -167,9 +163,7 @@ function obscuringAdaptor(
 	return adaptor;
 }
 
-function measurement(
-	partial: Partial<MeasureObscuringResult> = {},
-): MeasureObscuringResult {
+function measurement(partial: Partial<MeasureObscuringResult> = {}): MeasureObscuringResult {
 	return {
 		coveredFraction: 0,
 		fullyObscured: false,
@@ -216,10 +210,9 @@ describe("createFocusNotObscuredAudit", () => {
 
 	it("records a pass for an unobscured element", async () => {
 		const audit = createFocusNotObscuredAudit();
-		const orchestrator = createTabOrchestrator(
-			obscuringAdaptor([measurement()]),
-			{ screenshotSettleDelay: 0 },
-		);
+		const orchestrator = createTabOrchestrator(obscuringAdaptor([measurement()]), {
+			screenshotSettleDelay: 0,
+		});
 		orchestrator.attach(audit);
 		await orchestrator.run();
 		expect(audit.result.elements).toHaveLength(1);
@@ -359,10 +352,9 @@ describe("createFocusNotObscuredAudit", () => {
 
 	it("does not time out when timeout is 0 (default)", async () => {
 		const audit = createFocusNotObscuredAudit({ timeout: 0 });
-		const orchestrator = createTabOrchestrator(
-			obscuringAdaptor([measurement(), measurement()]),
-			{ screenshotSettleDelay: 0 },
-		);
+		const orchestrator = createTabOrchestrator(obscuringAdaptor([measurement(), measurement()]), {
+			screenshotSettleDelay: 0,
+		});
 		orchestrator.attach(audit);
 		await orchestrator.run();
 		expect(audit.result.summary.timedOut).toBe(false);
@@ -394,9 +386,7 @@ describe("createFocusNotObscuredAudit options type", () => {
 			screenshotSettleDelay: 10,
 			screenshotLimit: 3,
 		};
-		expect(
-			createFocusNotObscuredAudit(options).capabilities.has("obscuring"),
-		).toBe(true);
+		expect(createFocusNotObscuredAudit(options).capabilities.has("obscuring")).toBe(true);
 	});
 });
 
@@ -456,9 +446,7 @@ describe("createFocusNotObscuredAudit screenshots", () => {
 
 		expect(audit.result.elements).toHaveLength(3);
 		expect(audit.result.summary.failed).toBe(3);
-		expect(audit.result.elements.slice(0, 2).every((e) => e.screenshot)).toBe(
-			true,
-		);
+		expect(audit.result.elements.slice(0, 2).every((e) => e.screenshot)).toBe(true);
 		expect(audit.result.elements[2]?.screenshot).toBeUndefined();
 	});
 });

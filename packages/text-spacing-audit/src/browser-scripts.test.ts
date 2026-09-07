@@ -95,9 +95,7 @@ describe("collectCandidateElements", () => {
 		giveLayoutRect(host);
 		giveLayoutRect(shadow.getElementById("inside") as Element);
 
-		expect(collectCandidateElements(500).map((el) => el.id)).toEqual([
-			"inside",
-		]);
+		expect(collectCandidateElements(500).map((el) => el.id)).toEqual(["inside"]);
 	});
 });
 
@@ -106,12 +104,8 @@ describe("isVisibleTextContainer", () => {
 		document.body.innerHTML = `<script id="js">var x = 1;</script><style id="css">p{}</style>`;
 		layoutAll();
 
-		expect(
-			isVisibleTextContainer(document.getElementById("js") as Element),
-		).toBe(false);
-		expect(
-			isVisibleTextContainer(document.getElementById("css") as Element),
-		).toBe(false);
+		expect(isVisibleTextContainer(document.getElementById("js") as Element)).toBe(false);
+		expect(isVisibleTextContainer(document.getElementById("css") as Element)).toBe(false);
 	});
 });
 
@@ -139,9 +133,7 @@ describe("findNearestClippingAncestor", () => {
 	it("returns null when nothing clips", () => {
 		document.body.innerHTML = `<p id="copy">Text</p>`;
 
-		expect(
-			findNearestClippingAncestor(document.getElementById("copy") as Element),
-		).toBeNull();
+		expect(findNearestClippingAncestor(document.getElementById("copy") as Element)).toBeNull();
 	});
 });
 
@@ -202,9 +194,7 @@ describe("overlap pairing", () => {
 			{ ...baseline[1]!, rect: { x: 0, y: 16, width: 80, height: 24 } },
 		];
 
-		expect(findOverlapPairs(baseline, after)).toEqual([
-			{ selector: "#a", overlapsWith: "#b" },
-		]);
+		expect(findOverlapPairs(baseline, after)).toEqual([{ selector: "#a", overlapsWith: "#b" }]);
 	});
 
 	it("skips pairs that already intersected at baseline", () => {
@@ -238,12 +228,8 @@ describe("freeze and override stylesheets", () => {
 		injectOverrideStyles();
 		injectOverrideStyles();
 
-		expect(
-			document.querySelectorAll('[data-a11y-pulse="ts-freeze"]'),
-		).toHaveLength(1);
-		expect(
-			document.querySelectorAll('[data-a11y-pulse="ts-override"]'),
-		).toHaveLength(1);
+		expect(document.querySelectorAll('[data-a11y-pulse="ts-freeze"]')).toHaveLength(1);
+		expect(document.querySelectorAll('[data-a11y-pulse="ts-override"]')).toHaveLength(1);
 
 		removeInjectedStyles();
 		removeInjectedStyles();

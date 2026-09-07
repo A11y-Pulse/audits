@@ -58,9 +58,7 @@ describe("createTabOrchestrator lifecycle", () => {
 		const orchestrator = createTabOrchestrator(dummyAdaptor());
 		orchestrator.attach(consumer());
 		const running = orchestrator.run();
-		expect(() => orchestrator.attach(consumer())).toThrow(
-			/attach after run\(\) has started/i,
-		);
+		expect(() => orchestrator.attach(consumer())).toThrow(/attach after run\(\) has started/i);
 		await running.catch(() => {});
 	});
 
@@ -73,10 +71,7 @@ describe("createTabOrchestrator lifecycle", () => {
 
 const EMPTY_STYLES = { element: {}, before: {}, after: {} };
 
-function info(
-	index: number,
-	extra: Partial<ActiveElementInfo> = {},
-): ActiveElementInfo {
+function info(index: number, extra: Partial<ActiveElementInfo> = {}): ActiveElementInfo {
 	return {
 		index,
 		isBody: false,
@@ -90,22 +85,14 @@ function info(
 }
 
 function recordingConsumer(
-	capabilities: Array<
-		TabConsumer["capabilities"] extends ReadonlySet<infer C> ? C : never
-	> = [],
-	onStop?: (
-		snapshot: TabStopSnapshot,
-		disconnect: () => void,
-	) => void | Promise<void>,
+	capabilities: Array<TabConsumer["capabilities"] extends ReadonlySet<infer C> ? C : never> = [],
+	onStop?: (snapshot: TabStopSnapshot, disconnect: () => void) => void | Promise<void>,
 ): TabConsumer & { stops: TabStopSnapshot[]; sessionEnds: string[] } {
 	const record = {
 		stops: [] as TabStopSnapshot[],
 		sessionEnds: [] as string[],
 		capabilities: new Set(capabilities),
-		async onTabStop(
-			snapshot: TabStopSnapshot,
-			session: { disconnect(): void },
-		) {
+		async onTabStop(snapshot: TabStopSnapshot, session: { disconnect(): void }) {
 			record.stops.push(snapshot);
 			await onStop?.(snapshot, () => session.disconnect());
 		},
@@ -118,10 +105,9 @@ function recordingConsumer(
 }
 
 /**
- * Fixed `location.href` returned by `loopAdaptor`'s default handling of
- * `locationHrefScript` so tests that don't care about navigation-via-href
- * never see a diff against the baseline captured at session start (which
- * uses the same default).
+ * Fixed `location.href` returned by `loopAdaptor`'s default handling of `locationHrefScript` so
+ * tests that don't care about navigation-via-href never see a diff against the baseline captured at
+ * session start (which uses the same default).
  */
 const STABLE_HREF = "https://example.test/";
 
@@ -187,11 +173,7 @@ function loopAdaptor(script: {
 					return script.restoresFocus ?? false;
 				}
 
-				return (
-					script.hasFocusAfterTab?.[stopIndex] ??
-					script.hasFocus?.[stopIndex] ??
-					false
-				);
+				return script.hasFocusAfterTab?.[stopIndex] ?? script.hasFocus?.[stopIndex] ?? false;
 			}
 
 			return false;
@@ -418,11 +400,7 @@ describe("tab loop", () => {
 				return { x: 10, y: 20, width: 30, height: 40 };
 			}
 
-			if (
-				fn === blurScript ||
-				fn === focusScript ||
-				fn === scrollToCenterScript
-			) {
+			if (fn === blurScript || fn === focusScript || fn === scrollToCenterScript) {
 				return undefined;
 			}
 
@@ -667,12 +645,9 @@ describe("tab loop", () => {
 			return original(fn, ...args);
 		}) as BrowserAdaptor["evaluate"];
 
-		const obscuring = recordingConsumer(
-			["obscuring"],
-			async (_s, disconnect) => {
-				disconnect();
-			},
-		);
+		const obscuring = recordingConsumer(["obscuring"], async (_s, disconnect) => {
+			disconnect();
+		});
 		const other = recordingConsumer();
 		const orchestrator = createTabOrchestrator(adaptor, {
 			screenshotSettleDelay: 0,
@@ -792,12 +767,9 @@ describe("tab loop", () => {
 
 			return original(fn, ...args);
 		}) as BrowserAdaptor["evaluate"];
-		const ctx = recordingConsumer(
-			["contextSignals"],
-			async (_s, disconnect) => {
-				disconnect();
-			},
-		);
+		const ctx = recordingConsumer(["contextSignals"], async (_s, disconnect) => {
+			disconnect();
+		});
 		const other = recordingConsumer();
 		const orchestrator = createTabOrchestrator(adaptor, {
 			screenshotSettleDelay: 0,
@@ -860,10 +832,9 @@ describe("tab loop", () => {
 			}
 
 			if (fn === drainContextObserverScript) {
-				// Soft-nav flag is false: the observer's execution context
-				// survived long enough to answer, but this was a hard nav, not a
-				// pushState/hashchange, so the href-diff layer must still treat
-				// it as a full navigation rather than trusting a stale soft flag.
+				// Soft-nav flag is false: the observer's execution context survived long enough to answer,
+				// but this was a hard nav, not a pushState/hashchange, so the href-diff layer must still
+				// treat it as a full navigation rather than trusting a stale soft flag.
 				return {
 					openedWindow: false,
 					submittedForm: false,
@@ -944,13 +915,11 @@ describe("tab loop", () => {
 		});
 		orchestrator.attach(ctx);
 		await orchestrator.run();
-		// href is unchanged (loopAdaptor's default), so the primary href-diff
-		// layer sees no change and this stop reaches the full-mapping drain
-		// call with a resolved active element already in hand: the stop is
-		// still notified (matching "aborts the session after notifying a
-		// navigation drain" above) before the session ends, since a thrown
-		// destroyed-context error here is just an alternate way of learning
-		// the same thing a non-throwing `navigation: true` drain reports.
+		// href is unchanged (loopAdaptor's default), so the primary href-diff layer sees no change and
+		// this stop reaches the full-mapping drain call with a resolved active element already in hand:
+		// the stop is still notified (matching "aborts the session after notifying a navigation drain"
+		// above) before the session ends, since a thrown destroyed-context error here is just an
+		// alternate way of learning the same thing a non-throwing `navigation: true` drain reports.
 		expect(ctx.stops).toHaveLength(1);
 		expect(ctx.stops[0]?.contextSignals?.signals.navigation).toBe(true);
 		expect(ctx.sessionEnds).toEqual(["navigation"]);
@@ -1027,11 +996,10 @@ describe("tab loop", () => {
 		});
 		orchestrator.attach(a);
 		await orchestrator.run();
-		// The session's second (and final) loop iteration is the "done tabbing"
-		// isBody exit, which now also drains context signals before ending (see
-		// the F55 focus-removal tests below) — hence the trailing "drain" with
-		// no further "pair"/"clear" since that drain reports hasAttributed:
-		// false (this fixture has nothing attributed on the second iteration).
+		// The session's second (and final) loop iteration is the "done tabbing" isBody exit, which also
+		// drains context signals before ending, hence the trailing "drain" with no further
+		// "pair"/"clear": that drain reports hasAttributed: false, this fixture having nothing
+		// attributed on the second iteration.
 		expect(order).toEqual(["drain", "pair", "clear", "drain"]);
 	});
 
@@ -1068,10 +1036,7 @@ describe("tab loop", () => {
 					return "#blurred";
 				}
 
-				if (
-					fn === installContextObserverScript ||
-					fn === clearAttributedScript
-				) {
+				if (fn === installContextObserverScript || fn === clearAttributedScript) {
 					return undefined;
 				}
 
@@ -1126,10 +1091,7 @@ describe("tab loop", () => {
 					return "#blurred";
 				}
 
-				if (
-					fn === installContextObserverScript ||
-					fn === clearAttributedScript
-				) {
+				if (fn === installContextObserverScript || fn === clearAttributedScript) {
 					return undefined;
 				}
 
@@ -1145,12 +1107,11 @@ describe("tab loop", () => {
 			orchestrator.attach(plain);
 			await orchestrator.run();
 
-			// The synthetic F55 snapshot has no live focused element (it already
-			// blurred itself), so only the contextSignals declarer — the
-			// capability this mechanism exists to serve — gets notified. A
-			// plain consumer with no contextSignals capability has nothing here
-			// it could act on, unlike a normal tab stop where every consumer's
-			// fields are meaningfully absent-or-present for a real element.
+			// The synthetic F55 snapshot has no live focused element (it already blurred itself), so only
+			// the contextSignals declarer (the capability this mechanism exists to serve) gets notified.
+			// A plain consumer with no contextSignals capability has nothing here it could act on, unlike
+			// a normal tab stop where every consumer's fields are meaningfully absent-or-present for a
+			// real element.
 			expect(plain.stops).toHaveLength(0);
 			expect(ctx.stops).toHaveLength(1);
 			expect(plain.sessionEnds).toEqual(["completed"]);
@@ -1251,17 +1212,15 @@ describe("tab loop", () => {
 		});
 
 		/**
-		 * Builds a consumer that mirrors `@a11y-pulse/focus-appearance-audit`'s
-		 * real `onTabStop` closely enough to be a faithful regression test: it
-		 * declares `unfocusedPair` + `baselineStyles` and calls
-		 * `session.ensureUnfocusedPair()` whenever `snapshot.baselineStyles` is
-		 * absent (see `packages/focus-appearance-audit/src/audit.ts`). The
-		 * synthetic F55 snapshot never sets `baselineStyles`, so this consumer
-		 * would call `ensureUnfocusedPair()` for it if ever notified — which
-		 * throws synchronously ("unfocusedPair capture not implemented") since
-		 * there is no `activeHandle` for the synthetic stop to hold. Scoping
-		 * notification to `contextSignals` declarers (the fix under test) means
-		 * this consumer should never be handed the synthetic snapshot at all.
+		 * Builds a consumer that mirrors `@a11y-pulse/focus-appearance-audit`'s real `onTabStop`
+		 * closely enough to be a faithful regression test: it declares `unfocusedPair` +
+		 * `baselineStyles` and calls `session.ensureUnfocusedPair()` whenever `snapshot.baselineStyles`
+		 * is absent (see `packages/focus-appearance-audit/src/audit.ts`). The synthetic F55 snapshot
+		 * never sets `baselineStyles`, so this consumer would call `ensureUnfocusedPair()` for it if
+		 * ever notified, which throws synchronously ("unfocusedPair capture not implemented") since
+		 * there is no `activeHandle` for the synthetic stop to hold. Scoping notification to
+		 * `contextSignals` declarers means this consumer should never be handed the synthetic snapshot
+		 * at all.
 		 */
 		function unfocusedPairConsumer(): TabConsumer & {
 			stops: TabStopSnapshot[];
@@ -1319,10 +1278,7 @@ describe("tab loop", () => {
 					return "#blurred";
 				}
 
-				if (
-					fn === installContextObserverScript ||
-					fn === clearAttributedScript
-				) {
+				if (fn === installContextObserverScript || fn === clearAttributedScript) {
 					return undefined;
 				}
 
@@ -1347,9 +1303,8 @@ describe("tab loop", () => {
 			expect(ctx.sessionEnds).toEqual(["completed"]);
 			expect(ctx.stops).toHaveLength(1);
 			expect(ctx.stops[0]?.contextSignals?.signals.focusRemoved).toBe(true);
-			// Scoped out of notification entirely: no live element for it to
-			// act on, so ensureUnfocusedPair() (which would throw) is never
-			// reached.
+			// Scoped out of notification entirely: no live element for it to act on, so
+			// ensureUnfocusedPair() (which would throw) is never reached.
 			expect(pairConsumer.stops).toHaveLength(0);
 			expect(pairConsumer.ensureCalls).toBe(0);
 		});

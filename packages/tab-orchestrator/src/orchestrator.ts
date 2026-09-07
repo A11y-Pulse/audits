@@ -44,9 +44,7 @@ import { captureUnfocusedPair } from "./unfocused-pair";
 function isContextDestroyedError(error: unknown): boolean {
 	const message = error instanceof Error ? error.message : String(error);
 
-	return /Execution context was destroyed|Target closed|frame was detached|navigat/i.test(
-		message,
-	);
+	return /Execution context was destroyed|Target closed|frame was detached|navigat/i.test(message);
 }
 
 /**
@@ -112,8 +110,7 @@ export function createTabOrchestrator(
 			const attached = new Set(consumers);
 			const screenshotSettleDelay =
 				options.screenshotSettleDelay ?? DEFAULT_SCREENSHOT_SETTLE_DELAY;
-			const screenshotClipBuffer =
-				options.screenshotClipBuffer ?? DEFAULT_SCREENSHOT_CLIP_BUFFER;
+			const screenshotClipBuffer = options.screenshotClipBuffer ?? DEFAULT_SCREENSHOT_CLIP_BUFFER;
 			const markerLimit = Math.max(
 				options.markerLimit ?? DEFAULT_MARKER_LIMIT,
 				options.baselineElementLimit ?? 0,
@@ -168,11 +165,7 @@ export function createTabOrchestrator(
 						throw new Error("unfocusedPair capture not implemented");
 					}
 
-					pairByStop.current ??= captureUnfocusedPair(
-						adaptor,
-						resolved,
-						activeHandle,
-					);
+					pairByStop.current ??= captureUnfocusedPair(adaptor, resolved, activeHandle);
 
 					return pairByStop.current;
 				},
@@ -189,11 +182,7 @@ export function createTabOrchestrator(
 						throw new Error("screenshot capture not implemented");
 					}
 
-					screenshotByStop.current ??= captureScreenshot(
-						adaptor,
-						resolved,
-						activeHandle,
-					);
+					screenshotByStop.current ??= captureScreenshot(adaptor, resolved, activeHandle);
 
 					return screenshotByStop.current;
 				},
@@ -348,16 +337,9 @@ export function createTabOrchestrator(
 					let base: ActiveElementBase | null;
 
 					try {
-						base = await adaptor.evaluate(
-							probeActiveElementScript,
-							styleProps,
-							MARKER_ATTR,
-						);
+						base = await adaptor.evaluate(probeActiveElementScript, styleProps, MARKER_ATTR);
 					} catch (error) {
-						if (
-							remainingHas("contextSignals") &&
-							isContextDestroyedError(error)
-						) {
+						if (remainingHas("contextSignals") && isContextDestroyedError(error)) {
 							// Mid-flight navigation destroyed the execution context
 							// before the probe could even run: there is no active
 							// element to report, so end directly (mirrors the
@@ -413,10 +395,7 @@ export function createTabOrchestrator(
 							try {
 								raw =
 									contextNav?.raw ??
-									(await adaptor.evaluate(
-										drainContextObserverScript,
-										MARKER_ATTR,
-									));
+									(await adaptor.evaluate(drainContextObserverScript, MARKER_ATTR));
 							} catch (error) {
 								if (!isContextDestroyedError(error)) {
 									throw error;
@@ -431,9 +410,7 @@ export function createTabOrchestrator(
 							}
 
 							if (raw.hasAttributed) {
-								const attributedRef = await adaptor.evaluateHandle(
-									attributedHandleScript,
-								);
+								const attributedRef = await adaptor.evaluateHandle(attributedHandleScript);
 								let selector: string;
 
 								try {
@@ -531,10 +508,7 @@ export function createTabOrchestrator(
 							activeElement,
 						};
 
-						if (
-							remainingHas("baselineStyles") &&
-							activeElement.index !== null
-						) {
+						if (remainingHas("baselineStyles") && activeElement.index !== null) {
 							const baselineStyles = interned.get(activeElement.index);
 
 							if (baselineStyles !== undefined) {
@@ -555,10 +529,7 @@ export function createTabOrchestrator(
 								// yet) do the one drain this stop needs.
 								const raw =
 									contextNav?.raw ??
-									(await adaptor.evaluate(
-										drainContextObserverScript,
-										MARKER_ATTR,
-									));
+									(await adaptor.evaluate(drainContextObserverScript, MARKER_ATTR));
 								signals = {
 									openedWindow: raw.openedWindow,
 									submittedForm: raw.submittedForm,
@@ -592,34 +563,20 @@ export function createTabOrchestrator(
 						}
 
 						if (remainingHas("obscuring")) {
-							let raw = await adaptor.evaluate(
-								measureObscuringScript,
-								ref,
-								OBSCURER_ATTR,
-							);
+							let raw = await adaptor.evaluate(measureObscuringScript, ref, OBSCURER_ATTR);
 
 							if (raw.fullyObscured) {
-								await new Promise((resolve) =>
-									setTimeout(resolve, OBSCURING_RECHECK_DELAY_MS),
-								);
-								raw = await adaptor.evaluate(
-									measureObscuringScript,
-									ref,
-									OBSCURER_ATTR,
-								);
+								await new Promise((resolve) => setTimeout(resolve, OBSCURING_RECHECK_DELAY_MS));
+								raw = await adaptor.evaluate(measureObscuringScript, ref, OBSCURER_ATTR);
 							}
 
 							let obscuredBy: { selector: string; html: string } | null = null;
 
 							if (raw.hasObscurer) {
-								const obscurer =
-									await adaptor.evaluateHandle(obscurerHandleScript);
+								const obscurer = await adaptor.evaluateHandle(obscurerHandleScript);
 
 								try {
-									const obscurerSelector = await adaptor.evaluate(
-										getSelector,
-										obscurer,
-									);
+									const obscurerSelector = await adaptor.evaluate(getSelector, obscurer);
 									obscuredBy = {
 										selector: obscurerSelector,
 										html: truncateHtml(raw.obscuredByHtml ?? ""),

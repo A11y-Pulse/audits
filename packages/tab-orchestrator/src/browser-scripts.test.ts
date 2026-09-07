@@ -94,12 +94,10 @@ describe("baselineScript visibility filtering (checkVisibility)", () => {
 	});
 
 	it("skips checkVisibility-hidden elements so they don't consume the marker budget", () => {
-		// Mimic a closed mega-menu: its links are hidden via an ancestor, which
-		// per-element display/visibility checks can't see. They must not eat into
-		// the marker budget, or every element tabbed after them loses its baseline.
-		(Element.prototype as CheckVisibilityCarrier).checkVisibility = function (
-			this: Element,
-		) {
+		// Mimic a closed mega-menu: its links are hidden via an ancestor, which per-element
+		// display/visibility checks can't see. They must not eat into the marker budget, or every
+		// element tabbed after them loses its baseline.
+		(Element.prototype as CheckVisibilityCarrier).checkVisibility = function (this: Element) {
 			return this.closest("[data-hidden-menu]") === null;
 		};
 
@@ -116,15 +114,12 @@ describe("baselineScript visibility filtering (checkVisibility)", () => {
 
 		expect(entries).toHaveLength(2);
 		expect(document.querySelector("#after")?.hasAttribute(MARKER)).toBe(true);
-		expect(
-			document.querySelectorAll(`[data-hidden-menu] [${MARKER}]`),
-		).toHaveLength(0);
+		expect(document.querySelectorAll(`[data-hidden-menu] [${MARKER}]`)).toHaveLength(0);
 	});
 
 	it("asks checkVisibility to include the CSS visibility property", () => {
 		const checkVisibility = vi.fn().mockReturnValue(true);
-		(Element.prototype as CheckVisibilityCarrier).checkVisibility =
-			checkVisibility;
+		(Element.prototype as CheckVisibilityCarrier).checkVisibility = checkVisibility;
 
 		document.body.innerHTML = "<button>visible</button>";
 
@@ -147,9 +142,7 @@ describe("baselineScript snapshot interning", () => {
 
 		expect(payload.entries).toHaveLength(6);
 		expect(payload.styles).toHaveLength(1);
-		expect(payload.entries.map((e) => e.styleIndex)).toEqual([
-			0, 0, 0, 0, 0, 0,
-		]);
+		expect(payload.entries.map((e) => e.styleIndex)).toEqual([0, 0, 0, 0, 0, 0]);
 	});
 
 	it("assigns distinct snapshots to differently-styled elements", () => {
@@ -173,9 +166,9 @@ describe("baseline snapshot DOM state", () => {
 	});
 
 	it("snapshots styles with the marker attribute applied, matching the probe", () => {
-		// The probe always reads styles while the marker is present, so the
-		// baseline must too — otherwise page CSS targeting the marker attribute
-		// would register as a style change on every element.
+		// The probe always reads styles while the marker is present, so the baseline must too.
+		// Otherwise page CSS targeting the marker attribute would register as a style change on every
+		// element.
 		const markerSeenDuringReads: boolean[] = [];
 		vi.stubGlobal("getComputedStyle", (el: Element) => ({
 			display: "inline-block",
@@ -200,9 +193,7 @@ describe("snapshot value truncation", () => {
 		vi.unstubAllGlobals();
 	});
 
-	function stubComputedStyle(
-		valueFor: (el: Element, prop: string) => string,
-	): void {
+	function stubComputedStyle(valueFor: (el: Element, prop: string) => string): void {
 		vi.stubGlobal("getComputedStyle", (el: Element) => ({
 			display: "inline-block",
 			visibility: "visible",
@@ -212,9 +203,7 @@ describe("snapshot value truncation", () => {
 
 	it("bounds oversized property values", () => {
 		const long = `url(data:image/png;base64,${"A".repeat(20000)})`;
-		stubComputedStyle((_el, prop) =>
-			prop === "background-image" ? long : "none",
-		);
+		stubComputedStyle((_el, prop) => (prop === "background-image" ? long : "none"));
 		document.body.innerHTML = "<button>x</button>";
 
 		const payload = baselineScript(["background-image"], MARKER, 10);
@@ -225,13 +214,11 @@ describe("snapshot value truncation", () => {
 	});
 
 	it("preserves inequality between distinct oversized values", () => {
-		// Same length, same first 512 characters — only the tail differs, so
-		// the truncated forms must still differ (via the fingerprint).
+		// Same length, same first 512 characters, only the tail differs, so the truncated forms must
+		// still differ (via the fingerprint).
 		const head = "A".repeat(600);
 		stubComputedStyle((el, prop) =>
-			prop === "background-image"
-				? head + (el.textContent === "a" ? "X" : "Y")
-				: "none",
+			prop === "background-image" ? head + (el.textContent === "a" ? "X" : "Y") : "none",
 		);
 		document.body.innerHTML = "<button>a</button><button>b</button>";
 
@@ -244,12 +231,10 @@ describe("snapshot value truncation", () => {
 	});
 
 	it("truncates identically in the baseline and the focus probe", () => {
-		// Asymmetric truncation would make every oversized value "differ" on
-		// focus and produce false style-check passes.
+		// Asymmetric truncation would make every oversized value "differ" on focus and produce false
+		// style-check passes.
 		const long = `url(data:image/png;base64,${"B".repeat(20000)})`;
-		stubComputedStyle((_el, prop) =>
-			prop === "background-image" ? long : "none",
-		);
+		stubComputedStyle((_el, prop) => (prop === "background-image" ? long : "none"));
 		document.body.innerHTML = "<button>x</button>";
 
 		const payload = baselineScript(["background-image"], MARKER, 10);
@@ -296,8 +281,7 @@ describe("elementRectScript", () => {
 	it("returns the element's page-relative rect", () => {
 		document.body.innerHTML = "<button>target</button>";
 		const el = document.querySelector("button") as HTMLElement;
-		el.getBoundingClientRect = () =>
-			({ left: 10, top: 20, width: 30, height: 40 }) as DOMRect;
+		el.getBoundingClientRect = () => ({ left: 10, top: 20, width: 30, height: 40 }) as DOMRect;
 		Object.defineProperty(window, "scrollX", { value: 5, configurable: true });
 		Object.defineProperty(window, "scrollY", { value: 7, configurable: true });
 
@@ -330,8 +314,7 @@ describe("isCenterObscuredScript", () => {
 	it("is false when the hit test lands on a descendant of the element", () => {
 		document.body.innerHTML = "<button><span>label</span></button>";
 		const el = document.querySelector("button") as HTMLElement;
-		document.elementFromPoint = () =>
-			document.querySelector("span") as HTMLElement;
+		document.elementFromPoint = () => document.querySelector("span") as HTMLElement;
 
 		expect(isCenterObscuredScript(el)).toBe(false);
 	});
@@ -339,8 +322,7 @@ describe("isCenterObscuredScript", () => {
 	it("is true when an unrelated element covers the element's centre", () => {
 		document.body.innerHTML = `<button>target</button><div id="banner">cookie banner</div>`;
 		const el = document.querySelector("button") as HTMLElement;
-		document.elementFromPoint = () =>
-			document.querySelector("#banner") as HTMLElement;
+		document.elementFromPoint = () => document.querySelector("#banner") as HTMLElement;
 
 		expect(isCenterObscuredScript(el)).toBe(true);
 	});
@@ -455,8 +437,7 @@ describe("measureObscuringScript", () => {
 	});
 
 	it("classifies opacity below 1 as semi-transparent", () => {
-		document.body.innerHTML =
-			'<button>target</button><div id="veil">veil</div>';
+		document.body.innerHTML = '<button>target</button><div id="veil">veil</div>';
 		const el = document.querySelector("button") as HTMLElement;
 		const veil = document.querySelector("#veil") as HTMLElement;
 		el.getBoundingClientRect = () =>

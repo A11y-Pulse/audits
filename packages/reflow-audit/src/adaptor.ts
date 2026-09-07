@@ -8,8 +8,8 @@ export type { Rect } from "@a11y-pulse/browser-adaptor";
 export type ElementRef = unknown;
 
 /**
- * A framework-specific adaptor that provides the primitives needed by the audit. An adaptor wraps
- * a single page in a web browser.
+ * A framework-specific adaptor that provides the primitives needed by the audit. An adaptor wraps a
+ * single page in a web browser.
  */
 export interface ReflowAuditAdaptor {
 	/**
@@ -32,12 +32,10 @@ export interface ReflowAuditAdaptor {
 	setViewport(v: { width: number; height: number }): Promise<void>;
 
 	/**
-	 * Screenshot a clipped region of the page defined by `clip`. `scale` is the
-	 * device scale factor (bitmap pixels per CSS pixel), multiplied against
-	 * whatever deviceScaleFactor the page itself currently has (Puppeteer does
-	 * not replace it). The caller is responsible for the page being at a known
-	 * deviceScaleFactor before invoking this. This function must return PNG
-	 * bytes.
+	 * Screenshot a clipped region of the page defined by `clip`. `scale` is the device scale factor
+	 * (bitmap pixels per CSS pixel), multiplied against whatever deviceScaleFactor the page itself
+	 * currently has (Puppeteer does not replace it). The caller is responsible for the page being at
+	 * a known deviceScaleFactor before invoking this. This function must return PNG bytes.
 	 */
 	screenshotClip(clip: Rect, scale?: number): Promise<Uint8Array>;
 

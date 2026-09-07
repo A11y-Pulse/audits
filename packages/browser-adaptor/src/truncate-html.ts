@@ -11,10 +11,7 @@ export type TruncateHtmlOptions = {
  * Given an element's outerHTML, produce a truncated version suitable for display in results. For
  * memory efficiency, pass a shallow outerHTML i.e. `Node.cloneNode(false).outerHTML`.
  */
-export function truncateHtml(
-	html: string,
-	options: TruncateHtmlOptions = {},
-): string {
+export function truncateHtml(html: string, options: TruncateHtmlOptions = {}): string {
 	if (!html) {
 		return "";
 	}
@@ -25,8 +22,7 @@ export function truncateHtml(
 
 	// Keep only the opening tag
 	const closingBracket = html.indexOf(">");
-	const openingTag =
-		closingBracket === -1 ? html : html.slice(0, closingBracket + 1);
+	const openingTag = closingBracket === -1 ? html : html.slice(0, closingBracket + 1);
 
 	// Shorten long quoted attribute values, preserving the quote style.
 	const trimmed = openingTag.replace(
