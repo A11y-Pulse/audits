@@ -46,7 +46,7 @@
 		"access": "public"
 	},
 	"peerDependencies": {
-		"puppeteer": "^25.7.0"
+		"puppeteer": "^25.9.0"
 	},
 	"peerDependenciesMeta": {
 		"puppeteer": {
@@ -57,7 +57,7 @@
 		"@a11y-pulse/context-change-on-focus-audit": "*",
 		"@a11y-pulse/focus-appearance-audit": "*",
 		"@a11y-pulse/focus-not-obscured-audit": "*",
-		"happy-dom": "^20.11.2",
-		"puppeteer": "^25.7.0"
+		"happy-dom": "^20.12.0",
+		"puppeteer": "^25.9.0"
 	}
 }

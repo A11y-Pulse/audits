@@ -31,7 +31,7 @@ jobs:
       - name: Clear token auth so OIDC is used
         run: npm config delete "//registry.npmjs.org/:_authToken" || true
 
-      - uses: changesets/action@v1
+      - uses: changesets/action@v2
         with:
           publish: npm run release
           title: Version packages
