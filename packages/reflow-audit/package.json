@@ -27,10 +27,12 @@
 	},
 	"exports": {
 		".": {
+			"source": "./src/index.ts",
 			"types": "./dist/index.d.ts",
 			"import": "./dist/index.js"
 		},
 		"./puppeteer": {
+			"source": "./src/adaptors/puppeteer.ts",
 			"types": "./dist/adaptors/puppeteer.d.ts",
 			"import": "./dist/adaptors/puppeteer.js"
 		}
