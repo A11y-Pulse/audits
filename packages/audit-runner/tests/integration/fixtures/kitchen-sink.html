@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Kitchen sink</title><style>
+  body { margin: 0; background: #fff; font: 16px/1.4 sans-serif; }
+  a, button { display: block; padding: 8px; }
+  button { outline: none; }
+  #visible-focus:focus { outline: 3px solid #0050ff; }
+  .spacer { height: 120vh; }
+  #wide { width: 900px; background: #eee; }
+  #clipped {
+    width: 20rem;
+    height: 22px;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  #sticky-footer {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    height: 80px;
+    background: #111;
+    color: #fff;
+    z-index: 10;
+  }
+</style></head><body>
+  <a href="#main">Skip to content</a>
+  <main id="main" tabindex="-1">
+    <button id="visible-focus">Has a focus indicator</button>
+    <button id="no-focus">Has no focus indicator</button>
+    <div id="clipped">A single line of copy that has no room to grow when spacing increases.</div>
+    <div id="wide">Wider than a 320px viewport.</div>
+    <div class="spacer"></div>
+    <button id="under-footer">Hidden behind the footer</button>
+  </main>
+  <div id="sticky-footer">Sticky footer</div>
+</body></html>

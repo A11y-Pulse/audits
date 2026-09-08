@@ -4,7 +4,7 @@
 	"description": "WCAG 2.4.7 Focus Visible audit that tabs through a page and detects visible focus indicators via computed styles and pixel-diff fallback.",
 	"type": "module",
 	"license": "SEE LICENSE IN LICENSE.md",
-	"author": "A11y Pulse Limited",
+	"author": "A11y Pulse",
 	"homepage": "https://github.com/A11y-Pulse/audits/tree/main/packages/focus-appearance-audit#readme",
 	"repository": {
 		"type": "git",
@@ -28,6 +28,7 @@
 	},
 	"exports": {
 		".": {
+			"source": "./src/index.ts",
 			"types": "./dist/index.d.ts",
 			"import": "./dist/index.js"
 		}

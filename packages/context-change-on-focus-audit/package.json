@@ -4,7 +4,7 @@
 	"description": "WCAG 3.2.1 On Focus audit that tabs through a page and detects focus-triggered context changes (new windows, auto-submits, navigation, and focus theft/removal).",
 	"type": "module",
 	"license": "SEE LICENSE IN LICENSE.md",
-	"author": "A11y Pulse Limited",
+	"author": "A11y Pulse",
 	"homepage": "https://github.com/A11y-Pulse/audits/tree/main/packages/context-change-on-focus-audit#readme",
 	"repository": {
 		"type": "git",
@@ -28,6 +28,7 @@
 	},
 	"exports": {
 		".": {
+			"source": "./src/index.ts",
 			"types": "./dist/index.d.ts",
 			"import": "./dist/index.js"
 		}
