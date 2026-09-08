@@ -1,6 +1,10 @@
 <p align="center">
     <a href="https://www.a11ypulse.com/?utm_source=github&utm_content=audit-logo" target="_blank">
-        <img src="./.github/logo.png" alt="A11y Pulse Logo" width="180" />
+        <picture>
+            <source srcset="https://app.a11ypulse.com/images/a11y-pulse-logo-white.png" media="(prefers-color-scheme: dark)" />
+            <source srcset="https://app.a11ypulse.com/images/a11y-pulse-logo.png" media="(prefers-color-scheme: light), (prefers-color-scheme: no-preference)" />
+            <img src="https://app.a11ypulse.com/images/a11y-pulse-logo.png" alt="A11y Pulse Logo">
+        </picture>
     </a>
 </p>
 
