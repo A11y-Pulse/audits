@@ -4,7 +4,7 @@
 	"description": "Shared Tab-session runner for A11y Pulse keyboard audits.",
 	"type": "module",
 	"license": "SEE LICENSE IN LICENSE.md",
-	"author": "A11y Pulse Limited",
+	"author": "A11y Pulse",
 	"homepage": "https://github.com/A11y-Pulse/audits/tree/main/packages/tab-orchestrator#readme",
 	"repository": {
 		"type": "git",

@@ -4,7 +4,7 @@ Thanks for your interest in contributing to the A11y Pulse audits.
 
 ## License note
 
-Packages in this repo are released under the [PolyForm Shield License 1.0.0](./packages/focus-appearance-audit/LICENSE.md), a source-available (not open-source/OSI-approved) license: it permits non-competing use but forbids using the software (including modified versions) to build a competing product or service. By submitting a contribution, you agree that it will be licensed under the same terms, and that A11y Pulse Limited may use, modify, and relicense your contribution as part of the project.
+Packages in this repo are released under the [PolyForm Shield License 1.0.0](./packages/focus-appearance-audit/LICENSE.md), a source-available (not open-source/OSI-approved) license: it permits non-competing use but forbids using the software (including modified versions) to build a competing product or service. By submitting a contribution, you agree that it will be licensed under the same terms, and that A11y Pulse may use, modify, and relicense your contribution as part of the project.
 
 If you're not comfortable with that, please open an issue to discuss your change before submitting a pull request.
 

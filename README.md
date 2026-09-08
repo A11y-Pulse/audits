@@ -1,8 +1,28 @@
-# A11y Pulse accessibility audits
+<p align="center">
+    <a href="https://www.a11ypulse.com/?utm_source=github&utm_content=audit-logo" target="_blank">
+        <img src="./.github/logo.png" alt="A11y Pulse Logo" width="180" />
+    </a>
+</p>
 
-These accessibility audits have been developed by [A11y Pulse](https://www.a11ypulse.com/) to compliment and extend other accessibility testing frameworks like [axe-core](https://github.com/dequelabs/axe-core). The audits come with Puppeteer adaptors, but are written to be framework-agnostic.
+# A11y Pulse Accessibility Audits
+
+## About A11y Pulse
+
+[A11y Pulse](https://www.a11ypulse.com/?utm_source=github&utm_content=audit-description) is a web accessibility monitoring platform. It scans websites for accessibility issues using real web browsers, making it easier to reach WCAG compliance and maintain accessibility over time. A11y Pulse combines its own proprietary audits with other open-source accessibility testing frameworks to provide more coverage than most other tools.
+
+## About the Audits
+
+The accessibility audits in this repository have been designed to compliment and extend other accessibility testing frameworks like [axe-core](https://github.com/dequelabs/axe-core). The audits come with Puppeteer adaptors, but are written to be framework-agnostic.
 
 These audits are released under the [PolyForm Shield License 1.0.0](./packages/focus-appearance-audit/LICENSE.md). This means they are source-available and free to use in non-competing products. In other words, you are free to use these audits in your own internal monitoring but cannot use them as part of any monitoring service that competes with A11y Pulse.
+
+## Quick Start
+
+These audits are intended to be run as part of a wider accessibility monitoring solution. For an example of how to run these audits, see the [`@a11y-pulse/audit-runner` package](./packages/audit-runner). This package can also be run from the command line:
+
+```bash
+npx @a11y-pulse/audit-runner https://example.com
+```
 
 ## Packages
 
@@ -16,6 +36,7 @@ These audits are released under the [PolyForm Shield License 1.0.0](./packages/f
 | [`@a11y-pulse/skip-link-audit`](./packages/skip-link-audit) | [@a11y-pulse/skip-link-audit](https://www.npmjs.com/package/@a11y-pulse/skip-link-audit) | [WCAG 2.4.1 Bypass Blocks](https://www.w3.org/WAI/WCAG22/Understanding/bypass-blocks.html): when a skip-link-like in-page anchor is in the first tab stops, verifies that activating it moves keyboard focus |
 | [`@a11y-pulse/text-spacing-audit`](./packages/text-spacing-audit) | [@a11y-pulse/text-spacing-audit](https://www.npmjs.com/package/@a11y-pulse/text-spacing-audit) | [WCAG 1.4.12 Text Spacing](https://www.w3.org/WAI/WCAG22/Understanding/text-spacing): injects the SC spacing overrides and detects clipped or overlapping text |
 | [`@a11y-pulse/tab-orchestrator`](./packages/tab-orchestrator) | [@a11y-pulse/tab-orchestrator](https://www.npmjs.com/package/@a11y-pulse/tab-orchestrator) | Orchestrator that drives a page once so multiple tab-driven audits can share a single tab loop |
+| [`@a11y-pulse/audit-runner`](./packages/audit-runner) | [@a11y-pulse/audit-runner](https://www.npmjs.com/package/@a11y-pulse/audit-runner) | Simple example tool that runs all audits |
 
 ## Development
 
