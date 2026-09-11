@@ -1,5 +1,17 @@
 # @a11y-pulse/audit-runner
 
+## 0.3.0
+
+### Minor Changes
+
+- [`abe4b4e`](https://github.com/A11y-Pulse/audits/commit/abe4b4e48bf8bfaa59e5be2d4c158803083e8ffd) Thanks [@wildlyinaccurate](https://github.com/wildlyinaccurate)! - Relicense under MIT. These packages carry no automation-library or audit logic of their own, so the PolyForm Shield restrictions only discouraged contributions such as new browser adaptors. The audit packages remain under PolyForm Shield 1.0.0.
+
+### Patch Changes
+
+- Updated dependencies [[`abe4b4e`](https://github.com/A11y-Pulse/audits/commit/abe4b4e48bf8bfaa59e5be2d4c158803083e8ffd)]:
+  - @a11y-pulse/browser-adaptor@0.3.0
+  - @a11y-pulse/tab-orchestrator@0.5.0
+
 ## 0.2.0
 
 ### Minor Changes
