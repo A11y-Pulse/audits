@@ -1,5 +1,5 @@
 <p align="center">
-    <a href="https://www.a11ypulse.com/?utm_source=github&utm_content=audit-logo" target="_blank">
+    <a href="https://www.a11ypulse.com/?utm_source=github&utm_content=audits-logo" target="_blank">
         <picture>
             <source srcset="https://app.a11ypulse.com/images/a11y-pulse-logo-white.png" media="(prefers-color-scheme: dark)" />
             <source srcset="https://app.a11ypulse.com/images/a11y-pulse-logo.png" media="(prefers-color-scheme: light), (prefers-color-scheme: no-preference)" />
@@ -8,11 +8,13 @@
     </a>
 </p>
 
-# A11y Pulse Accessibility Audits
+# Automated accessibility audits that go beyond axe-core
+
+Browser-based WCAG testing for things static accessibility scanners can't test. Works with Puppeteer, Playwright, or your own browser automation. Developed by the [A11y Pulse](https://www.a11ypulse.com/?utm_source=github&utm_content=audits-lead) team.
 
 ## About A11y Pulse
 
-[A11y Pulse](https://www.a11ypulse.com/?utm_source=github&utm_content=audit-description) is a web accessibility monitoring platform. It scans websites for accessibility issues using real web browsers, making it easier to reach WCAG compliance and maintain accessibility over time. A11y Pulse combines its own proprietary audits with other open-source accessibility testing frameworks to provide more coverage than most other tools.
+[A11y Pulse](https://www.a11ypulse.com/?utm_source=github&utm_content=audits-about) is a web accessibility monitoring platform. It scans websites for accessibility issues using real web browsers, making it easier to reach WCAG compliance and maintain accessibility over time. A11y Pulse combines its own proprietary audits with other open-source accessibility testing frameworks to provide more coverage than most other tools.
 
 ## About the Audits
 
