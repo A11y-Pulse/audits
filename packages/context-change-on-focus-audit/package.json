@@ -52,9 +52,11 @@
 		"access": "public"
 	},
 	"dependencies": {
+		"@a11y-pulse/browser-adaptor": "*",
 		"@a11y-pulse/tab-orchestrator": "*"
 	},
 	"devDependencies": {
+		"playwright-core": "^1.63.0",
 		"puppeteer": "^25.9.0"
 	}
 }

@@ -1,10 +1,8 @@
 #!/usr/bin/env node
-import puppeteer from "puppeteer";
+import { openPage } from "./browsers";
 import { parseArgs, USAGE } from "./cli-args";
 import { runAllAudits } from "./run-audits";
 import { toJson } from "./serialise";
-
-const DEFAULT_VIEWPORT = { width: 1280, height: 800 };
 
 async function main(argv: readonly string[]): Promise<number> {
 	const parsed = parseArgs(argv);
@@ -21,15 +19,12 @@ async function main(argv: readonly string[]): Promise<number> {
 		return 1;
 	}
 
-	const browser = await puppeteer.launch({ defaultViewport: DEFAULT_VIEWPORT });
+	const session = await openPage(parsed.url, parsed.engine, parsed.browser);
 
 	try {
-		const page = await browser.newPage();
-		await page.goto(parsed.url, { waitUntil: "networkidle2" });
-
-		console.log(toJson(await runAllAudits(page)));
+		console.log(toJson(await runAllAudits(session.adaptors)));
 	} finally {
-		await browser.close();
+		await session.close();
 	}
 
 	return 0;

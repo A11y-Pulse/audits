@@ -1,6 +1,6 @@
-import type { BrowserAdaptor, ElementRef } from "./adaptor";
+import type { BrowserAdaptor, ElementRef } from "@a11y-pulse/browser-adaptor";
+import { bufferedClip } from "@a11y-pulse/browser-adaptor";
 import { elementRectScript, pageDimensionsScript } from "./browser-scripts";
-import { bufferedClip } from "./clip";
 
 export type CaptureScreenshotOptions = {
 	screenshotClipBuffer: number;

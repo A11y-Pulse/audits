@@ -23,9 +23,17 @@ jobs:
         with:
           path: ~/.cache/puppeteer
           key: puppeteer-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Cache Playwright browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - name: Allow Chrome sandbox (Ubuntu 24.04 AppArmor userns restriction)
         run: echo 0 | sudo tee /proc/sys/kernel/apparmor_restrict_unprivileged_userns
       - run: npm ci
+      # Playwright's browsers are deliberately not devDependencies (close to a gigabyte). CI
+      # installs the one the default engine set needs; Firefox and WebKit are opt-in locally.
+      - run: npx playwright install --with-deps chromium
       - run: npm run lint
       - run: npm run build
       - run: npm run typecheck

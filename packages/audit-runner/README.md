@@ -16,7 +16,7 @@ It is released as source-available under the [PolyForm Shield License 1.0.0](#li
 npm install @a11y-pulse/audit-runner
 ```
 
-Unlike the individual audit packages, `puppeteer` is a regular dependency here rather than an optional peer, so the CLI works without any further setup.
+Unlike the individual audit packages, `puppeteer` is a regular dependency here rather than an optional peer, so the CLI works without any further setup. To drive the page with Playwright instead, install it yourself: `npm install playwright-core && npx playwright-core install`.
 
 ## CLI
 
@@ -30,19 +30,50 @@ Launches headless Chromium at a 1280x800 viewport, loads the URL, runs every aud
 npx @a11y-pulse/audit-runner https://who.likesdogs.nz/ | jq '.audits.reflow.bucket'
 ```
 
+`--engine playwright` drives the page with Playwright rather than Puppeteer, and `--browser` then picks the engine to launch:
+
+```bash
+npx @a11y-pulse/audit-runner https://who.likesdogs.nz/ --engine playwright --browser webkit
+```
+
+| Option | Values | Default |
+| --- | --- | --- |
+| `--engine` | `puppeteer`, `playwright` | `puppeteer` |
+| `--browser` | `chromium`, `firefox`, `webkit` | `chromium` |
+
+`--browser` requires `--engine playwright`. Firefox and WebKit tab in their own order and apply their own `:focus-visible` heuristics, so results will not match Chromium's element for element.
+
 The exit code reports whether the run itself succeeded, not whether the page passed: a page with violations still exits `0`. A bad URL or a crashed browser exits `1`, with the message on stderr.
+
+## Browser support
+
+| Adaptor | Browser | Supported |
+| --- | --- | --- |
+| Puppeteer | Chrome | Yes |
+| Playwright | Chromium | Yes |
+| Playwright | WebKit | **No.** The keyboard-driven audits it runs are unsupported on WebKit, which does not move focus to links when Tab is pressed. |
+| Playwright | Firefox | **Partial.** Reflow, text spacing, skip link and context change match Chromium; focus appearance and focus not obscured differ in the cases noted in their own READMEs. |
+
+Verified by this repo's integration suites, which run every audit against each of these engines. Unsupported and partial cases are skipped there with the reason printed alongside them.
 
 ## `runAllAudits`
 
 ```js
 import { runAllAudits } from "@a11y-pulse/audit-runner";
+import { PuppeteerAdaptor } from "@a11y-pulse/browser-adaptor/puppeteer";
+import { PuppeteerAdaptor as ReflowAdaptor } from "@a11y-pulse/reflow-audit/puppeteer";
+import { PuppeteerAdaptor as TextSpacingAdaptor } from "@a11y-pulse/text-spacing-audit/puppeteer";
 import puppeteer from "puppeteer";
 
 const browser = await puppeteer.launch();
 const page = await browser.newPage();
 await page.goto("https://who.likesdogs.nz/");
 
-const { url, audits } = await runAllAudits(page);
+const { url, audits } = await runAllAudits({
+	browser: new PuppeteerAdaptor(page),
+	reflow: new ReflowAdaptor(page),
+	textSpacing: new TextSpacingAdaptor(page),
+});
 
 console.log(audits.reflow.bucket);
 // 'violation'
@@ -53,12 +84,12 @@ console.log(audits.focusAppearance.summary);
 await browser.close();
 ```
 
-`runAllAudits(page, options?)` takes an already-loaded Puppeteer `Page` and builds the adaptors each audit needs.
+`runAllAudits(adaptors, options?)` takes one adaptor per audit interface, all three wrapping the same already-loaded page. Swap in the `PlaywrightAdaptor` from each of those subpaths to run the same audits under Playwright; nothing else changes.
 
 `options` takes each audit's own options object under its key, all optional:
 
 ```js
-const { audits } = await runAllAudits(page, {
+const { audits } = await runAllAudits(adaptors, {
 	focusAppearance: { elementLimit: 50, skipStyleCheck: true },
 	reflow: { screenshotLimit: 3 },
 });

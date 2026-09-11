@@ -9,6 +9,8 @@ const focusEmulationSessions = new WeakMap<Page, CDPSession>();
 
 /** A BrowserAdaptor backed by a Puppeteer Page. */
 export class PuppeteerAdaptor implements BrowserAdaptor {
+	readonly screenshotClipScale = 2;
+
 	constructor(private readonly page: Page) {}
 
 	evaluate<T>(
@@ -36,8 +38,12 @@ export class PuppeteerAdaptor implements BrowserAdaptor {
 		await this.page.keyboard.press("Enter");
 	}
 
-	async screenshotClip(clip: Rect): Promise<Uint8Array> {
-		return (await this.page.screenshot({ type: "png", clip })) as Uint8Array;
+	async screenshotClip(clip: Rect, scale = 1): Promise<Uint8Array> {
+		return (await this.page.screenshot({
+			type: "png",
+			optimizeForSpeed: true,
+			clip: { ...clip, scale },
+		})) as Uint8Array;
 	}
 
 	async ensureFocusReporting(): Promise<void> {

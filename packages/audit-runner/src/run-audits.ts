@@ -1,4 +1,4 @@
-import { PuppeteerAdaptor as SkipLinkAdaptor } from "@a11y-pulse/browser-adaptor/puppeteer";
+import type { BrowserAdaptor } from "@a11y-pulse/browser-adaptor";
 import {
 	type ContextChangeOnFocusOptions,
 	type ContextChangeOnFocusResult,
@@ -14,8 +14,12 @@ import {
 	type FocusNotObscuredOptions,
 	type FocusNotObscuredResult,
 } from "@a11y-pulse/focus-not-obscured-audit";
-import { type ReflowOptions, type ReflowResult, runReflowAudit } from "@a11y-pulse/reflow-audit";
-import { PuppeteerAdaptor as ReflowAdaptor } from "@a11y-pulse/reflow-audit/puppeteer";
+import {
+	type ReflowAuditAdaptor,
+	type ReflowOptions,
+	type ReflowResult,
+	runReflowAudit,
+} from "@a11y-pulse/reflow-audit";
 import {
 	runSkipLinkAudit,
 	type SkipLinkOptions,
@@ -27,14 +31,22 @@ import {
 	DEFAULT_SCREENSHOT_SETTLE_DELAY,
 	type TabSessionOptions,
 } from "@a11y-pulse/tab-orchestrator";
-import { PuppeteerAdaptor as TabAdaptor } from "@a11y-pulse/tab-orchestrator/puppeteer";
 import {
 	runTextSpacingAudit,
+	type TextSpacingAuditAdaptor,
 	type TextSpacingOptions,
 	type TextSpacingResult,
 } from "@a11y-pulse/text-spacing-audit";
-import { PuppeteerAdaptor as TextSpacingAdaptor } from "@a11y-pulse/text-spacing-audit/puppeteer";
-import type { Page } from "puppeteer";
+
+/**
+ * The adaptors every audit is driven through. One page, one adaptor per audit interface, so the
+ * runner never needs to know which automation library is underneath.
+ */
+export type AuditAdaptors = {
+	browser: BrowserAdaptor;
+	reflow: ReflowAuditAdaptor;
+	textSpacing: TextSpacingAuditAdaptor;
+};
 
 export type AuditRunnerOptions = {
 	focusAppearance?: FocusAppearanceOptions;
@@ -85,14 +97,14 @@ function widestSessionOptions(options: AuditRunnerOptions): TabSessionOptions {
 }
 
 async function runTabAuditsInSharedSession(
-	page: Page,
+	adaptor: BrowserAdaptor,
 	options: AuditRunnerOptions,
 ): Promise<SharedSessionResults> {
 	const focusAppearance = createFocusAppearanceAudit(options.focusAppearance);
 	const focusNotObscured = createFocusNotObscuredAudit(options.focusNotObscured);
 	const contextChangeOnFocus = createContextChangeOnFocusAudit(options.contextChangeOnFocus);
 
-	const orchestrator = createTabOrchestrator(new TabAdaptor(page), widestSessionOptions(options));
+	const orchestrator = createTabOrchestrator(adaptor, widestSessionOptions(options));
 	orchestrator.attach(focusAppearance);
 	orchestrator.attach(focusNotObscured);
 	orchestrator.attach(contextChangeOnFocus);
@@ -111,24 +123,29 @@ function blurAndScrollToTopScript(): void {
 	window.scrollTo(0, 0);
 }
 
+function locationHrefScript(): string {
+	return window.location.href;
+}
+
 /**
  * Run every A11y Pulse audit against an already-loaded page.
  */
 export async function runAllAudits(
-	page: Page,
+	adaptors: AuditAdaptors,
 	options: AuditRunnerOptions = {},
 ): Promise<AuditRunnerResult> {
-	const url = page.url();
+	const { browser } = adaptors;
+	const url = await browser.evaluate(locationHrefScript);
 
-	const sharedSession = await runTabAuditsInSharedSession(page, options);
+	const sharedSession = await runTabAuditsInSharedSession(browser, options);
 
-	await page.evaluate(blurAndScrollToTopScript);
-	const skipLink = await runSkipLinkAudit(new SkipLinkAdaptor(page), options.skipLink);
+	await browser.evaluate(blurAndScrollToTopScript);
+	const skipLink = await runSkipLinkAudit(browser, options.skipLink);
 
-	await page.evaluate(blurAndScrollToTopScript);
-	const textSpacing = await runTextSpacingAudit(new TextSpacingAdaptor(page), options.textSpacing);
+	await browser.evaluate(blurAndScrollToTopScript);
+	const textSpacing = await runTextSpacingAudit(adaptors.textSpacing, options.textSpacing);
 
-	const reflow = await runReflowAudit(new ReflowAdaptor(page), options.reflow);
+	const reflow = await runReflowAudit(adaptors.reflow, options.reflow);
 
 	return {
 		url,
