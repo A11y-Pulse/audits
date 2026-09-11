@@ -10,7 +10,7 @@
 
 # Automated accessibility audits that go beyond axe-core
 
-Browser-based WCAG testing for things static accessibility scanners can't test. Works with Puppeteer, Playwright, or your own browser automation. Developed by the [A11y Pulse](https://www.a11ypulse.com/?utm_source=github&utm_content=audits-lead) team.
+Browser-based WCAG testing for things static accessibility scanners like axe-core and Lighthouse can't test. Works with Puppeteer, Playwright, or your own browser automation. Developed by the [A11y Pulse](https://www.a11ypulse.com/?utm_source=github&utm_content=audits-lead) team.
 
 ## About A11y Pulse
 
