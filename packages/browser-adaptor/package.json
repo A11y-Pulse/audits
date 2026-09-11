@@ -3,7 +3,7 @@
 	"version": "0.2.2",
 	"description": "Shared browser adaptor primitives and DOM helpers for A11y Pulse accessibility audits.",
 	"type": "module",
-	"license": "SEE LICENSE IN LICENSE.md",
+	"license": "MIT",
 	"author": "A11y Pulse",
 	"homepage": "https://github.com/A11y-Pulse/audits/tree/main/packages/browser-adaptor#readme",
 	"repository": {

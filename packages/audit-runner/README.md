@@ -2,13 +2,13 @@
 
 [![npm version](https://img.shields.io/npm/v/@a11y-pulse/audit-runner)](https://www.npmjs.com/package/@a11y-pulse/audit-runner)
 [![CI](https://github.com/A11y-Pulse/audits/actions/workflows/ci.yml/badge.svg)](https://github.com/A11y-Pulse/audits/actions/workflows/ci.yml)
-[![License: PolyForm Shield 1.0.0](https://img.shields.io/badge/license-PolyForm%20Shield%201.0.0-blue)](./LICENSE.md)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](./LICENSE.md)
 
 A worked example of using every [A11y Pulse](https://www.a11ypulse.com/) accessibility audit together. It runs all audits against a single page and hands back their results unchanged, and ships a CLI that prints those results as JSON.
 
 This package exists to be read as much as run. If you are wiring the audits into your own pipeline, [`src/run-audits.ts`](./src/run-audits.ts) is the file to copy from: it shows how to share one tab session between the keyboard-driven audits and what order to run the rest in.
 
-It is released as source-available under the [PolyForm Shield License 1.0.0](#license).
+It is released under the [MIT License](#license).
 
 ## Install
 
@@ -106,10 +106,7 @@ Trusted Publisher on npm must stay configured for:
 
 ## License
 
-Released under the [PolyForm Shield License 1.0.0](./LICENSE.md), in plain language:
+[MIT](./LICENSE.md). Use it however you like, including in commercial and competing products.
 
-- **Source-available.** The source is public and you can read, fork, and modify it.
-- **Permitted for non-competing use.** You can use this package freely in your own products and services, as long as they don't compete with A11y Pulse.
-- **Competing products are forbidden.** You may not use this software (or a modified version of it) to build a product or service that competes with A11y Pulse's accessibility monitoring offering.
-
-See [LICENSE.md](./LICENSE.md) for the full, binding terms.
+The audit packages in this repository are licensed separately, under the
+[PolyForm Shield License 1.0.0](../../LICENSE.md).
