@@ -2,11 +2,11 @@
 
 [![npm version](https://img.shields.io/npm/v/@a11y-pulse/browser-adaptor)](https://www.npmjs.com/package/@a11y-pulse/browser-adaptor)
 [![CI](https://github.com/A11y-Pulse/audits/actions/workflows/ci.yml/badge.svg)](https://github.com/A11y-Pulse/audits/actions/workflows/ci.yml)
-[![License: PolyForm Shield 1.0.0](https://img.shields.io/badge/license-PolyForm%20Shield%201.0.0-blue)](./LICENSE.md)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](./LICENSE.md)
 
 Shared browser adaptor primitives and DOM helpers used by [A11y Pulse](https://www.a11ypulse.com/) accessibility audits. Audit packages drive a page through a `BrowserAdaptor` without depending on a specific automation library. This package also exports `getSelector` and `truncateHtml` for building result metadata.
 
-Released as source-available under the [PolyForm Shield License 1.0.0](#license).
+Released under the [MIT License](#license).
 
 ## Install
 
@@ -73,4 +73,7 @@ import { getSelector, truncateHtml } from "@a11y-pulse/browser-adaptor/dom";
 
 ## License
 
-[PolyForm Shield License 1.0.0](./LICENSE.md). Read, fork, and use in non-competing products. Do not use this package to build a competing accessibility monitoring service.
+[MIT](./LICENSE.md). Use it however you like, including in commercial and competing products.
+
+The audit packages in this repository are licensed separately, under the
+[PolyForm Shield License 1.0.0](../../LICENSE.md).

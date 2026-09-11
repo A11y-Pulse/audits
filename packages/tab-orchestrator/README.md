@@ -2,13 +2,13 @@
 
 [![npm version](https://img.shields.io/npm/v/@a11y-pulse/tab-orchestrator)](https://www.npmjs.com/package/@a11y-pulse/tab-orchestrator)
 [![CI](https://github.com/A11y-Pulse/audits/actions/workflows/ci.yml/badge.svg)](https://github.com/A11y-Pulse/audits/actions/workflows/ci.yml)
-[![License: PolyForm Shield 1.0.0](https://img.shields.io/badge/license-PolyForm%20Shield%201.0.0-blue)](./LICENSE.md)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](./LICENSE.md)
 
 A shared Tab-session runner for A11y Pulse's keyboard-driven accessibility audits. It drives a page through its focusable elements once (pressing Tab, tracking visited elements, capturing screenshots and styles on demand) while one or more **consumers** each score the tab stops for their own WCAG success criterion. This lets audits like [`@a11y-pulse/focus-appearance-audit`](../focus-appearance-audit) (WCAG 2.4.7) share a single tab loop with sibling audits instead of each re-tabbing the page from scratch.
 
 It is not an audit itself: it has no opinion on what "passing" means. It only owns the mechanics of moving focus, tracking cycle completion, and capturing the primitives (computed styles, clipped screenshots, unfocused/focused pairs) that consumers need.
 
-This package was developed by [A11y Pulse](https://www.a11ypulse.com/) for its accessibility monitoring service. It is released as source-available under the [PolyForm Shield License 1.0.0](#license).
+This package was developed by [A11y Pulse](https://www.a11ypulse.com/) for its accessibility monitoring service. It is released under the [MIT License](#license).
 
 ## Install
 
@@ -84,10 +84,7 @@ Trusted Publisher on npm must stay configured for:
 
 ## License
 
-Released under the [PolyForm Shield License 1.0.0](./LICENSE.md), in plain language:
+[MIT](./LICENSE.md). Use it however you like, including in commercial and competing products.
 
-- **Source-available.** The source is public and you can read, fork, and modify it.
-- **Permitted for non-competing use.** You can use this package freely in your own products and services, as long as they don't compete with A11y Pulse.
-- **Competing products are forbidden.** You may not use this software (or a modified version of it) to build a product or service that competes with A11y Pulse's accessibility monitoring offering.
-
-See [LICENSE.md](./LICENSE.md) for the full, binding terms.
+The audit packages in this repository are licensed separately, under the
+[PolyForm Shield License 1.0.0](../../LICENSE.md).

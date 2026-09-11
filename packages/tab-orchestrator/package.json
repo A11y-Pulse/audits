@@ -3,7 +3,7 @@
 	"version": "0.4.0",
 	"description": "Shared Tab-session runner for A11y Pulse keyboard audits.",
 	"type": "module",
-	"license": "SEE LICENSE IN LICENSE.md",
+	"license": "MIT",
 	"author": "A11y Pulse",
 	"homepage": "https://github.com/A11y-Pulse/audits/tree/main/packages/tab-orchestrator#readme",
 	"repository": {
