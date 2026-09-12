@@ -67,3 +67,32 @@ describe("PuppeteerAdaptor.pressEnter", () => {
 		expect(press).toHaveBeenCalledWith("Enter");
 	});
 });
+
+describe("PuppeteerAdaptor.screenshotClipScale", () => {
+	it("defaults to 2 and honours an override", () => {
+		const page = {} as unknown as Page;
+
+		expect(new PuppeteerAdaptor(page).screenshotClipScale).toBe(2);
+		expect(new PuppeteerAdaptor(page, { screenshotClipScale: 1 }).screenshotClipScale).toBe(1);
+	});
+});
+
+describe("PuppeteerAdaptor.screenshotClip", () => {
+	it("optimises for speed by default and honours an override", async () => {
+		const screenshot = vi.fn(async () => new Uint8Array());
+		const page = { screenshot } as unknown as Page;
+		const clip = { x: 0, y: 0, width: 10, height: 10 };
+
+		await new PuppeteerAdaptor(page).screenshotClip(clip);
+		await new PuppeteerAdaptor(page, { optimizeForSpeed: false }).screenshotClip(clip);
+
+		expect(screenshot).toHaveBeenNthCalledWith(
+			1,
+			expect.objectContaining({ optimizeForSpeed: true }),
+		);
+		expect(screenshot).toHaveBeenNthCalledWith(
+			2,
+			expect.objectContaining({ optimizeForSpeed: false }),
+		);
+	});
+});
