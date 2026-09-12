@@ -22,11 +22,6 @@
 			"source": "./src/index.ts",
 			"types": "./dist/index.d.ts",
 			"import": "./dist/index.js"
-		},
-		"./puppeteer": {
-			"source": "./src/adaptors/puppeteer.ts",
-			"types": "./dist/adaptors/puppeteer.d.ts",
-			"import": "./dist/adaptors/puppeteer.js"
 		}
 	},
 	"files": [
@@ -45,19 +40,15 @@
 	"publishConfig": {
 		"access": "public"
 	},
-	"peerDependencies": {
-		"puppeteer": "^25.9.0"
-	},
-	"peerDependenciesMeta": {
-		"puppeteer": {
-			"optional": true
-		}
+	"dependencies": {
+		"@a11y-pulse/browser-adaptor": "*"
 	},
 	"devDependencies": {
 		"@a11y-pulse/context-change-on-focus-audit": "*",
 		"@a11y-pulse/focus-appearance-audit": "*",
 		"@a11y-pulse/focus-not-obscured-audit": "*",
 		"happy-dom": "^20.12.0",
+		"playwright-core": "^1.63.0",
 		"puppeteer": "^25.9.0"
 	}
 }

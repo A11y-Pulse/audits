@@ -35,6 +35,11 @@
 			"source": "./src/adaptors/puppeteer.ts",
 			"types": "./dist/adaptors/puppeteer.d.ts",
 			"import": "./dist/adaptors/puppeteer.js"
+		},
+		"./playwright": {
+			"source": "./src/adaptors/playwright.ts",
+			"types": "./dist/adaptors/playwright.d.ts",
+			"import": "./dist/adaptors/playwright.js"
 		}
 	},
 	"files": [
@@ -59,15 +64,20 @@
 		"@a11y-pulse/browser-adaptor": "*"
 	},
 	"peerDependencies": {
+		"playwright-core": ">=1.40",
 		"puppeteer": "^25.9.0"
 	},
 	"peerDependenciesMeta": {
+		"playwright-core": {
+			"optional": true
+		},
 		"puppeteer": {
 			"optional": true
 		}
 	},
 	"devDependencies": {
 		"happy-dom": "^20.12.0",
+		"playwright-core": "^1.63.0",
 		"puppeteer": "^25.9.0"
 	}
 }

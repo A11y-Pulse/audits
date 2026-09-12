@@ -7,9 +7,32 @@ import type { BrowserAdaptor, ElementRef, Rect } from "../adaptor";
 // emulation when the CDP client disconnects.
 const focusEmulationSessions = new WeakMap<Page, CDPSession>();
 
+const DEFAULT_SCREENSHOT_CLIP_SCALE = 2;
+
+export type PuppeteerAdaptorOptions = {
+	/** Device scale factor for evidence screenshots. Defaults to 2, applied per capture. */
+	screenshotClipScale?: number;
+
+	/**
+	 * Trade PNG compression for capture speed. Defaults to true, which roughly doubles the encoded
+	 * size of each capture without changing a single pixel.
+	 */
+	optimizeForSpeed?: boolean;
+};
+
 /** A BrowserAdaptor backed by a Puppeteer Page. */
 export class PuppeteerAdaptor implements BrowserAdaptor {
-	constructor(private readonly page: Page) {}
+	readonly screenshotClipScale: number;
+
+	private readonly optimizeForSpeed: boolean;
+
+	constructor(
+		private readonly page: Page,
+		options: PuppeteerAdaptorOptions = {},
+	) {
+		this.screenshotClipScale = options.screenshotClipScale ?? DEFAULT_SCREENSHOT_CLIP_SCALE;
+		this.optimizeForSpeed = options.optimizeForSpeed ?? true;
+	}
 
 	evaluate<T>(
 		// biome-ignore lint/suspicious/noExplicitAny: the page-evaluated fn accepts arbitrary serialised args and element handles.
@@ -36,8 +59,12 @@ export class PuppeteerAdaptor implements BrowserAdaptor {
 		await this.page.keyboard.press("Enter");
 	}
 
-	async screenshotClip(clip: Rect): Promise<Uint8Array> {
-		return (await this.page.screenshot({ type: "png", clip })) as Uint8Array;
+	async screenshotClip(clip: Rect, scale = 1): Promise<Uint8Array> {
+		return (await this.page.screenshot({
+			type: "png",
+			optimizeForSpeed: this.optimizeForSpeed,
+			clip: { ...clip, scale },
+		})) as Uint8Array;
 	}
 
 	async ensureFocusReporting(): Promise<void> {

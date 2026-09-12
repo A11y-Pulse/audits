@@ -1,7 +1,8 @@
+import type { BrowserAdaptor } from "@a11y-pulse/browser-adaptor";
+import { getSelector } from "@a11y-pulse/browser-adaptor/dom";
 import {
 	type ActiveElementInfo,
 	type BaselinePayload,
-	type BrowserAdaptor,
 	baselineScript,
 	blurScript,
 	clearMarkersScript,
@@ -9,7 +10,6 @@ import {
 	elementRectScript,
 	elementStylesScript,
 	focusScript,
-	getSelector,
 	hasFocusScript,
 	isCenterObscuredScript,
 	pageDimensionsScript,
@@ -176,6 +176,7 @@ function loopAdaptor(script: {
 			stopIndex++;
 			tabbed = true;
 		},
+		async pressEnter() {},
 		async screenshotClip() {
 			adaptor.clipCalls++;
 			const pngs = script.pngs;
@@ -536,6 +537,7 @@ function fakeAdaptor(script: AdaptorScript = {}): {
 			stopIndex++;
 			tabbed = true;
 		},
+		async pressEnter() {},
 		async screenshotClip(clip: Rect, _scale?: number) {
 			record.clips.push(clip);
 

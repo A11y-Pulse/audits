@@ -11,16 +11,16 @@ This audit was developed by [A11y Pulse](https://www.a11ypulse.com/) for its acc
 ## Install
 
 ```bash
-npm install @a11y-pulse/focus-appearance-audit @a11y-pulse/tab-orchestrator puppeteer
+npm install @a11y-pulse/focus-appearance-audit @a11y-pulse/tab-orchestrator @a11y-pulse/browser-adaptor puppeteer
 ```
 
-`@a11y-pulse/tab-orchestrator` drives the page (tabbing, markers, screenshots) and ships the bundled [Puppeteer adaptor](#adaptors); `puppeteer` itself is only required if you use that adaptor. Other frameworks can supply their own adaptor without installing Puppeteer at all.
+`@a11y-pulse/tab-orchestrator` drives the page (tabbing, markers, screenshots), and [`@a11y-pulse/browser-adaptor`](../browser-adaptor) ships the bundled [Puppeteer and Playwright adaptors](#adaptors); `puppeteer` and `playwright-core` are optional peers of that package, each only required if you use the matching adaptor. Other frameworks can supply their own adaptor without installing either.
 
 ## Quickstart
 
 ```js
 import { runFocusAppearanceAudit } from "@a11y-pulse/focus-appearance-audit";
-import { PuppeteerAdaptor } from "@a11y-pulse/tab-orchestrator/puppeteer";
+import { PuppeteerAdaptor } from "@a11y-pulse/browser-adaptor/puppeteer";
 import puppeteer from "puppeteer";
 
 const browser = await puppeteer.launch();
@@ -64,7 +64,7 @@ See [`examples/puppeteer`](./examples/puppeteer) for a complete, runnable exampl
 ```ts
 import { createTabOrchestrator } from "@a11y-pulse/tab-orchestrator";
 import { createFocusAppearanceAudit } from "@a11y-pulse/focus-appearance-audit";
-import { PuppeteerAdaptor } from "@a11y-pulse/tab-orchestrator/puppeteer";
+import { PuppeteerAdaptor } from "@a11y-pulse/browser-adaptor/puppeteer";
 
 const orchestrator = createTabOrchestrator(new PuppeteerAdaptor(page));
 
@@ -77,6 +77,17 @@ console.log(focus.result);
 ```
 
 `focus.result` is only complete once `focus` has disconnected (by hitting one of its own limits) or the session has ended. Reading it before then is undefined. See [`@a11y-pulse/tab-orchestrator`](../tab-orchestrator) for the full session lifecycle and capability model.
+
+## Browser support
+
+| Adaptor | Browser | Supported |
+| --- | --- | --- |
+| Puppeteer | Chrome | Yes |
+| Playwright | Chromium | Yes |
+| Playwright | WebKit | **No.** WebKit does not move focus to links when Tab is pressed, so the audit only reaches a subset of the page. |
+| Playwright | Firefox | **Partial.** Elements inside a closed shadow root get no detection, where Chromium reports a pixel diff. Everything else matches. |
+
+Verified by this repo's integration suites, which run every audit against each of these engines. Unsupported and partial cases are skipped there with the reason printed alongside them.
 
 ## Options
 
@@ -157,37 +168,13 @@ At the time of writing this audit only checks for 2.4.7. Experimental support fo
 
 The audit itself is framework-agnostic: it drives a page through an **adaptor**, a small interface of primitives (evaluate JS in the page, press Tab, take a clipped screenshot, etc.) that the audit calls without knowing which browser automation library is behind it.
 
-The `BrowserAdaptor` interface itself lives in [`@a11y-pulse/tab-orchestrator`](../tab-orchestrator), which also ships the bundled `PuppeteerAdaptor`, backed by a Puppeteer `Page`. This package re-exports the type (aliased here as `FocusAppearanceAuditAdaptor`) so `runFocusAppearanceAudit`'s argument type is available without a separate import. Other environments (Playwright, Selenium, WebDriver) can be supported by implementing the same interface.
+The `BrowserAdaptor` interface itself lives in [`@a11y-pulse/browser-adaptor`](../browser-adaptor), which also ships the bundled `PuppeteerAdaptor` and `PlaywrightAdaptor`. This package re-exports the type (aliased here as `FocusAppearanceAuditAdaptor`) so `runFocusAppearanceAudit`'s argument type is available without a separate import. Other environments (Selenium, WebDriver) can be supported by implementing the same interface.
 
-### `FocusAppearanceAuditAdaptor` / `BrowserAdaptor`
-
-| Method                  | Description                                                                                                                                        |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `evaluate(fn, ...args)` | Runs `fn` in the page context, passing in any serialisable `args`, and returns its result.                                                          |
-| `evaluateHandle(fn)`    | Runs `fn` in the page context and returns an opaque `ElementRef` handle to the `Element` it returns, without serialising it.                        |
-| `disposeRef(ref)`       | Releases a handle previously returned by `evaluateHandle`.                                                                                           |
-| `pressTab()`            | Presses the Tab key, advancing focus to the next focusable element.                                                                                  |
-| `screenshotClip(clip)`  | Screenshots a clipped region of the page (`{ x, y, width, height }`) and returns PNG bytes.                                                          |
-| `ensureFocusReporting()`| Ensures the page reports focus for its lifetime, in particular that `document.hasFocus()` works and `:focus` styles apply, even when the page is not the foreground tab/window. Must not throw. |
-
-### Writing a new adaptor
-
-Implement `FocusAppearanceAuditAdaptor` from `@a11y-pulse/focus-appearance-audit` (or its `BrowserAdaptor` alias) against your automation library's page/session object, then pass an instance to `runFocusAppearanceAudit`:
-
-```ts
-import type { BrowserAdaptor } from "@a11y-pulse/focus-appearance-audit";
-
-class MyFrameworkAdaptor implements BrowserAdaptor {
-  // ...implement evaluate, evaluateHandle, disposeRef, pressTab,
-  // screenshotClip, and ensureFocusReporting for your framework
-}
-```
-
-Use [`@a11y-pulse/tab-orchestrator`'s `src/adaptors/puppeteer.ts`](../tab-orchestrator/src/adaptors/puppeteer.ts) as a reference implementation. It's a small, self-contained example of every method the audit needs.
+Use [`@a11y-pulse/browser-adaptor`'s `src/adaptors/puppeteer.ts`](../browser-adaptor/src/adaptors/puppeteer.ts) as a reference implementation.
 
 ## Limitations
 
-- **Chromium focus emulation.** Accurate `:focus`/`document.hasFocus()` reporting for a backgrounded page relies on Chromium's CDP focus emulation (used by `PuppeteerAdaptor.ensureFocusReporting`). Other browser engines may not offer an equivalent, and results may be less reliable if the page genuinely loses focus during the audit.
+- **Focus emulation.** Accurate `:focus`/`document.hasFocus()` reporting for a backgrounded page relies on focus emulation. The Puppeteer adaptor enables it over CDP; Playwright enables its own for every page it creates, on all three engines. An adaptor that offers neither will see the page lose focus mid-audit, which ends the session as `lostFocus` rather than producing failures.
 - **Tab order only.** The audit tabs through elements in native tab order. It does not yet exercise arrow-key composite widgets (menus, comboboxes, toolbars, etc.) where focus moves via `aria-activedescendant` or roving `tabindex` instead of native Tab.
 - **Heuristic accuracy.** Detection is heuristic and can produce false positives and false negatives. See [Accuracy](#accuracy) and [docs/accuracy.md](./docs/accuracy.md) for known cases.
 

@@ -4,7 +4,7 @@
  * common logic (like descending into shadow roots) must be duplicated.
  */
 
-import type { Rect } from "./adaptor";
+import type { Rect } from "@a11y-pulse/browser-adaptor";
 import type { StyleSnapshot } from "./types";
 
 type BaselineElementEntry = {

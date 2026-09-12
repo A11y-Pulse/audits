@@ -1,12 +1,12 @@
+import type { BrowserAdaptor } from "@a11y-pulse/browser-adaptor";
+import { getSelector } from "@a11y-pulse/browser-adaptor/dom";
 import type { ActiveElementInfo } from "@a11y-pulse/tab-orchestrator";
 import {
 	activeElementHandleScript,
-	type BrowserAdaptor,
 	baselineScript,
 	clearMarkersScript,
 	createTabOrchestrator,
 	elementRectScript,
-	getSelector,
 	hasFocusScript,
 	pageDimensionsScript,
 	probeActiveElementScript,
@@ -118,6 +118,7 @@ function loopAdaptor(script: {
 			stopIndex++;
 			tabbed = true;
 		},
+		async pressEnter() {},
 		async screenshotClip() {
 			return new Uint8Array([1]);
 		},

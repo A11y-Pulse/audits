@@ -1,9 +1,3 @@
-import { defineConfig } from "vitest/config";
+import { unitConfig } from "../integration-harness/src/vitest-config.ts";
 
-export default defineConfig({
-	resolve: { tsconfigPaths: true },
-	test: {
-		include: ["src/**/*.test.{ts,tsx}"],
-		environment: "node",
-	},
-});
+export default unitConfig();

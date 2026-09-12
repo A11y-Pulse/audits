@@ -15,6 +15,7 @@
 		"lint:fix": "biome check --fix",
 		"test:unit": "npm run test:unit --workspaces --if-present",
 		"test:integration": "npm run test:integration --workspaces --if-present",
+		"test:integration:all": "A11Y_PULSE_ENGINES=puppeteer,playwright-chromium,playwright-firefox,playwright-webkit npm run test:integration",
 		"test": "npm run build && npm run typecheck && npm run test:unit",
 		"release": "changeset publish"
 	},

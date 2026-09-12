@@ -1,4 +1,3 @@
-export type { BrowserAdaptor, ElementRef, Rect } from "./adaptor";
 export type {
 	AuditSelfDisconnect,
 	BaseAuditOptions,
@@ -26,13 +25,9 @@ export {
 	probeActiveElementScript,
 	scrollToCenterScript,
 } from "./browser-scripts";
-export { bufferedClip } from "./clip";
 export { FOCUS_STYLE_PROPERTIES } from "./focus-style";
-export { getSelector } from "./get-selector";
 export type { TabSessionOptions } from "./orchestrator";
 export { createTabOrchestrator } from "./orchestrator";
-export type { TruncateHtmlOptions } from "./truncate-html";
-export { truncateHtml } from "./truncate-html";
 export type {
 	ActiveElementInfo,
 	Capability,
