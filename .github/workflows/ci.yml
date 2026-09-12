@@ -59,6 +59,8 @@ jobs:
       A11Y_PULSE_ENGINES: playwright-${{ matrix.browser }}
       A11Y_PULSE_REQUIRE_BROWSERS: "1"
       PUPPETEER_SKIP_DOWNLOAD: "true"
+      # Firefox will not start unless HOME belongs to the user running it.
+      HOME: /root
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
