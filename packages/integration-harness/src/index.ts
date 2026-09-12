@@ -22,17 +22,20 @@ export type AdaptorFactories<A> = {
 
 export type EngineOptions<A> = {
 	adaptor: AdaptorFactories<A>;
+
 	/**
 	 * Engines whose results this audit cannot trust, mapped to why. The suite is skipped there and
 	 * the reason is printed with it, so the gap stays visible rather than looking like coverage.
 	 */
 	unsupported?: Partial<Record<EngineName, string>>;
+
 	/**
 	 * The adaptor's `screenshotClipScale`. Chromium applies the scale per capture, but Firefox and
 	 * WebKit can only capture at the context's own device scale factor, so they are given a context
 	 * matching it. Suites that never screenshot can leave it at 1.
 	 */
 	screenshotClipScale?: number;
+
 	viewport?: { width: number; height: number };
 };
 
@@ -43,19 +46,16 @@ export type EnginePage<A> = {
 	bringToFront: () => Promise<void>;
 	viewportSize: () => { width: number; height: number } | null;
 	url: () => string;
+
 	/** Fires if the page ever opens a real popup window. */
 	onPopup: (listener: () => void) => void;
+
 	/** Every key pressed through the page's keyboard, in order. */
 	keyPresses: string[];
 };
 
 export type EngineHandle<A> = {
 	name: EngineName;
-	/**
-	 * Which automation library is driving. Some behaviour is a property of the driver rather than the
-	 * rendering engine: Playwright emulates focus on its own CDP client for every page it creates,
-	 * which no adaptor can switch off.
-	 */
 	driver: "puppeteer" | "playwright";
 	newPage: () => Promise<EnginePage<A>>;
 };
@@ -82,9 +82,8 @@ const PLAYWRIGHT_TYPES = {
 	"playwright-webkit": webkit,
 } as const;
 
-// Playwright's browsers are not devDependencies: they add close to a gigabyte, and most work in
-// this repo never launches them. A suite skips the engines whose browser is absent rather than
-// failing, so `npm run test:integration` works on a plain install.
+// Only Puppeteer is a dev dependency. When Playwright's browsers are not installed, we skip running
+// the suite for those browsers.
 function browserInstalled(name: EngineName): boolean {
 	if (name === "puppeteer") {
 		return true;
@@ -95,6 +94,15 @@ function browserInstalled(name: EngineName): boolean {
 	} catch {
 		return false;
 	}
+}
+
+/**
+ * Whether an absent browser should fail its suite instead of skipping it.
+ */
+function browsersRequired(): boolean {
+	const value = process.env.A11Y_PULSE_REQUIRE_BROWSERS?.trim();
+
+	return !!value && value !== "0" && value !== "false";
 }
 
 export const ENGINE_NAMES: readonly EngineName[] = [
@@ -232,7 +240,23 @@ export function describeEachEngine<A>(
 		}
 
 		if (!browserInstalled(engineName)) {
-			describe.skip(`${name} (${engineName}: browser not installed, run \`npx playwright install ${engineName.replace("playwright-", "")}\`)`, () => {
+			const install = `npx playwright-core install ${engineName.replace("playwright-", "")}`;
+
+			// Skipping keeps a plain install usable, but it also turns missing coverage into a green
+			// run, so CI sets A11Y_PULSE_REQUIRE_BROWSERS to make the gap fail instead.
+			if (browsersRequired()) {
+				describe(`${name} (${engineName})`, () => {
+					it("has its browser installed", () => {
+						throw new Error(
+							`No browser installed for ${engineName}, and A11Y_PULSE_REQUIRE_BROWSERS is set. Run \`${install}\`.`,
+						);
+					});
+				});
+
+				continue;
+			}
+
+			describe.skip(`${name} (${engineName}: browser not installed, run \`${install}\`)`, () => {
 				it("has no browser installed", () => {});
 			});
 

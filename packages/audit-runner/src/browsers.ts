@@ -9,6 +9,8 @@ import type { AuditAdaptors } from "./run-audits";
 
 const DEFAULT_VIEWPORT = { width: 1280, height: 800 };
 
+const SCREENSHOT_CLIP_SCALE = 2;
+
 export type Session = {
 	adaptors: AuditAdaptors;
 	close: () => Promise<void>;
@@ -40,17 +42,26 @@ async function launchPuppeteer(url: string): Promise<Session> {
 	);
 
 	const browser = await puppeteer.launch({ defaultViewport: DEFAULT_VIEWPORT });
-	const page = await browser.newPage();
-	await page.goto(url, { waitUntil: "networkidle2" });
 
-	return {
-		adaptors: {
-			browser: new PuppeteerAdaptor(page),
-			reflow: new ReflowPuppeteerAdaptor(page),
-			textSpacing: new TextSpacingPuppeteerAdaptor(page),
-		},
-		close: () => browser.close(),
-	};
+	try {
+		const page = await browser.newPage();
+		await page.goto(url, { waitUntil: "networkidle2" });
+
+		return {
+			adaptors: {
+				browser: new PuppeteerAdaptor(page),
+				reflow: new ReflowPuppeteerAdaptor(page),
+				textSpacing: new TextSpacingPuppeteerAdaptor(page),
+			},
+			close: () => browser.close(),
+		};
+	} catch (error) {
+		// Nothing else holds the browser yet, so a failure here would otherwise leave it running and
+		// the process unable to exit.
+		await browser.close();
+
+		throw error;
+	}
 }
 
 async function launchPlaywright(url: string, browserName: Browser): Promise<Session> {
@@ -59,18 +70,29 @@ async function launchPlaywright(url: string, browserName: Browser): Promise<Sess
 		"npm install playwright-core && npx playwright-core install",
 	);
 
-	const browser = await playwright[browserName].launch();
-	const page = await browser.newPage({ viewport: DEFAULT_VIEWPORT });
-	await page.goto(url, { waitUntil: "networkidle" });
+	// Only Chromium re-scales screenshots. Other browsers should not attempt to capture at a
+	// higher pixel density.
+	const screenshotClipScale = browserName === "chromium" ? SCREENSHOT_CLIP_SCALE : 1;
 
-	return {
-		adaptors: {
-			browser: new PlaywrightAdaptor(page),
-			reflow: new ReflowPlaywrightAdaptor(page),
-			textSpacing: new TextSpacingPlaywrightAdaptor(page),
-		},
-		close: () => browser.close(),
-	};
+	const browser = await playwright[browserName].launch();
+
+	try {
+		const page = await browser.newPage({ viewport: DEFAULT_VIEWPORT });
+		await page.goto(url, { waitUntil: "networkidle" });
+
+		return {
+			adaptors: {
+				browser: new PlaywrightAdaptor(page, { screenshotClipScale }),
+				reflow: new ReflowPlaywrightAdaptor(page),
+				textSpacing: new TextSpacingPlaywrightAdaptor(page),
+			},
+			close: () => browser.close(),
+		};
+	} catch (error) {
+		await browser.close();
+
+		throw error;
+	}
 }
 
 /**
