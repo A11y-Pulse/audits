@@ -1,6 +1,6 @@
+import type { BrowserAdaptor } from "@a11y-pulse/browser-adaptor";
 import {
 	type BaseAuditOptions,
-	type BrowserAdaptor,
 	createAuditSelfDisconnect,
 	createTabOrchestrator,
 	DEFAULT_ELEMENT_LIMIT,

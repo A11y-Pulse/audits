@@ -38,4 +38,36 @@ describe("PuppeteerAdaptor", () => {
 		await expect(new PuppeteerAdaptor(page).evaluate(fn, "arg")).resolves.toBe(7);
 		expect(evaluate).toHaveBeenCalledWith(fn, "arg");
 	});
+
+	it("screenshotClip passes the scale through to the capture", async () => {
+		const screenshot = vi.fn(async () => new Uint8Array());
+		const page = { screenshot } as unknown as Page;
+		const clip = { x: 0, y: 0, width: 10, height: 10 };
+
+		await new PuppeteerAdaptor(page).screenshotClip(clip, 3);
+
+		expect(screenshot).toHaveBeenCalledWith(
+			expect.objectContaining({ clip: { ...clip, scale: 3 } }),
+		);
+	});
+
+	// The shared browser adaptor defaults to 2. Reflow captures at the page's own scale, matching
+	// this package's Playwright adaptor, so the audit's pixel maths is unchanged across engines.
+	it("defaults screenshotClipScale to 1 and honours an override", () => {
+		const page = {} as unknown as Page;
+
+		expect(new PuppeteerAdaptor(page).screenshotClipScale).toBe(1);
+		expect(new PuppeteerAdaptor(page, { screenshotClipScale: 2 }).screenshotClipScale).toBe(2);
+	});
+
+	// The shared browser adaptor trades PNG compression for capture speed, which roughly doubles
+	// the encoded evidence. This audit keeps the smaller captures it has always produced.
+	it("does not optimise captures for speed", async () => {
+		const screenshot = vi.fn(async () => new Uint8Array());
+		const page = { screenshot } as unknown as Page;
+
+		await new PuppeteerAdaptor(page).screenshotClip({ x: 0, y: 0, width: 10, height: 10 });
+
+		expect(screenshot).toHaveBeenCalledWith(expect.objectContaining({ optimizeForSpeed: false }));
+	});
 });

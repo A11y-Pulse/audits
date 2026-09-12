@@ -1,4 +1,5 @@
-import type { BrowserAdaptor, ElementRef } from "./adaptor";
+import type { BrowserAdaptor, ElementRef } from "@a11y-pulse/browser-adaptor";
+import { bufferedClip } from "@a11y-pulse/browser-adaptor";
 import {
 	blurScript,
 	elementRectScript,
@@ -8,7 +9,6 @@ import {
 	pageDimensionsScript,
 	scrollToCenterScript,
 } from "./browser-scripts";
-import { bufferedClip } from "./clip";
 import type { UnfocusedPair } from "./types";
 
 export type CaptureUnfocusedPairOptions = {

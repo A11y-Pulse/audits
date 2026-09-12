@@ -1,4 +1,4 @@
-import type { Rect } from "./adaptor";
+import type { Rect } from "@a11y-pulse/browser-adaptor";
 
 export type StyleSnapshot = {
 	element: Record<string, string>;

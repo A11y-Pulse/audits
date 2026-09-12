@@ -16,7 +16,7 @@ This package was developed by [A11y Pulse](https://www.a11ypulse.com/) for its a
 npm install @a11y-pulse/tab-orchestrator
 ```
 
-Puppeteer is an optional peer dependency, needed only if you use the bundled [`PuppeteerAdaptor`](#puppeteeradaptor).
+This package drives the page through a [`BrowserAdaptor`](#browseradaptor) you supply. It has no peer dependencies: install [`@a11y-pulse/browser-adaptor`](../browser-adaptor) alongside it for the bundled Puppeteer and Playwright implementations.
 
 ## `createTabOrchestrator`
 
@@ -41,29 +41,20 @@ Most callers won't build a `TabConsumer` by hand. Audit packages export a `creat
 
 ## `BrowserAdaptor`
 
-The orchestrator drives a page through an **adaptor**: a small interface of primitives (evaluate JS in the page, press Tab, take a clipped screenshot, etc.) so it never needs to know which browser automation library is behind it.
-
-| Method                   | Description                                                                                                                                       |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `evaluate(fn, ...args)`  | Runs `fn` in the page context, passing in any serialisable `args`, and returns its result.                                                          |
-| `evaluateHandle(fn)`     | Runs `fn` in the page context and returns an opaque `ElementRef` handle to the `Element` it returns, without serialising it.                        |
-| `disposeRef(ref)`        | Releases a handle previously returned by `evaluateHandle`.                                                                                           |
-| `pressTab()`             | Presses the Tab key, advancing focus to the next focusable element.                                                                                  |
-| `screenshotClip(clip)`   | Screenshots a clipped region of the page (`{ x, y, width, height }`) and returns PNG bytes.                                                          |
-| `ensureFocusReporting()` | Ensures the page reports focus for its lifetime, in particular that `document.hasFocus()` works and `:focus` styles apply, even when the page is not the foreground tab/window. Must not throw. |
+The orchestrator drives a page through an **adaptor**: a small interface of primitives (evaluate JS in the page, press Tab, take a clipped screenshot, etc.) so it never needs to know which browser automation library is behind it. The `BrowserAdaptor` interface and its method-by-method reference live in [`@a11y-pulse/browser-adaptor`](../browser-adaptor#browseradaptor); this package does not re-export them.
 
 The orchestrator is the only thing that mutates the page through this adaptor during a session; consumers score snapshots, they don't call `pressTab`, take screenshots, or install observers themselves.
 
-### `PuppeteerAdaptor`
+### Supplying an adaptor
 
 ```js
 import { createTabOrchestrator } from "@a11y-pulse/tab-orchestrator";
-import { PuppeteerAdaptor } from "@a11y-pulse/tab-orchestrator/puppeteer";
+import { PuppeteerAdaptor } from "@a11y-pulse/browser-adaptor/puppeteer";
 
 const orchestrator = createTabOrchestrator(new PuppeteerAdaptor(page));
 ```
 
-The package ships one implementation, `PuppeteerAdaptor`, backed by a Puppeteer `Page`, exported from the `./puppeteer` subpath so consumers that only need the type-level `BrowserAdaptor` interface aren't forced to import Puppeteer. Other environments (Playwright, Selenium, WebDriver) can be supported by implementing `BrowserAdaptor` against your automation library's page/session object; use [`src/adaptors/puppeteer.ts`](./src/adaptors/puppeteer.ts) as a reference implementation.
+This package ships no adaptor of its own. [`@a11y-pulse/browser-adaptor`](../browser-adaptor) provides `BrowserAdaptor` along with two implementations, `PuppeteerAdaptor` and `PlaywrightAdaptor`, so consumers that only need the type-level interface aren't forced to install either automation library. Other environments (Selenium, WebDriver) can be supported by implementing `BrowserAdaptor` against your automation library's page/session object; use [`@a11y-pulse/browser-adaptor`'s `src/adaptors/puppeteer.ts`](../browser-adaptor/src/adaptors/puppeteer.ts) as a reference implementation.
 
 ## Releasing
 

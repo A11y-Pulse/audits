@@ -52,6 +52,7 @@
 		"access": "public"
 	},
 	"dependencies": {
+		"@a11y-pulse/browser-adaptor": "*",
 		"@a11y-pulse/tab-orchestrator": "*",
 		"pixelmatch": "^7.2.0",
 		"pngjs": "^7.0.0"
@@ -59,6 +60,7 @@
 	"devDependencies": {
 		"@types/pngjs": "^6.0.5",
 		"happy-dom": "^20.12.0",
+		"playwright-core": "^1.63.0",
 		"puppeteer": "^25.9.0"
 	}
 }

@@ -11,16 +11,16 @@ This audit was developed by [A11y Pulse](https://www.a11ypulse.com/) for its acc
 ## Install
 
 ```bash
-npm install @a11y-pulse/context-change-on-focus-audit @a11y-pulse/tab-orchestrator puppeteer
+npm install @a11y-pulse/context-change-on-focus-audit @a11y-pulse/tab-orchestrator @a11y-pulse/browser-adaptor puppeteer
 ```
 
-`@a11y-pulse/tab-orchestrator` drives the page (tabbing, markers, context-change observation) and ships the bundled [Puppeteer adaptor](#adaptors); `puppeteer` itself is only required if you use that adaptor. Other frameworks can supply their own adaptor without installing Puppeteer at all.
+`@a11y-pulse/tab-orchestrator` drives the page (tabbing, markers, context-change observation), and [`@a11y-pulse/browser-adaptor`](../browser-adaptor) ships the bundled [Puppeteer and Playwright adaptors](#adaptors); `puppeteer` and `playwright-core` are optional peers of that package, each only required if you use the matching adaptor. Other frameworks can supply their own adaptor without installing either.
 
 ## Quickstart
 
 ```js
 import { runContextChangeOnFocusAudit } from "@a11y-pulse/context-change-on-focus-audit";
-import { PuppeteerAdaptor } from "@a11y-pulse/tab-orchestrator/puppeteer";
+import { PuppeteerAdaptor } from "@a11y-pulse/browser-adaptor/puppeteer";
 import puppeteer from "puppeteer";
 
 const browser = await puppeteer.launch();
@@ -57,7 +57,7 @@ See [`@a11y-pulse/focus-appearance-audit`'s `examples/puppeteer`](../focus-appea
 ```ts
 import { createTabOrchestrator } from "@a11y-pulse/tab-orchestrator";
 import { createContextChangeOnFocusAudit } from "@a11y-pulse/context-change-on-focus-audit";
-import { PuppeteerAdaptor } from "@a11y-pulse/tab-orchestrator/puppeteer";
+import { PuppeteerAdaptor } from "@a11y-pulse/browser-adaptor/puppeteer";
 
 const orchestrator = createTabOrchestrator(new PuppeteerAdaptor(page));
 
@@ -72,6 +72,17 @@ console.log(contextChange.result);
 `contextChange.result` is only complete once `contextChange` has disconnected (by hitting one of its own limits) or the session has ended. Reading it before then is undefined. See [`@a11y-pulse/tab-orchestrator`](../tab-orchestrator) for the full session lifecycle and capability model. This audit declares only the `"contextSignals"` capability: it does not need `obscuring`, `unfocusedPair`, or `baselineStyles`, so it can run alongside the other audits on the same orchestrator without paying for their measurements.
 
 Because a genuine navigation ends the whole shared session (`summary.sessionEnd === "navigation"`), any other consumers attached to the same orchestrator also stop receiving tab stops once one occurs. This is a property of the shared session, not something this audit can opt out of.
+
+## Browser support
+
+| Adaptor | Browser | Supported |
+| --- | --- | --- |
+| Puppeteer | Chrome | Yes |
+| Playwright | Chromium | Yes |
+| Playwright | WebKit | **No.** WebKit does not move focus to links when Tab is pressed, so the audit only reaches a subset of the page. |
+| Playwright | Firefox | Yes |
+
+Verified by this repo's integration suites, which run every audit against each of these engines. Unsupported and partial cases are skipped there with the reason printed alongside them.
 
 ## Options
 
@@ -150,9 +161,9 @@ A full navigation also ends the shared tab session early (`summary.sessionEnd ==
 
 The audit itself is framework-agnostic: it drives a page through an **adaptor**, a small interface of primitives (evaluate JS in the page, press Tab, hit-test the focused element, etc.) that the audit calls without knowing which browser automation library is behind it.
 
-The `BrowserAdaptor` interface lives in [`@a11y-pulse/tab-orchestrator`](../tab-orchestrator), which also ships the bundled `PuppeteerAdaptor`, backed by a Puppeteer `Page`. This package re-exports the type so `runContextChangeOnFocusAudit`'s argument type is available without a separate import. Other environments (Playwright, Selenium, WebDriver) can be supported by implementing the same interface.
+The `BrowserAdaptor` interface lives in [`@a11y-pulse/browser-adaptor`](../browser-adaptor), which also ships the bundled `PuppeteerAdaptor` and `PlaywrightAdaptor`. This package re-exports the type so `runContextChangeOnFocusAudit`'s argument type is available without a separate import. Other environments (Selenium, WebDriver) can be supported by implementing the same interface.
 
-Use [`@a11y-pulse/tab-orchestrator`'s `src/adaptors/puppeteer.ts`](../tab-orchestrator/src/adaptors/puppeteer.ts) as a reference implementation.
+Use [`@a11y-pulse/browser-adaptor`'s `src/adaptors/puppeteer.ts`](../browser-adaptor/src/adaptors/puppeteer.ts) as a reference implementation.
 
 ## Limitations
 

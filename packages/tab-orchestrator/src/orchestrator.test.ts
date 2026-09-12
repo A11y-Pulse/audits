@@ -1,5 +1,6 @@
+import type { BrowserAdaptor } from "@a11y-pulse/browser-adaptor";
+import { getSelector } from "@a11y-pulse/browser-adaptor/dom";
 import { describe, expect, it, vi } from "vitest";
-import type { BrowserAdaptor } from "./adaptor";
 import {
 	activeElementHandleScript,
 	attributedHandleScript,
@@ -23,8 +24,7 @@ import {
 	probeActiveElementScript,
 	scrollToCenterScript,
 } from "./browser-scripts";
-import { getSelector } from "./get-selector";
-import { createTabOrchestrator } from "./orchestrator";
+import { createTabOrchestrator, isContextDestroyedError } from "./orchestrator";
 import type { ActiveElementInfo, TabConsumer, TabStopSnapshot } from "./types";
 
 function dummyAdaptor(): BrowserAdaptor {
@@ -33,6 +33,7 @@ function dummyAdaptor(): BrowserAdaptor {
 		evaluateHandle: vi.fn(async () => ({})),
 		disposeRef: vi.fn(async () => undefined),
 		pressTab: vi.fn(async () => undefined),
+		pressEnter: vi.fn(async () => undefined),
 		screenshotClip: vi.fn(async () => new Uint8Array()),
 		ensureFocusReporting: vi.fn(async () => undefined),
 	};
@@ -191,6 +192,7 @@ function loopAdaptor(script: {
 			tabbed = true;
 			postTabReads = 0;
 		},
+		async pressEnter() {},
 		async screenshotClip() {
 			return new Uint8Array([1]);
 		},
@@ -1356,5 +1358,21 @@ describe("tab loop", () => {
 			await expect(orchestrator.run()).rejects.toThrow("boom");
 			expect(clearCalls).toBe(1);
 		});
+	});
+});
+
+describe("isContextDestroyedError", () => {
+	it.each([
+		"Execution context was destroyed, most likely because of a navigation.",
+		"Protocol error (Runtime.callFunctionOn): Target closed.",
+		"Target page, context or browser has been closed",
+		"Error: frame was detached",
+		"Navigating frame was detached",
+	])("matches %s", (message) => {
+		expect(isContextDestroyedError(new Error(message))).toBe(true);
+	});
+
+	it("does not match an unrelated failure", () => {
+		expect(isContextDestroyedError(new Error("boom"))).toBe(false);
 	});
 });

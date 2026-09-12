@@ -9,5 +9,5 @@ export default defineConfig({
 	dts: false,
 	clean: true,
 	sourcemap: true,
-	// @a11y-pulse/tab-orchestrator (dep) stays external.
+	// @a11y-pulse/tab-orchestrator and @a11y-pulse/browser-adaptor (deps) stay external.
 });

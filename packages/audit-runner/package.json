@@ -20,7 +20,8 @@
 		"wcag",
 		"audit",
 		"cli",
-		"puppeteer"
+		"puppeteer",
+		"playwright"
 	],
 	"engines": {
 		"node": ">=22"
@@ -62,5 +63,16 @@
 		"@a11y-pulse/tab-orchestrator": "*",
 		"@a11y-pulse/text-spacing-audit": "*",
 		"puppeteer": "^25.9.0"
+	},
+	"peerDependencies": {
+		"playwright-core": ">=1.40"
+	},
+	"peerDependenciesMeta": {
+		"playwright-core": {
+			"optional": true
+		}
+	},
+	"devDependencies": {
+		"playwright-core": "^1.63.0"
 	}
 }

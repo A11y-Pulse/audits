@@ -1,8 +1,4 @@
-export type {
-	BrowserAdaptor,
-	ElementRef,
-	Rect,
-} from "@a11y-pulse/tab-orchestrator";
+export type { BrowserAdaptor, ElementRef, Rect } from "@a11y-pulse/browser-adaptor";
 export type { FocusAppearanceOptions } from "./audit";
 export { createFocusAppearanceAudit, runFocusAppearanceAudit } from "./audit";
 export type { StyleSnapshot } from "./detection";

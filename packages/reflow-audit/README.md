@@ -45,6 +45,17 @@ console.log(result.offenders);
 await browser.close();
 ```
 
+## Browser support
+
+| Adaptor | Browser | Supported |
+| --- | --- | --- |
+| Puppeteer | Chrome | Yes |
+| Playwright | Chromium | Yes |
+| Playwright | WebKit | Yes |
+| Playwright | Firefox | Yes |
+
+Verified by this repo's integration suites, which run every audit against each of these engines. Unsupported and partial cases are skipped there with the reason printed alongside them.
+
 ## Options
 
 The following options can be passed to `runReflowAudit` as `ReflowOptions`:
@@ -98,7 +109,7 @@ The incoming viewport is restored even if measurement throws. Pages already 320p
 
 The audit itself is framework-agnostic: it drives a page through an **adaptor**, a small interface of primitives (evaluate JS in the page, get and set the viewport) that the audit calls without knowing which browser automation library is behind it.
 
-The package ships one implementation, `PuppeteerAdaptor`, backed by a Puppeteer `Page`. Other environments (Playwright, Selenium, WebDriver) can be supported by implementing the same interface, exported as `ReflowAuditAdaptor` (aliased as `BrowserAdaptor` from the package root).
+The package ships two implementations: `PuppeteerAdaptor` from the `./puppeteer` subpath, backed by a Puppeteer `Page`, and `PlaywrightAdaptor` from `./playwright`, backed by a Playwright `Page`. Other environments (Selenium, WebDriver) can be supported by implementing the same interface, exported as `ReflowAuditAdaptor` (aliased as `BrowserAdaptor` from the package root).
 
 ### `ReflowAuditAdaptor` / `BrowserAdaptor`
 
@@ -120,7 +131,7 @@ class MyFrameworkAdaptor implements ReflowAuditAdaptor {
 }
 ```
 
-Use [`src/adaptors/puppeteer.ts`](./src/adaptors/puppeteer.ts) as a reference implementation.
+Use [`src/adaptors/puppeteer.ts`](./src/adaptors/puppeteer.ts) or [`src/adaptors/playwright.ts`](./src/adaptors/playwright.ts) as a reference implementation.
 
 ## Limitations
 

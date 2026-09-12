@@ -1,7 +1,12 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-	entry: ["src/index.ts", "src/adaptors/puppeteer.ts", "src/dom.ts"],
+	entry: [
+		"src/index.ts",
+		"src/adaptors/puppeteer.ts",
+		"src/adaptors/playwright.ts",
+		"src/dom.ts",
+	],
 	format: ["esm"],
 	// TypeScript 7's published package no longer exposes the JS compiler API that tsup's bundled
 	// rollup-plugin-dts needs. Emit .d.ts with `tsc` instead (see the `build` script and
@@ -9,5 +14,5 @@ export default defineConfig({
 	dts: false,
 	clean: true,
 	sourcemap: true,
-	// puppeteer (peer) stays external.
+	// puppeteer and playwright-core (peers) stay external.
 });

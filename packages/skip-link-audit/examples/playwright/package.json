@@ -1,0 +1,13 @@
+{
+	"name": "skip-link-audit-playwright-example",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"start": "node index.mjs"
+	},
+	"dependencies": {
+		"@a11y-pulse/browser-adaptor": "file:../../../browser-adaptor",
+		"@a11y-pulse/skip-link-audit": "file:../..",
+		"playwright": "^1.63.0"
+	}
+}

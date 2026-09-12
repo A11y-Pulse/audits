@@ -1,4 +1,5 @@
-import type { BrowserAdaptor, ElementRef } from "./adaptor";
+import type { BrowserAdaptor, ElementRef } from "@a11y-pulse/browser-adaptor";
+import { getSelector, truncateHtml } from "@a11y-pulse/browser-adaptor/dom";
 import {
 	type ActiveElementBase,
 	activeElementHandleScript,
@@ -19,8 +20,6 @@ import {
 } from "./browser-scripts";
 import { captureScreenshot } from "./capture-screenshot";
 import { FOCUS_STYLE_PROPERTIES } from "./focus-style";
-import { getSelector } from "./get-selector";
-import { truncateHtml } from "./truncate-html";
 import type {
 	ActiveElementInfo,
 	Capability,
@@ -41,10 +40,14 @@ import { captureUnfocusedPair } from "./unfocused-pair";
  * can never self-report: it destroys the JS context before it can log
  * anything, so the host has to infer it from how `evaluate()` failed.
  */
-function isContextDestroyedError(error: unknown): boolean {
+export function isContextDestroyedError(error: unknown): boolean {
 	const message = error instanceof Error ? error.message : String(error);
 
-	return /Execution context was destroyed|Target closed|frame was detached|navigat/i.test(message);
+	// Each adaptor's driver words this differently: "Target closed" is Puppeteer's, "has been
+	// closed" is Playwright's.
+	return /Execution context was destroyed|Target closed|has been closed|frame was detached|navigat/i.test(
+		message,
+	);
 }
 
 /**

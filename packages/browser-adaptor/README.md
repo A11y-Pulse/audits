@@ -14,7 +14,7 @@ Released under the [MIT License](#license).
 npm install @a11y-pulse/browser-adaptor
 ```
 
-`puppeteer` is an optional peer dependency. It is only required if you use the bundled [Puppeteer adaptor](#puppeteer-adaptor).
+`puppeteer` and `playwright-core` are optional peer dependencies. Each is only required if you use the matching bundled adaptor ([Puppeteer](#puppeteer-adaptor), [Playwright](#playwright-adaptor)).
 
 ## Exports
 
@@ -22,6 +22,7 @@ npm install @a11y-pulse/browser-adaptor
 | --- | --- |
 | `@a11y-pulse/browser-adaptor` | `BrowserAdaptor`, `ElementRef`, `Rect` |
 | `@a11y-pulse/browser-adaptor/puppeteer` | `PuppeteerAdaptor` |
+| `@a11y-pulse/browser-adaptor/playwright` | `PlaywrightAdaptor` |
 | `@a11y-pulse/browser-adaptor/dom` | `getSelector`, `truncateHtml` |
 
 ## Quickstart
@@ -52,7 +53,8 @@ interface BrowserAdaptor {
   disposeRef(ref: ElementRef): Promise<void>;
   pressTab(): Promise<void>;
   pressEnter(): Promise<void>;
-  screenshotClip(clip: Rect): Promise<Uint8Array>;
+  screenshotClip(clip: Rect, scale?: number): Promise<Uint8Array>;
+  readonly screenshotClipScale?: number;
   ensureFocusReporting(): Promise<void>; // must not throw
 }
 ```
@@ -61,7 +63,36 @@ Consumers may ignore methods they do not need. `ensureFocusReporting` is best-ef
 
 ## Puppeteer adaptor
 
-`PuppeteerAdaptor` wraps a Puppeteer `Page`. Focus emulation is enabled at most once per page via a `WeakSet`, so reused pages across audit runs do not open extra CDP sessions.
+`PuppeteerAdaptor` wraps a Puppeteer `Page`. Its CDP session is cached per page, so reusing a page across audit runs does not open extra sessions.
+
+## Playwright adaptor
+
+`PlaywrightAdaptor` wraps a Playwright `Page`, and works with either `playwright` or `playwright-core`.
+
+```js
+import { PlaywrightAdaptor } from "@a11y-pulse/browser-adaptor/playwright";
+import { chromium } from "playwright";
+
+const browser = await chromium.launch();
+const page = await browser.newPage({ deviceScaleFactor: 2 });
+await page.goto("https://example.com/");
+
+const adaptor = new PlaywrightAdaptor(page);
+await adaptor.ensureFocusReporting();
+await adaptor.pressTab();
+
+await browser.close();
+```
+
+Two differences from the Puppeteer adaptor are worth knowing about.
+
+**`evaluate` needs `unsafe-eval`.** Playwright's `evaluate` takes a single argument, so the adaptor packs the page function's source and its arguments into one tuple and rebuilds the function in the page with `new Function`. A page whose Content-Security-Policy omits `unsafe-eval` from `script-src` will reject that; the adaptor throws a message naming CSP as the cause rather than letting it read as a page failure. Puppeteer is unaffected, because CDP serialises the function itself.
+
+**Screenshot scale depends on the engine.** On Chromium the adaptor screenshots over CDP, which honours `screenshotClipScale` per capture and captures clips that lie outside the viewport, so evidence images match Puppeteer's. Firefox and WebKit expose no CDP, so the adaptor falls back to a full-page capture at the context's own `deviceScaleFactor`. There, create the context with a `deviceScaleFactor` matching `screenshotClipScale` (2 by default), or pass the scale you want:
+
+```js
+new PlaywrightAdaptor(page, { screenshotClipScale: 1 });
+```
 
 ## DOM helpers
 

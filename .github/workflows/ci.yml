@@ -6,17 +6,36 @@ on:
   pull_request:
 
 jobs:
-  test:
+  check:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         node-version: [22, 24]
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: "true"
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node-version }}
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+      - run: npm run typecheck
+      - run: npm run test:unit
+
+  integration-puppeteer:
+    runs-on: ubuntu-latest
+    env:
+      A11Y_PULSE_ENGINES: puppeteer
+      A11Y_PULSE_REQUIRE_BROWSERS: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
           cache: npm
       - name: Cache Puppeteer browser
         uses: actions/cache@v6
@@ -26,8 +45,28 @@ jobs:
       - name: Allow Chrome sandbox (Ubuntu 24.04 AppArmor userns restriction)
         run: echo 0 | sudo tee /proc/sys/kernel/apparmor_restrict_unprivileged_userns
       - run: npm ci
-      - run: npm run lint
       - run: npm run build
-      - run: npm run typecheck
-      - run: npm run test:unit
+      - run: npm run test:integration
+
+  integration-playwright:
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/playwright:v1.63.0-noble
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    env:
+      A11Y_PULSE_ENGINES: playwright-${{ matrix.browser }}
+      A11Y_PULSE_REQUIRE_BROWSERS: "1"
+      PUPPETEER_SKIP_DOWNLOAD: "true"
+      # Firefox will not start unless HOME belongs to the user running it.
+      HOME: /root
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
       - run: npm run test:integration

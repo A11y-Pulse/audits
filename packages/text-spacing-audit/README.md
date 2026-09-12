@@ -74,6 +74,17 @@ p { margin-bottom: 2em !important; }
 
 Growth and reflow without clipping are not findings. That is the correct response to a spacing override.
 
+## Browser support
+
+| Adaptor | Browser | Supported |
+| --- | --- | --- |
+| Puppeteer | Chrome | Yes |
+| Playwright | Chromium | Yes |
+| Playwright | WebKit | Yes |
+| Playwright | Firefox | Yes |
+
+Verified by this repo's integration suites, which run every audit against each of these engines. Unsupported and partial cases are skipped there with the reason printed alongside them.
+
 ## Options
 
 The following options can be passed to `runTextSpacingAudit` as `TextSpacingOptions`:
@@ -113,7 +124,7 @@ type TextSpacingResult = {
 
 The audit itself is framework-agnostic: it drives a page through an **adaptor**, a small interface of primitives that the audit calls without knowing which browser automation library is behind it.
 
-The package ships one implementation, `PuppeteerAdaptor`, backed by a Puppeteer `Page`. Other environments (Playwright, Selenium, WebDriver) can be supported by implementing the same interface, exported as `TextSpacingAuditAdaptor` (aliased as `BrowserAdaptor` from the package root).
+The package ships two implementations: `PuppeteerAdaptor` from the `./puppeteer` subpath, backed by a Puppeteer `Page`, and `PlaywrightAdaptor` from `./playwright`, backed by a Playwright `Page`. Other environments (Selenium, WebDriver) can be supported by implementing the same interface, exported as `TextSpacingAuditAdaptor` (aliased as `BrowserAdaptor` from the package root).
 
 ### `TextSpacingAuditAdaptor` / `BrowserAdaptor`
 
@@ -133,7 +144,7 @@ class MyFrameworkAdaptor implements TextSpacingAuditAdaptor {
 }
 ```
 
-Use [`src/adaptors/puppeteer.ts`](./src/adaptors/puppeteer.ts) as a reference implementation. It is a thin `page.evaluate` wrapper.
+Use [`src/adaptors/puppeteer.ts`](./src/adaptors/puppeteer.ts) or [`src/adaptors/playwright.ts`](./src/adaptors/playwright.ts) as a reference implementation. Each is a thin `page.evaluate` wrapper.
 
 ## Limitations
 

@@ -1,8 +1,9 @@
-import type { Rect, StyleSnapshot } from "@a11y-pulse/tab-orchestrator";
+import type { Rect } from "@a11y-pulse/browser-adaptor";
+import type { StyleSnapshot } from "@a11y-pulse/tab-orchestrator";
 import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
 
-export { bufferedClip } from "@a11y-pulse/tab-orchestrator";
+export { bufferedClip } from "@a11y-pulse/browser-adaptor";
 export type { Rect, StyleSnapshot };
 
 /**

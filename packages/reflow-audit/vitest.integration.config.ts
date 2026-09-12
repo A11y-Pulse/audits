@@ -1,12 +1,3 @@
-import { defineConfig } from "vitest/config";
+import { integrationConfig } from "../integration-harness/src/vitest-config.ts";
 
-export default defineConfig({
-	resolve: { tsconfigPaths: true },
-	test: {
-		include: ["tests/integration/**/*.test.ts"],
-		environment: "node",
-		testTimeout: 60_000,
-		hookTimeout: 120_000,
-		fileParallelism: false,
-	},
-});
+export default integrationConfig();

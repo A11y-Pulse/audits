@@ -1,36 +1,37 @@
-import puppeteer, { type Browser, type Page } from "puppeteer";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+	type AdaptorFactories,
+	describeEachEngine,
+	type EnginePage,
+} from "@a11y-pulse/integration-harness";
+import { afterAll, beforeAll, expect, it } from "vitest";
+import type { ReflowAuditAdaptor } from "../../src/adaptor";
+import { PlaywrightAdaptor } from "../../src/adaptors/playwright";
 import { PuppeteerAdaptor } from "../../src/adaptors/puppeteer";
 import { type ReflowResult, runReflowAudit } from "../../src/index";
 import { type FixtureServer, startFixtureServer } from "./helpers/serve-fixtures";
 
 let server: FixtureServer;
-let browser: Browser;
 
 beforeAll(async () => {
 	server = await startFixtureServer();
-	browser = await puppeteer.launch();
 });
 
 afterAll(async () => {
-	await browser.close();
 	await server.close();
 });
 
-async function runOnPage(page: Page, name: string): Promise<ReflowResult> {
-	await page.goto(`${server.url}/${name}`, { waitUntil: "load" });
+const adaptors: AdaptorFactories<ReflowAuditAdaptor> = {
+	puppeteer: (page) => new PuppeteerAdaptor(page),
+	playwright: (page) => new PlaywrightAdaptor(page),
+};
 
-	return runReflowAudit(new PuppeteerAdaptor(page), { settleDelayMs: 20 });
-}
+async function runOnPage(
+	page: EnginePage<ReflowAuditAdaptor>,
+	name: string,
+): Promise<ReflowResult> {
+	await page.goto(`${server.url}/${name}`);
 
-async function runFixture(name: string): Promise<ReflowResult> {
-	const page: Page = await browser.newPage();
-
-	try {
-		return await runOnPage(page, name);
-	} finally {
-		await page.close();
-	}
+	return runReflowAudit(page.adaptor, { settleDelayMs: 20 });
 }
 
 /** Width in pixels from a PNG's IHDR chunk (bytes 16-19, big-endian). */
@@ -38,147 +39,158 @@ function readPngWidth(png: Uint8Array): number {
 	return new DataView(png.buffer, png.byteOffset, png.byteLength).getUint32(16);
 }
 
-describe("reflow audit (integration)", () => {
-	it("passes a page that reflows at 320px and restores the viewport", async () => {
-		const page = await browser.newPage();
+describeEachEngine<ReflowAuditAdaptor>(
+	"reflow audit (integration)",
+	{ adaptor: adaptors },
+	(engine) => {
+		async function runFixture(name: string): Promise<ReflowResult> {
+			const page = await engine.newPage();
 
-		try {
-			await page.setViewport({ width: 1024, height: 768 });
-			const result = await runOnPage(page, "responsive.html");
-			const viewport = page.viewport();
+			try {
+				return await runOnPage(page, name);
+			} finally {
+				await page.close();
+			}
+		}
+
+		it("passes a page that reflows at 320px and restores the viewport", async () => {
+			const page = await engine.newPage();
+
+			try {
+				await page.adaptor.setViewport({ width: 1024, height: 768 });
+				const result = await runOnPage(page, "responsive.html");
+				const viewport = page.viewportSize();
+
+				expect(result.bucket).toBe("pass");
+				expect(result.restored).toBe(true);
+				expect(viewport?.width).toBe(1024);
+				expect(viewport?.height).toBe(768);
+			} finally {
+				await page.close();
+			}
+		});
+
+		it("flags a fixed-width layout as a violation", async () => {
+			const result = await runFixture("fixed-width-layout.html");
+
+			expect(result.bucket).toBe("violation");
+			expect(result.documentOverflowPx).toBeGreaterThan(20);
+			expect(result.offenders.some((o) => o.reason === "element-overflow")).toBe(true);
+		});
+
+		it("does not flag a wide data table", async () => {
+			const result = await runFixture("wide-data-table.html");
 
 			expect(result.bucket).toBe("pass");
-			expect(result.restored).toBe(true);
-			expect(viewport?.width).toBe(1024);
-			expect(viewport?.height).toBe(768);
-		} finally {
-			await page.close();
-		}
-	});
+		});
 
-	it("flags a fixed-width layout as a violation", async () => {
-		const result = await runFixture("fixed-width-layout.html");
+		it("flags a layout table with role=presentation", async () => {
+			const result = await runFixture("layout-table.html");
 
-		expect(result.bucket).toBe("violation");
-		expect(result.documentOverflowPx).toBeGreaterThan(20);
-		expect(result.offenders.some((o) => o.reason === "element-overflow")).toBe(true);
-	});
+			expect(result.bucket).toBe("violation");
+		});
 
-	it("does not flag a wide data table", async () => {
-		const result = await runFixture("wide-data-table.html");
+		it("flags a single overflowing element as the offender", async () => {
+			const result = await runFixture("overflowing-element.html");
 
-		expect(result.bucket).toBe("pass");
-	});
+			expect(result.bucket).toBe("violation");
+			expect(result.offenders.some((o) => o.selector.includes("poke"))).toBe(true);
+		});
 
-	it("flags a layout table with role=presentation", async () => {
-		const result = await runFixture("layout-table.html");
+		it("captures a real PNG screenshot of the offending element", async () => {
+			const result = await runFixture("overflowing-element.html");
+			const offender = result.offenders.find((o) => o.selector.includes("poke"));
 
-		expect(result.bucket).toBe("violation");
-	});
+			expect(offender?.screenshot).toBeInstanceOf(Uint8Array);
+			expect(offender?.screenshot?.length ?? 0).toBeGreaterThan(100);
+			// PNG magic number.
+			expect(Array.from(offender!.screenshot!.slice(0, 8))).toEqual([
+				0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+			]);
+		});
 
-	it("flags a single overflowing element as the offender", async () => {
-		const result = await runFixture("overflowing-element.html");
+		it("captures the screenshot at the measurement viewport's width in real pixels", async () => {
+			// Puppeteer's clip.scale multiplies against the page's current deviceScaleFactor rather than
+			// replacing it (verified directly against real Puppeteer), so this only comes out at exactly
+			// 320px given the page's own deviceScaleFactor is 1, as it is by default here. A caller that
+			// leaves deviceScaleFactor at something else beforehand is responsible for restoring it before
+			// invoking this audit.
+			const result = await runFixture("overflowing-element.html");
+			const offender = result.offenders.find((o) => o.selector.includes("poke"));
 
-		expect(result.bucket).toBe("violation");
-		expect(result.offenders.some((o) => o.selector.includes("poke"))).toBe(true);
-	});
+			expect(offender?.screenshot).toBeInstanceOf(Uint8Array);
+			expect(readPngWidth(offender!.screenshot!)).toBe(320);
+		});
 
-	it("captures a real PNG screenshot of the offending element", async () => {
-		const result = await runFixture("overflowing-element.html");
-		const offender = result.offenders.find((o) => o.selector.includes("poke"));
+		it("does not flag a scroll-snap carousel with no document overflow", async () => {
+			const result = await runFixture("carousel.html");
 
-		expect(offender?.screenshot).toBeInstanceOf(Uint8Array);
-		expect(offender?.screenshot?.length ?? 0).toBeGreaterThan(100);
-		// PNG magic number.
-		expect(Array.from(offender!.screenshot!.slice(0, 8))).toEqual([
-			0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-		]);
-	});
+			expect(result.bucket).not.toBe("violation");
+			expect(result.documentOverflowPx).toBeLessThanOrEqual(2);
+		});
 
-	it("captures the screenshot at the measurement viewport's width in real pixels", async () => {
-		// Puppeteer's clip.scale multiplies against the page's current deviceScaleFactor rather than
-		// replacing it (verified directly against real Puppeteer), so this only comes out at exactly
-		// 320px given the page's own deviceScaleFactor is 1, as it is by default here. A caller that
-		// leaves deviceScaleFactor at something else beforehand is responsible for restoring it before
-		// invoking this audit.
-		const result = await runFixture("overflowing-element.html");
-		const offender = result.offenders.find((o) => o.selector.includes("poke"));
+		it("does not flag a 1px subpixel overshoot", async () => {
+			const result = await runFixture("subpixel-overflow.html");
 
-		expect(offender?.screenshot).toBeInstanceOf(Uint8Array);
-		expect(readPngWidth(offender!.screenshot!)).toBe(320);
-	});
+			expect(result.bucket).not.toBe("violation");
+		});
 
-	it("does not flag a scroll-snap carousel with no document overflow", async () => {
-		const result = await runFixture("carousel.html");
+		it("returns incomplete for a 100vw scrollbar-gutter band", async () => {
+			const result = await runFixture("vw-overflow.html");
 
-		expect(result.bucket).not.toBe("violation");
-		expect(result.documentOverflowPx).toBeLessThanOrEqual(2);
-	});
+			expect(result.bucket).toBe("incomplete");
+			expect(result.documentOverflowPx).toBeGreaterThan(2);
+			expect(result.documentOverflowPx).toBeLessThanOrEqual(20);
+		});
 
-	it("does not flag a 1px subpixel overshoot", async () => {
-		const result = await runFixture("subpixel-overflow.html");
+		it("does not flag clipped overflow:hidden content", async () => {
+			const result = await runFixture("clipped.html");
 
-		expect(result.bucket).not.toBe("violation");
-	});
+			expect(result.bucket).not.toBe("violation");
+		});
 
-	it("returns incomplete for a 100vw scrollbar-gutter band", async () => {
-		const result = await runFixture("vw-overflow.html");
+		it("measures in place without resizing when already 320px wide", async () => {
+			const page = await engine.newPage();
 
-		expect(result.bucket).toBe("incomplete");
-		expect(result.documentOverflowPx).toBeGreaterThan(2);
-		expect(result.documentOverflowPx).toBeLessThanOrEqual(20);
-	});
+			try {
+				await page.adaptor.setViewport({ width: 320, height: 640 });
+				const original = page.adaptor.setViewport.bind(page.adaptor);
+				const extra: Array<{ width: number; height: number }> = [];
+				page.adaptor.setViewport = async (viewport) => {
+					extra.push(viewport);
 
-	it("does not flag clipped overflow:hidden content", async () => {
-		const result = await runFixture("clipped.html");
+					return original(viewport);
+				};
 
-		expect(result.bucket).not.toBe("violation");
-	});
+				const result = await runOnPage(page, "already-narrow.html");
 
-	it("measures in place without resizing when already 320px wide", async () => {
-		const page = await browser.newPage();
+				expect(extra).toEqual([]);
+				expect(result.alreadyNarrow).toBe(true);
+				expect(result.viewport.width).toBe(320);
+				expect(result.bucket).toBe("pass");
+			} finally {
+				await page.close();
+			}
+		});
 
-		try {
-			await page.setViewport({ width: 320, height: 640 });
-			const original = page.setViewport.bind(page);
-			const extra: Array<{ width: number; height: number }> = [];
-			page.setViewport = (async (viewport) => {
-				extra.push({
-					width: viewport?.width ?? 0,
-					height: viewport?.height ?? 0,
-				});
+		it("detects overflow on body when html does not scroll", async () => {
+			const result = await runFixture("body-overflow.html");
 
-				return original(viewport);
-			}) as Page["setViewport"];
+			expect(result.bucket).toBe("violation");
+			expect(result.documentOverflowPx).toBeGreaterThan(20);
+		});
 
-			const result = await runOnPage(page, "already-narrow.html");
+		it("does not false-positive a translateX(-100%) off-canvas menu", async () => {
+			const result = await runFixture("transform-hidden-menu.html");
 
-			expect(extra).toEqual([]);
-			expect(result.alreadyNarrow).toBe(true);
-			expect(result.viewport.width).toBe(320);
-			expect(result.bucket).toBe("pass");
-		} finally {
-			await page.close();
-		}
-	});
+			expect(result.bucket).not.toBe("violation");
+		});
 
-	it("detects overflow on body when html does not scroll", async () => {
-		const result = await runFixture("body-overflow.html");
+		it("still flags a fixed-width shell that wraps a data table", async () => {
+			const result = await runFixture("nested-table-in-fixed-shell.html");
 
-		expect(result.bucket).toBe("violation");
-		expect(result.documentOverflowPx).toBeGreaterThan(20);
-	});
-
-	it("does not false-positive a translateX(-100%) off-canvas menu", async () => {
-		const result = await runFixture("transform-hidden-menu.html");
-
-		expect(result.bucket).not.toBe("violation");
-	});
-
-	it("still flags a fixed-width shell that wraps a data table", async () => {
-		const result = await runFixture("nested-table-in-fixed-shell.html");
-
-		expect(result.bucket).toBe("violation");
-		expect(result.offenders.some((o) => o.selector.includes("shell"))).toBe(true);
-	});
-});
+			expect(result.bucket).toBe("violation");
+			expect(result.offenders.some((o) => o.selector.includes("shell"))).toBe(true);
+		});
+	},
+);

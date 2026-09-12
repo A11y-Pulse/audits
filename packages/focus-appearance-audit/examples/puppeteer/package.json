@@ -6,8 +6,8 @@
 		"start": "node index.mjs"
 	},
 	"dependencies": {
+		"@a11y-pulse/browser-adaptor": "file:../../../browser-adaptor",
 		"@a11y-pulse/focus-appearance-audit": "file:../..",
-		"@a11y-pulse/tab-orchestrator": "file:../../../tab-orchestrator",
 		"puppeteer": "^24.15.0"
 	}
 }
