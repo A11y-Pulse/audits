@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0
+
+### Minor Changes
+
+- [#52](https://github.com/A11y-Pulse/audits/pull/52) [`3797dfc`](https://github.com/A11y-Pulse/audits/commit/3797dfc4e2d68942fff8019683db80c6a660bd04) Thanks [@wildlyinaccurate](https://github.com/wildlyinaccurate)! - Add a Playwright adaptor alongside the Puppeteer one, exported from `@a11y-pulse/browser-adaptor/playwright` and from the reflow and text-spacing packages' own `./playwright` subpaths. `playwright-core` is an optional peer dependency, so Puppeteer users are unaffected.
+  
+  Two behaviours differ from Puppeteer and are documented in `@a11y-pulse/browser-adaptor`'s README: `evaluate` rebuilds the page function with `new Function`, which needs `unsafe-eval` in the page's CSP; and clipped screenshots go over CDP on Chromium for pixel parity, falling back to a full-page capture at the context's own `deviceScaleFactor` on Firefox and WebKit.
+
+### Patch Changes
+
+- Updated dependencies [[`3797dfc`](https://github.com/A11y-Pulse/audits/commit/3797dfc4e2d68942fff8019683db80c6a660bd04), [`3797dfc`](https://github.com/A11y-Pulse/audits/commit/3797dfc4e2d68942fff8019683db80c6a660bd04)]:
+  - @a11y-pulse/browser-adaptor@0.4.0
+
 ## 0.2.1
 
 ### Patch Changes
