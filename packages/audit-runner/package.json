@@ -1,6 +1,6 @@
 {
 	"name": "@a11y-pulse/audit-runner",
-	"version": "0.3.0",
+	"version": "0.4.0",
 	"description": "Simple example tool that runs all A11y Pulse accessibility audits",
 	"type": "module",
 	"license": "MIT",
