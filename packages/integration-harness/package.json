@@ -19,7 +19,7 @@
 	},
 	"devDependencies": {
 		"playwright-core": "^1.63.0",
-		"puppeteer": "^25.9.0",
+		"puppeteer": "^25.10.0",
 		"vitest": "^4.1.11"
 	}
 }
