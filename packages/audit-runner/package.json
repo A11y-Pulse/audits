@@ -62,6 +62,7 @@
 		"@a11y-pulse/skip-link-audit": "*",
 		"@a11y-pulse/tab-orchestrator": "*",
 		"@a11y-pulse/text-spacing-audit": "*",
+		"axe-core": "^4.13.0",
 		"puppeteer": "^25.9.0"
 	},
 	"peerDependencies": {

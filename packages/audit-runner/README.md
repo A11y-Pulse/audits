@@ -4,11 +4,9 @@
 [![CI](https://github.com/A11y-Pulse/audits/actions/workflows/ci.yml/badge.svg)](https://github.com/A11y-Pulse/audits/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](./LICENSE.md)
 
-A worked example of using every [A11y Pulse](https://www.a11ypulse.com/) accessibility audit together. It runs all audits against a single page and hands back their results unchanged, and ships a CLI that prints those results as JSON.
+A simple command line interface that runs axe-core and all A11y Pulse audits against a single page. Results are reported in the axe-core format.
 
-This package exists to be read as much as run. If you are wiring the audits into your own pipeline, [`src/run-audits.ts`](./src/run-audits.ts) is the file to copy from: it shows how to share one tab session between the keyboard-driven audits and what order to run the rest in.
-
-It is released under the [MIT License](#license).
+This package also exists as a reference for your own audit pipeline. If you would like to explore the code, a good starting point is [`src/run-audits.ts`](./src/run-audits.ts).
 
 ## Install
 
@@ -16,7 +14,7 @@ It is released under the [MIT License](#license).
 npm install @a11y-pulse/audit-runner
 ```
 
-Unlike the individual audit packages, `puppeteer` is a regular dependency here rather than an optional peer, so the CLI works without any further setup. To drive the page with Playwright instead, install it yourself: `npm install playwright-core && npx playwright-core install`.
+By default this package runs audits using Puppeteer. If you would like to use Playwright, you will need to install it with `npm install playwright-core && npx playwright-core install`.
 
 ## CLI
 
@@ -24,10 +22,10 @@ Unlike the individual audit packages, `puppeteer` is a regular dependency here r
 npx @a11y-pulse/audit-runner https://who.likesdogs.nz/
 ```
 
-Launches headless Chromium at a 1280x800 viewport, loads the URL, runs every audit, and writes the combined results to stdout as JSON. Pipe it wherever you like:
+Launches headless Chromium at a 1280x800 viewport, loads the URL, runs every audit, and writes the combined axe-core report to stdout as JSON. Pipe it wherever you like:
 
 ```bash
-npx @a11y-pulse/audit-runner https://who.likesdogs.nz/ | jq '.audits.reflow.bucket'
+npx @a11y-pulse/audit-runner https://who.likesdogs.nz/ | jq '.violations[].id'
 ```
 
 `--engine playwright` drives the page with Playwright rather than Puppeteer, and `--browser` then picks the engine to launch:
@@ -54,8 +52,6 @@ The exit code reports whether the run itself succeeded, not whether the page pas
 | Playwright | WebKit | **No.** The keyboard-driven audits it runs are unsupported on WebKit, which does not move focus to links when Tab is pressed. |
 | Playwright | Firefox | **Partial.** Reflow, text spacing, skip link and context change match Chromium; focus appearance and focus not obscured differ in the cases noted in their own READMEs. |
 
-Verified by this repo's integration suites, which run every audit against each of these engines. Unsupported and partial cases are skipped there with the reason printed alongside them.
-
 ## `runAllAudits`
 
 ```js
@@ -69,52 +65,75 @@ const browser = await puppeteer.launch();
 const page = await browser.newPage();
 await page.goto("https://who.likesdogs.nz/");
 
-const { url, audits } = await runAllAudits({
+const results = await runAllAudits({
 	browser: new PuppeteerAdaptor(page),
 	reflow: new ReflowAdaptor(page),
 	textSpacing: new TextSpacingAdaptor(page),
 });
 
-console.log(audits.reflow.bucket);
-// 'violation'
-
-console.log(audits.focusAppearance.summary);
-// { checked: 12, passed: 11, failed: 1, ... }
+console.log(results.violations.map((audit) => audit.id));
+// ['color-contrast', 'focus-appearance', 'reflow']
 
 await browser.close();
 ```
 
 `runAllAudits(adaptors, options?)` takes one adaptor per audit interface, all three wrapping the same already-loaded page. Swap in the `PlaywrightAdaptor` from each of those subpaths to run the same audits under Playwright; nothing else changes.
 
-`options` takes each audit's own options object under its key, all optional:
+`options` takes each audit's own options object under its key, all optional. `axe` is passed straight to `axe.run()`:
 
 ```js
-const { audits } = await runAllAudits(adaptors, {
+const results = await runAllAudits(adaptors, {
+	axe: { runOnly: ["wcag2a", "wcag2aa"] },
 	focusAppearance: { elementLimit: 50, skipStyleCheck: true },
 	reflow: { screenshotLimit: 3 },
 });
 ```
 
+## Results
+
+The return value is in the shape of [axe-core's results object](https://github.com/dequelabs/axe-core/blob/develop/doc/API.md#results-object). The A11y Pulse audit results included with the following audit IDs:
+
+| Audit | `id` |
+| --- | --- |
+| Focus appearance (WCAG 2.4.7) | `focus-appearance` |
+| Focus not obscured (WCAG 2.4.11) | `focus-not-obscured` |
+| Context change on focus (WCAG 3.2.1) | `context-change-on-focus` |
+| Skip link activation (WCAG 2.4.1) | `skip-link-activation` |
+| Reflow (WCAG 1.4.10) | `reflow` |
+| Text spacing (WCAG 1.4.12) | `text-spacing` |
+
 ## JSON output
 
-Audit results carry PNG evidence as raw bytes (`FocusFailureEvidence.focusedScreenshot`, `ReflowOffender.screenshot`, and so on). `toJson` is a thin `JSON.stringify` wrapper that encodes those as base64 strings:
+Audit evidence is attached to the node it belongs to, as a single axe-core check under `any`, carrying PNG bytes as raw `Uint8Array`s. `toJson` is a thin `JSON.stringify` wrapper that encodes those as base64:
 
 ```json
 {
   "url": "https://who.likesdogs.nz/",
-  "audits": {
-    "reflow": {
-      "bucket": "violation",
-      "offenders": [
+  "violations": [
+    {
+      "id": "reflow",
+      "help": "Content must reflow without two-dimensional scrolling",
+      "impact": "serious",
+      "tags": ["wcag21aa", "wcag1410", "cat.structure"],
+      "nodes": [
         {
-          "selector": "#wide",
-          "overflowPx": 580,
-          "reason": "element-overflow",
-          "screenshot": "iVBORw0KGgoAAAANSUhEUg…"
+          "target": ["#wide"],
+          "html": "<div id=\"wide\">",
+          "failureSummary": "Element is overflowing the viewport by 580px…",
+          "any": [
+            {
+              "id": "reflow-evidence",
+              "impact": "serious",
+              "message": "Element overflows the 320px reflow viewport",
+              "data": { "screenshot": "iVBORw0KGgoAAAANSUhEUg…" }
+            }
+          ],
+          "all": [],
+          "none": []
         }
       ]
     }
-  }
+  ]
 }
 ```
 

@@ -9,9 +9,15 @@ import { PlaywrightAdaptor as ReflowPlaywrightAdaptor } from "@a11y-pulse/reflow
 import { PuppeteerAdaptor as ReflowAdaptor } from "@a11y-pulse/reflow-audit/puppeteer";
 import { PlaywrightAdaptor as TextSpacingPlaywrightAdaptor } from "@a11y-pulse/text-spacing-audit/playwright";
 import { PuppeteerAdaptor as TextSpacingAdaptor } from "@a11y-pulse/text-spacing-audit/puppeteer";
+import type { Result } from "axe-core";
 import { afterAll, beforeAll, expect, it } from "vitest";
-import { type AuditAdaptors, runAllAudits } from "../../src/run-audits";
+import { type AuditAdaptors, type AuditRunnerResult, runAllAudits } from "../../src/run-audits";
 import { toJson } from "../../src/serialise";
+import { FOCUS_APPEARANCE_AUDIT_ID } from "../../src/to-axe/focus-appearance";
+import { FOCUS_NOT_OBSCURED_AUDIT_ID } from "../../src/to-axe/focus-not-obscured";
+import { REFLOW_AUDIT_ID } from "../../src/to-axe/reflow";
+import { SKIP_LINK_AUDIT_ID } from "../../src/to-axe/skip-link";
+import { TEXT_SPACING_AUDIT_ID } from "../../src/to-axe/text-spacing";
 import { type FixtureServer, startFixtureServer } from "./helpers/serve-fixtures";
 
 let server: FixtureServer;
@@ -37,6 +43,16 @@ const adaptors: AdaptorFactories<AuditAdaptors> = {
 	}),
 };
 
+function auditIds(result: AuditRunnerResult): Set<string> {
+	const buckets = [result.violations, result.incomplete, result.passes, result.inapplicable];
+
+	return new Set(buckets.flat().map((audit: Result) => audit.id));
+}
+
+function find(results: Result[], id: string): Result | undefined {
+	return results.find((audit) => audit.id === id);
+}
+
 describeEachEngine<AuditAdaptors>(
 	"runAllAudits (integration)",
 	{
@@ -48,7 +64,7 @@ describeEachEngine<AuditAdaptors>(
 		},
 	},
 	(engine) => {
-		it("reports a result for every audit and leaves the page restored", async () => {
+		it("reports every audit in axe-core's buckets and leaves the page restored", async () => {
 			const page = await engine.newPage();
 			await page.goto(`${server.url}/kitchen-sink.html`);
 
@@ -57,21 +73,20 @@ describeEachEngine<AuditAdaptors>(
 			});
 
 			expect(result.url).toBe(`${server.url}/kitchen-sink.html`);
-			expect(Object.keys(result.audits)).toEqual([
-				"focusAppearance",
-				"focusNotObscured",
-				"contextChangeOnFocus",
-				"skipLink",
-				"textSpacing",
-				"reflow",
-			]);
+			expect(result.testEngine.name).toBe("axe-core");
 
-			expect(result.audits.focusAppearance.elements.length).toBeGreaterThan(0);
-			expect(result.audits.focusNotObscured.elements.length).toBeGreaterThan(0);
-			expect(result.audits.contextChangeOnFocus.elements.length).toBeGreaterThan(0);
-			expect(result.audits.skipLink.summary.found).toBe(1);
-			expect(result.audits.reflow.restored).toBe(true);
-			expect(result.audits.textSpacing.restored).toBe(true);
+			const ids = auditIds(result);
+			expect(ids).toContain(FOCUS_APPEARANCE_AUDIT_ID);
+			expect(ids).toContain(FOCUS_NOT_OBSCURED_AUDIT_ID);
+			expect(ids).toContain(SKIP_LINK_AUDIT_ID);
+			expect(ids).toContain(TEXT_SPACING_AUDIT_ID);
+			expect(ids).toContain(REFLOW_AUDIT_ID);
+
+			// axe-core's own rules report alongside the A11y Pulse audits.
+			expect(result.passes.some((audit) => audit.id === "document-title")).toBe(true);
+
+			expect(find(result.violations, REFLOW_AUDIT_ID)?.nodes[0]?.target).toEqual(["#wide"]);
+			expect(find(result.passes, SKIP_LINK_AUDIT_ID)?.nodes).toHaveLength(1);
 
 			expect(page.viewportSize()).toMatchObject({ width: 1280, height: 800 });
 			await page.close();
@@ -85,13 +100,18 @@ describeEachEngine<AuditAdaptors>(
 			const result = await runAllAudits(page.adaptor, {
 				focusAppearance: { skipStyleCheck: true },
 			});
-			const stops = result.audits.focusNotObscured.elements.length;
 
-			expect(result.audits.focusAppearance.elements).toHaveLength(stops);
-			expect(result.audits.contextChangeOnFocus.elements).toHaveLength(stops);
+			const nodeCount = (id: string): number =>
+				[result.violations, result.incomplete, result.passes]
+					.flat()
+					.filter((audit) => audit.id === id)
+					.reduce((total, audit) => total + audit.nodes.length, 0);
+
+			const stops = nodeCount(FOCUS_NOT_OBSCURED_AUDIT_ID);
+			expect(nodeCount(FOCUS_APPEARANCE_AUDIT_ID)).toBe(stops);
 
 			const tabs = page.keyPresses.filter((key) => key === "Tab").length;
-			const skipLinkTabs = result.audits.skipLink.summary.found > 0 ? tabs - stops - 1 : 0;
+			const skipLinkTabs = tabs - stops - 1;
 			expect(skipLinkTabs).toBeLessThanOrEqual(3);
 
 			await page.close();
@@ -104,14 +124,13 @@ describeEachEngine<AuditAdaptors>(
 			const result = await runAllAudits(page.adaptor, {
 				focusAppearance: { skipStyleCheck: true },
 			});
-			const parsed = JSON.parse(toJson(result));
+			const parsed = JSON.parse(toJson(result)) as AuditRunnerResult;
 
-			const obscured = parsed.audits.focusNotObscured.elements.find(
-				(element: { bucket: string }) => element.bucket === "violation",
-			);
+			const obscured = find(parsed.violations, FOCUS_NOT_OBSCURED_AUDIT_ID);
+			const screenshot = obscured?.nodes[0]?.any[0]?.data.screenshot;
 
-			expect(typeof obscured.screenshot).toBe("string");
-			expect(Buffer.from(obscured.screenshot, "base64").subarray(0, 4)).toEqual(
+			expect(typeof screenshot).toBe("string");
+			expect(Buffer.from(screenshot, "base64").subarray(0, 4)).toEqual(
 				Buffer.from([0x89, 0x50, 0x4e, 0x47]),
 			);
 
