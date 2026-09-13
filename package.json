@@ -20,7 +20,7 @@
 		"release": "changeset publish"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.5.11",
+		"@biomejs/biome": "^2.5.12",
 		"@changesets/changelog-github": "^1.0.1",
 		"@changesets/cli": "^3.0.1",
 		"@tsconfig/node22": "^22.0.6",
