@@ -61,6 +61,6 @@
 		"@types/pngjs": "^6.0.5",
 		"happy-dom": "^20.14.5",
 		"playwright-core": "^1.63.0",
-		"puppeteer": "^25.10.0"
+		"puppeteer": "^25.11.0"
 	}
 }
