@@ -14,7 +14,7 @@ function cdpPage(send: EvaluateMock): { page: Page; newCDPSession: EvaluateMock 
 	const newCDPSession = vi.fn(async () => ({ send }));
 
 	return {
-		page: { context: () => ({ newCDPSession }) } as unknown as Page,
+		page: { context: () => ({ newCDPSession }), evaluate: async () => {} } as unknown as Page,
 		newCDPSession,
 	};
 }
@@ -108,6 +108,7 @@ describe("PlaywrightAdaptor.screenshotClip", () => {
 					throw new Error("CDP is only available in Chromium");
 				},
 			}),
+			evaluate: async () => {},
 			screenshot,
 		} as unknown as Page;
 
