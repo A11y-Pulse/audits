@@ -1,5 +1,6 @@
 import type { CDPSession, JSHandle, Page } from "playwright-core";
 import type { BrowserAdaptor, ElementRef, Rect } from "../adaptor";
+import { nextPaintScript } from "../paint";
 
 // The CDP session for each page, shared by focus emulation and clipped screenshots. A fresh adaptor
 // is created per audit run, but a page often outlives one run, so without this each run would open
@@ -102,6 +103,8 @@ export class PlaywrightAdaptor implements BrowserAdaptor {
 	}
 
 	async screenshotClip(clip: Rect, scale = 1): Promise<Uint8Array> {
+		await this.page.evaluate(nextPaintScript);
+
 		const session = await cdpSession(this.page);
 
 		if (session) {

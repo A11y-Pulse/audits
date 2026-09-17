@@ -41,7 +41,7 @@ describe("PuppeteerAdaptor", () => {
 
 	it("screenshotClip passes the scale through to the capture", async () => {
 		const screenshot = vi.fn(async () => new Uint8Array());
-		const page = { screenshot } as unknown as Page;
+		const page = { evaluate: async () => {}, screenshot } as unknown as Page;
 		const clip = { x: 0, y: 0, width: 10, height: 10 };
 
 		await new PuppeteerAdaptor(page).screenshotClip(clip, 3);
@@ -64,7 +64,7 @@ describe("PuppeteerAdaptor", () => {
 	// the encoded evidence. This audit keeps the smaller captures it has always produced.
 	it("does not optimise captures for speed", async () => {
 		const screenshot = vi.fn(async () => new Uint8Array());
-		const page = { screenshot } as unknown as Page;
+		const page = { evaluate: async () => {}, screenshot } as unknown as Page;
 
 		await new PuppeteerAdaptor(page).screenshotClip({ x: 0, y: 0, width: 10, height: 10 });
 
