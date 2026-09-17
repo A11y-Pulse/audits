@@ -53,6 +53,7 @@ describe("PlaywrightAdaptor", () => {
 		const send = vi.fn(async () => ({ data: "" }));
 		const page = {
 			context: () => ({ newCDPSession: async () => ({ send }) }),
+			evaluate: async () => {},
 		} as unknown as Page;
 		const clip = { x: 0, y: 0, width: 10, height: 10 };
 

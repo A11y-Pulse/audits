@@ -80,7 +80,7 @@ describe("PuppeteerAdaptor.screenshotClipScale", () => {
 describe("PuppeteerAdaptor.screenshotClip", () => {
 	it("optimises for speed by default and honours an override", async () => {
 		const screenshot = vi.fn(async () => new Uint8Array());
-		const page = { screenshot } as unknown as Page;
+		const page = { evaluate: async () => {}, screenshot } as unknown as Page;
 		const clip = { x: 0, y: 0, width: 10, height: 10 };
 
 		await new PuppeteerAdaptor(page).screenshotClip(clip);

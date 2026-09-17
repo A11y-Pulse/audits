@@ -1,5 +1,6 @@
 import type { CDPSession, JSHandle, Page } from "puppeteer";
 import type { BrowserAdaptor, ElementRef, Rect } from "../adaptor";
+import { nextPaintScript } from "../paint";
 
 // The CDP session holding focus emulation for each page. A fresh adaptor is created per audit run,
 // but a page often outlives one run, so without this each run would open another CDP session that
@@ -60,6 +61,8 @@ export class PuppeteerAdaptor implements BrowserAdaptor {
 	}
 
 	async screenshotClip(clip: Rect, scale = 1): Promise<Uint8Array> {
+		await this.page.evaluate(nextPaintScript);
+
 		return (await this.page.screenshot({
 			type: "png",
 			optimizeForSpeed: this.optimizeForSpeed,
