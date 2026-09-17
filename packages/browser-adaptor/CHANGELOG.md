@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1
+
+### Patch Changes
+
+- [#65](https://github.com/A11y-Pulse/audits/pull/65) [`3e7a3ae`](https://github.com/A11y-Pulse/audits/commit/3e7a3ae187792c2a74b7656114f03032a745c1f6) Thanks [@wildlyinaccurate](https://github.com/wildlyinaccurate)! - Wait for the page to paint before `screenshotClip` captures, in both the Puppeteer and Playwright adaptors. A capture taken straight after a style change could return a frame from before it, so a focus indicator that was applied but not yet painted was missing from the focused screenshot and reported as a failure.
+
 ## 0.4.0
 
 ### Minor Changes
