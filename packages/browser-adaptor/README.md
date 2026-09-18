@@ -65,6 +65,12 @@ Consumers may ignore methods they do not need. `ensureFocusReporting` is best-ef
 
 `PuppeteerAdaptor` wraps a Puppeteer `Page`. Its CDP session is cached per page, so reusing a page across audit runs does not open extra sessions.
 
+Clipped screenshots go over that CDP session with `captureBeyondViewport` off, so only what is inside the current viewport is captured. Chromium honours `captureBeyondViewport` by shrinking the emulated viewport to 1x1 and resizing it for the clip before restoring it, and the page sees each of those as a real resize: `resize` fires and media queries flip to their narrowest breakpoint, which can collapse a responsive layout and blur the focused element mid-capture. The tab-driven audits scroll each element into view before capturing. Pass `captureBeyondViewport: true` only for evidence of regions you cannot scroll to, where the page's state does not matter:
+
+```js
+new PuppeteerAdaptor(page, { captureBeyondViewport: true });
+```
+
 ## Playwright adaptor
 
 `PlaywrightAdaptor` wraps a Playwright `Page`, and works with either `playwright` or `playwright-core`.
@@ -88,7 +94,7 @@ Two differences from the Puppeteer adaptor are worth knowing about.
 
 **`evaluate` needs `unsafe-eval`.** Playwright's `evaluate` takes a single argument, so the adaptor packs the page function's source and its arguments into one tuple and rebuilds the function in the page with `new Function`. A page whose Content-Security-Policy omits `unsafe-eval` from `script-src` will reject that; the adaptor throws a message naming CSP as the cause rather than letting it read as a page failure. Puppeteer is unaffected, because CDP serialises the function itself.
 
-**Screenshot scale depends on the engine.** On Chromium the adaptor screenshots over CDP, which honours `screenshotClipScale` per capture and captures clips that lie outside the viewport, so evidence images match Puppeteer's. Firefox and WebKit expose no CDP, so the adaptor falls back to a full-page capture at the context's own `deviceScaleFactor`. There, create the context with a `deviceScaleFactor` matching `screenshotClipScale` (2 by default), or pass the scale you want:
+**Screenshot scale depends on the engine.** On Chromium the adaptor screenshots over CDP, which honours `screenshotClipScale` per capture, so evidence images match Puppeteer's; it takes the same `captureBeyondViewport` option, off by default for the same reason. Firefox and WebKit expose no CDP, so the adaptor falls back to a full-page capture at the context's own `deviceScaleFactor`, which those engines take without resizing the viewport. There, create the context with a `deviceScaleFactor` matching `screenshotClipScale` (2 by default), or pass the scale you want:
 
 ```js
 new PlaywrightAdaptor(page, { screenshotClipScale: 1 });

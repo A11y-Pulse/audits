@@ -21,6 +21,7 @@ export {
 	focusScript,
 	hasFocusScript,
 	isCenterObscuredScript,
+	needsCentringScript,
 	pageDimensionsScript,
 	probeActiveElementScript,
 	scrollToCenterScript,

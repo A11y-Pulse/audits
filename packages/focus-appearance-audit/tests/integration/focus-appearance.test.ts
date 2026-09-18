@@ -173,6 +173,34 @@ describeEachEngine<BrowserAdaptor>(
 			},
 		);
 
+		it("never lets a clipped screenshot resize the page's viewport", async () => {
+			// A clipped capture over CDP with captureBeyondViewport shrinks the emulated viewport to 1x1
+			// before restoring it. A page that observes that resize can flip to its narrow breakpoint and
+			// hide the focused element, which blurs it, so the "focused" screenshot has no indicator and
+			// the element is reported as failing. The ring here is drawn by a child, so the elements can
+			// only pass via screenshots.
+			const page = await engine.newPage();
+
+			try {
+				await page.goto(`${server.url}/responsive-nav.html`);
+
+				const result = await runFocusAppearanceAudit(page.adaptor);
+
+				expect(result.elements.map((e) => e.detectionMethod)).toEqual([
+					"pixel-diff",
+					"pixel-diff",
+					"pixel-diff",
+				]);
+
+				const resizes = await page.adaptor.evaluate(
+					() => (window as unknown as { __resizes: unknown[] }).__resizes,
+				);
+				expect(resizes).toEqual([]);
+			} finally {
+				await page.close();
+			}
+		});
+
 		it("ends as completed once the page has been tabbed to the end", async () => {
 			// The tab press that leaves the last element takes focus out of the
 			// document entirely, which reads identically to a stolen focus. Ending

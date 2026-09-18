@@ -41,10 +41,12 @@ export interface BrowserAdaptor {
 	pressEnter(): Promise<void>;
 
 	/**
-	 * Screenshot a clipped region of the page defined by `clip`. `scale` is the device scale factor
-	 * (bitmap pixels per CSS pixel), multiplied against whatever deviceScaleFactor the page itself
-	 * currently has. The caller is responsible for the page being at a known deviceScaleFactor before
-	 * invoking this. This function must return PNG bytes.
+	 * Screenshot a clipped region of the page defined by `clip`, in document coordinates. `scale` is
+	 * the device scale factor (bitmap pixels per CSS pixel), multiplied against whatever
+	 * deviceScaleFactor the page itself currently has. The caller is responsible for the page being
+	 * at a known deviceScaleFactor before invoking this, and for the clip lying inside the current
+	 * viewport: what falls outside it may come back blank. The capture must not change anything the
+	 * page can observe, such as its viewport size. This function must return PNG bytes.
 	 */
 	screenshotClip(clip: Rect, scale?: number): Promise<Uint8Array>;
 
