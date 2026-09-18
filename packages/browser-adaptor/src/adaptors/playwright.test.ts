@@ -86,7 +86,7 @@ describe("PlaywrightAdaptor.evaluate", () => {
 describe("PlaywrightAdaptor.screenshotClip", () => {
 	const clip = { x: 10, y: 3000, width: 100, height: 50 };
 
-	it("captures beyond the viewport at the requested scale over CDP", async () => {
+	it("captures at the requested scale over CDP, without captureBeyondViewport", async () => {
 		const send = vi.fn(async () => ({ data: Buffer.from("png").toString("base64") }));
 		const { page } = cdpPage(send);
 
@@ -94,10 +94,22 @@ describe("PlaywrightAdaptor.screenshotClip", () => {
 
 		expect(send).toHaveBeenCalledWith("Page.captureScreenshot", {
 			format: "png",
-			captureBeyondViewport: true,
+			captureBeyondViewport: false,
 			clip: { ...clip, scale: 2 },
 		});
 		expect(Buffer.from(bytes).toString()).toBe("png");
+	});
+
+	it("captures beyond the viewport only when asked to", async () => {
+		const send = vi.fn(async () => ({ data: "" }));
+		const { page } = cdpPage(send);
+
+		await new PlaywrightAdaptor(page, { captureBeyondViewport: true }).screenshotClip(clip, 2);
+
+		expect(send).toHaveBeenCalledWith(
+			"Page.captureScreenshot",
+			expect.objectContaining({ captureBeyondViewport: true }),
+		);
 	});
 
 	it("falls back to a full-page public capture when there is no CDP", async () => {

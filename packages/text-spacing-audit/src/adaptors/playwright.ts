@@ -14,8 +14,12 @@ export class PlaywrightAdaptor implements TextSpacingAuditAdaptor {
 	private readonly browser: BrowserPlaywrightAdaptor;
 
 	constructor(page: Page, options: PlaywrightAdaptorOptions = {}) {
+		// Evidence is a region of the page that need not be in view. The viewport resize this causes
+		// can re-render a page that reacts to it, but every measurement is taken before the evidence
+		// is captured, so at worst the evidence differs from what was measured.
 		this.browser = new BrowserPlaywrightAdaptor(page, {
 			screenshotClipScale: options.screenshotClipScale ?? 1,
+			captureBeyondViewport: options.captureBeyondViewport ?? true,
 		});
 		this.screenshotClipScale = this.browser.screenshotClipScale;
 	}

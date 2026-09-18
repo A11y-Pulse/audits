@@ -341,15 +341,80 @@ export function isCenterObscuredScript(el: Element | null): boolean {
 }
 
 /**
- * Scroll the element to the centre of the viewport, instantly so a screenshot taken immediately
- * afterwards isn't captured mid-animation.
+ * Whether the element should be centred in the viewport before its screenshots are taken: either
+ * something unrelated covers its centre (see isCenterObscuredScript, duplicated here because these
+ * scripts cannot share code), or its screenshot clip (its box padded by `buffer`, cut off at the
+ * document edges like bufferedClip) reaches past an edge of the viewport. A capture only shows what
+ * is inside the viewport, so such a clip would lose an indicator drawn in the padding. A clip larger
+ * than the viewport does not count, since scrolling cannot fit it anyway.
  */
-export function scrollToCenterScript(el: Element | null): void {
-	el?.scrollIntoView({
-		block: "center",
-		inline: "nearest",
-		behavior: "instant",
-	});
+export function needsCentringScript(el: Element | null, buffer: number): boolean {
+	if (!el) {
+		return false;
+	}
+
+	const rect = el.getBoundingClientRect();
+	const viewportWidth = document.documentElement.clientWidth;
+	const viewportHeight = document.documentElement.clientHeight;
+
+	const x = Math.min(Math.max(rect.left + rect.width / 2, 0), viewportWidth - 1);
+	const y = Math.min(Math.max(rect.top + rect.height / 2, 0), viewportHeight - 1);
+
+	let hit = document.elementFromPoint(x, y);
+
+	while (hit?.shadowRoot) {
+		const inner = hit.shadowRoot.elementFromPoint(x, y);
+
+		if (!inner || inner === hit) {
+			break;
+		}
+
+		hit = inner;
+	}
+
+	if (hit && hit !== el && !el.contains(hit) && !hit.contains(el)) {
+		return true;
+	}
+
+	const docLeft = -window.scrollX;
+	const docTop = -window.scrollY;
+	const left = Math.max(rect.left - buffer, docLeft);
+	const top = Math.max(rect.top - buffer, docTop);
+	const right = Math.min(rect.right + buffer, docLeft + document.documentElement.scrollWidth);
+	const bottom = Math.min(rect.bottom + buffer, docTop + document.documentElement.scrollHeight);
+
+	if (right - left > viewportWidth || bottom - top > viewportHeight) {
+		return false;
+	}
+
+	return left < 0 || top < 0 || right > viewportWidth || bottom > viewportHeight;
+}
+
+/**
+ * Scroll the window so the element sits at the vertical centre of the viewport and is inside it
+ * horizontally with `buffer` to spare, instantly so a screenshot taken immediately afterwards isn't
+ * captured mid-animation. Scrolls the window directly rather than via scrollIntoView(): Chromium
+ * moves the sequential focus navigation starting point to the element passed to scrollIntoView(),
+ * so when focus cannot be handed back afterwards (a closed shadow host) the next Tab would re-enter
+ * the same element instead of moving on.
+ */
+export function scrollToCenterScript(el: Element | null, buffer = 0): void {
+	if (!el) {
+		return;
+	}
+
+	const rect = el.getBoundingClientRect();
+	const viewportWidth = document.documentElement.clientWidth;
+	const top = rect.top + rect.height / 2 - document.documentElement.clientHeight / 2;
+	let left = 0;
+
+	if (rect.left - buffer < 0) {
+		left = rect.left - buffer;
+	} else if (rect.right + buffer > viewportWidth) {
+		left = Math.min(rect.right + buffer - viewportWidth, rect.left - buffer);
+	}
+
+	window.scrollBy({ top, left, behavior: "instant" });
 }
 
 export function blurScript(el: Element | null): void {

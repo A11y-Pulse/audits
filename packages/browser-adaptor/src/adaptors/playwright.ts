@@ -47,17 +47,31 @@ export type PlaywrightAdaptorOptions = {
 	 * with, because Playwright's public screenshot API cannot rescale a single capture.
 	 */
 	screenshotClipScale?: number;
+
+	/**
+	 * Let a Chromium clip capture content outside the current viewport. Defaults to false: to honour
+	 * it Chromium shrinks the emulated viewport to 1x1 and then resizes it for the clip before
+	 * restoring it, and the page observes each of those as a real resize (`resize` fires, media
+	 * queries flip to their narrowest breakpoint), which can collapse a responsive layout and blur
+	 * the focused element mid-capture. Only enable it for evidence of regions the caller cannot
+	 * scroll into view, where the page's state does not matter. Firefox and WebKit capture the full
+	 * page without resizing the viewport, so they ignore this.
+	 */
+	captureBeyondViewport?: boolean;
 };
 
 /** A BrowserAdaptor backed by a Playwright Page. */
 export class PlaywrightAdaptor implements BrowserAdaptor {
 	readonly screenshotClipScale: number;
 
+	private readonly captureBeyondViewport: boolean;
+
 	constructor(
 		private readonly page: Page,
 		options: PlaywrightAdaptorOptions = {},
 	) {
 		this.screenshotClipScale = options.screenshotClipScale ?? DEFAULT_SCREENSHOT_CLIP_SCALE;
+		this.captureBeyondViewport = options.captureBeyondViewport ?? false;
 	}
 
 	async evaluate<T>(
@@ -110,9 +124,13 @@ export class PlaywrightAdaptor implements BrowserAdaptor {
 		if (session) {
 			// The public API cannot scale one capture, and its `clip` is only honoured inside the
 			// viewport. CDP is what Puppeteer drives too, so evidence images stay pixel-comparable.
+			//
+			// `captureBeyondViewport: false` ensures that Chromium does not resize the viewport before
+			// capturing the screenshot, which can trigger media queries and hide the element we are
+			// trying to capture.
 			const { data } = await session.send("Page.captureScreenshot", {
 				format: "png",
-				captureBeyondViewport: true,
+				captureBeyondViewport: this.captureBeyondViewport,
 				clip: { ...clip, scale },
 			});
 
@@ -120,7 +138,8 @@ export class PlaywrightAdaptor implements BrowserAdaptor {
 		}
 
 		// Clips are document coordinates, and Playwright renders anything outside the viewport blank
-		// unless the capture is full-page.
+		// unless the capture is full-page. Firefox and WebKit capture a full page without resizing
+		// the viewport, so the page does not observe this.
 		return (await this.page.screenshot({
 			type: "png",
 			fullPage: true,

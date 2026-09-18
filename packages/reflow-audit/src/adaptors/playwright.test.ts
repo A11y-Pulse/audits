@@ -65,6 +65,23 @@ describe("PlaywrightAdaptor", () => {
 		);
 	});
 
+	// Evidence can sit anywhere on the page, so unlike the shared browser adaptor this one captures
+	// beyond the viewport.
+	it("captures beyond the viewport", async () => {
+		const send = vi.fn(async () => ({ data: "" }));
+		const page = {
+			context: () => ({ newCDPSession: async () => ({ send }) }),
+			evaluate: async () => {},
+		} as unknown as Page;
+
+		await new PlaywrightAdaptor(page).screenshotClip({ x: 0, y: 0, width: 10, height: 10 }, 1);
+
+		expect(send).toHaveBeenCalledWith(
+			"Page.captureScreenshot",
+			expect.objectContaining({ captureBeyondViewport: true }),
+		);
+	});
+
 	// The shared browser adaptor defaults to 2. Reflow captures at the page's own scale, matching
 	// this package's Puppeteer adaptor, so the audit's pixel maths is unchanged across engines.
 	it("defaults screenshotClipScale to 1 and honours an override", () => {
