@@ -17,9 +17,13 @@ export class PuppeteerAdaptor implements ReflowAuditAdaptor {
 		private readonly page: Page,
 		options: PuppeteerAdaptorOptions = {},
 	) {
+		// Evidence is a region of the page that need not be in view. The viewport resize this causes
+		// can re-render a page that reacts to it, but every measurement is taken before the evidence
+		// is captured, so at worst the evidence differs from what was measured.
 		this.browser = new BrowserPuppeteerAdaptor(page, {
 			screenshotClipScale: options.screenshotClipScale ?? 1,
 			optimizeForSpeed: options.optimizeForSpeed ?? false,
+			captureBeyondViewport: options.captureBeyondViewport ?? true,
 		});
 		this.screenshotClipScale = this.browser.screenshotClipScale;
 	}

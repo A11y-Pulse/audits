@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><style>
+  body { background: #fff; margin: 0; }
+  nav a { display: inline-block; padding: 8px 16px; color: #fff; background: #146; text-decoration: none; }
+  /* The control suppresses its own outline and a child draws the ring, so only the pixel diff can
+     see it. */
+  nav a:focus { outline: none !important; }
+  nav a:focus .label { outline: 2px solid #e83; outline-offset: -3px; }
+  /* Desktop nav collapses on narrow viewports. A viewport that shrinks even for a moment hides the
+     focused link, and a hidden element cannot keep focus. */
+  @media (max-width: 699px) { nav { display: none; } }
+</style></head><body>
+  <nav>
+    <a href="#one"><span class="label">One</span></a>
+    <a href="#two"><span class="label">Two</span></a>
+    <a href="#three"><span class="label">Three</span></a>
+  </nav>
+  <script>
+    window.__resizes = [];
+    addEventListener("resize", () => window.__resizes.push([innerWidth, innerHeight]));
+  </script>
+</body></html>

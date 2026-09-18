@@ -16,9 +16,9 @@ import {
 	focusScript,
 	hasFocusScript,
 	installContextObserverScript,
-	isCenterObscuredScript,
 	locationHrefScript,
 	measureObscuringScript,
+	needsCentringScript,
 	obscurerHandleScript,
 	pageDimensionsScript,
 	probeActiveElementScript,
@@ -394,7 +394,7 @@ describe("tab loop", () => {
 				return { width: 2000, height: 4000 };
 			}
 
-			if (fn === isCenterObscuredScript) {
+			if (fn === needsCentringScript) {
 				return false;
 			}
 
@@ -521,7 +521,7 @@ describe("tab loop", () => {
 		expect(clips).toHaveLength(1);
 	});
 
-	it("scrolls to center before capture when the element centre is covered", async () => {
+	it("scrolls to center before capture when the element needs centring", async () => {
 		let scrolls = 0;
 		const adaptor = loopAdaptor({
 			hasFocus: [true, true],
@@ -529,11 +529,14 @@ describe("tab loop", () => {
 		});
 		const originalEvaluate = adaptor.evaluate.bind(adaptor);
 		adaptor.evaluate = (async (fn, ...args) => {
-			if (fn === isCenterObscuredScript) {
+			if (fn === needsCentringScript) {
+				expect(args[1]).toBe(10);
+
 				return true;
 			}
 
 			if (fn === scrollToCenterScript) {
+				expect(args[1]).toBe(10);
 				scrolls++;
 
 				return undefined;
@@ -563,6 +566,7 @@ describe("tab loop", () => {
 		};
 		const orchestrator = createTabOrchestrator(adaptor, {
 			screenshotSettleDelay: 0,
+			screenshotClipBuffer: 10,
 		});
 		orchestrator.attach(a);
 		await orchestrator.run();
@@ -963,7 +967,7 @@ describe("tab loop", () => {
 
 			if (
 				fn === pageDimensionsScript ||
-				fn === isCenterObscuredScript ||
+				fn === needsCentringScript ||
 				fn === elementRectScript ||
 				fn === blurScript ||
 				fn === focusScript
@@ -972,7 +976,7 @@ describe("tab loop", () => {
 					return { width: 100, height: 100 };
 				}
 
-				if (fn === isCenterObscuredScript) {
+				if (fn === needsCentringScript) {
 					return false;
 				}
 

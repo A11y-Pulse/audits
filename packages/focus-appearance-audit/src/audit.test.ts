@@ -11,7 +11,7 @@ import {
 	elementStylesScript,
 	focusScript,
 	hasFocusScript,
-	isCenterObscuredScript,
+	needsCentringScript,
 	pageDimensionsScript,
 	probeActiveElementScript,
 	scrollToCenterScript,
@@ -145,7 +145,7 @@ function loopAdaptor(script: {
 				return { width: 2000, height: 4000 };
 			}
 
-			if (fn === isCenterObscuredScript) {
+			if (fn === needsCentringScript) {
 				return false;
 			}
 
@@ -424,7 +424,7 @@ describe("createFocusAppearanceAudit: timeout", () => {
 });
 
 type AdaptorScript = {
-	/** Per-call results for isCenterObscuredScript. Defaults to false. */
+	/** Per-call results for needsCentringScript (centre obscured or clip past the viewport). Defaults to false. */
 	obscured?: boolean[];
 	/** Per-call results for elementRectScript. */
 	rects?: Rect[];
@@ -494,7 +494,7 @@ function fakeAdaptor(script: AdaptorScript = {}): {
 				return { width: 2000, height: 4000 };
 			}
 
-			if (fn === isCenterObscuredScript) {
+			if (fn === needsCentringScript) {
 				return script.obscured?.[obscuredCalls++] ?? false;
 			}
 
@@ -629,7 +629,7 @@ describe("runFocusAppearanceAudit", () => {
 		expect(result.summary.sessionEnd).toBe("lostFocus");
 	});
 
-	it("centres the element before screenshotting when its centre is obscured", async () => {
+	it("centres the element before screenshotting when it needs centring", async () => {
 		const { adaptor, record } = fakeAdaptor({
 			obscured: [true],
 			tabStops: 1,
@@ -640,7 +640,7 @@ describe("runFocusAppearanceAudit", () => {
 		expect(record.scrolls).toBe(1);
 	});
 
-	it("does not scroll when the element's centre is visible", async () => {
+	it("does not scroll when the element does not need centring", async () => {
 		const { adaptor, record } = fakeAdaptor({
 			obscured: [false],
 			tabStops: 1,

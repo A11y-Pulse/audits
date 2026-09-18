@@ -5,7 +5,7 @@ import {
 	elementRectScript,
 	elementStylesScript,
 	focusScript,
-	isCenterObscuredScript,
+	needsCentringScript,
 	pageDimensionsScript,
 	scrollToCenterScript,
 } from "./browser-scripts";
@@ -30,10 +30,12 @@ export async function captureUnfocusedPair(
 ): Promise<UnfocusedPair> {
 	// Tab scrolls an element just barely into view at the viewport edge, which is exactly where fixed
 	// overlays (cookie banners, sticky footers) sit. If something covers the element there, both
-	// screenshots would show the overlay and no indicator could ever be detected. Centre the element
-	// in the viewport first, then give the scroll a moment to settle.
-	if (await adaptor.evaluate(isCenterObscuredScript, handle)) {
-		await adaptor.evaluate(scrollToCenterScript, handle);
+	// screenshots would show the overlay and no indicator could ever be detected. The clip's padding
+	// also hangs past the edge there, and a screenshot only captures what is inside the viewport, so
+	// an indicator drawn in that padding would be lost. Centre the element in the viewport first in
+	// either case, then give the scroll a moment to settle.
+	if (await adaptor.evaluate(needsCentringScript, handle, options.screenshotClipBuffer)) {
+		await adaptor.evaluate(scrollToCenterScript, handle, options.screenshotClipBuffer);
 
 		await new Promise((resolve) => setTimeout(resolve, options.screenshotSettleDelay));
 	}

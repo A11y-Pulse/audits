@@ -13,14 +13,35 @@ describe("PuppeteerAdaptor", () => {
 	});
 
 	it("screenshotClip passes the scale through to the capture", async () => {
-		const screenshot = vi.fn(async () => new Uint8Array());
-		const page = { evaluate: async () => {}, screenshot } as unknown as Page;
+		const send = vi.fn(async () => ({ data: "" }));
+		const page = {
+			evaluate: async () => {},
+			createCDPSession: async () => ({ send }),
+		} as unknown as Page;
 		const clip = { x: 0, y: 0, width: 10, height: 10 };
 
 		await new PuppeteerAdaptor(page).screenshotClip(clip, 3);
 
-		expect(screenshot).toHaveBeenCalledWith(
+		expect(send).toHaveBeenCalledWith(
+			"Page.captureScreenshot",
 			expect.objectContaining({ clip: { ...clip, scale: 3 } }),
+		);
+	});
+
+	// Evidence can sit anywhere on the page, so unlike the shared browser adaptor this one captures
+	// beyond the viewport.
+	it("captures beyond the viewport", async () => {
+		const send = vi.fn(async () => ({ data: "" }));
+		const page = {
+			evaluate: async () => {},
+			createCDPSession: async () => ({ send }),
+		} as unknown as Page;
+
+		await new PuppeteerAdaptor(page).screenshotClip({ x: 0, y: 0, width: 10, height: 10 });
+
+		expect(send).toHaveBeenCalledWith(
+			"Page.captureScreenshot",
+			expect.objectContaining({ captureBeyondViewport: true }),
 		);
 	});
 
@@ -36,11 +57,17 @@ describe("PuppeteerAdaptor", () => {
 	// The shared browser adaptor trades PNG compression for capture speed, which roughly doubles
 	// the encoded evidence. This audit keeps the smaller captures it has always produced.
 	it("does not optimise captures for speed", async () => {
-		const screenshot = vi.fn(async () => new Uint8Array());
-		const page = { evaluate: async () => {}, screenshot } as unknown as Page;
+		const send = vi.fn(async () => ({ data: "" }));
+		const page = {
+			evaluate: async () => {},
+			createCDPSession: async () => ({ send }),
+		} as unknown as Page;
 
 		await new PuppeteerAdaptor(page).screenshotClip({ x: 0, y: 0, width: 10, height: 10 });
 
-		expect(screenshot).toHaveBeenCalledWith(expect.objectContaining({ optimizeForSpeed: false }));
+		expect(send).toHaveBeenCalledWith(
+			"Page.captureScreenshot",
+			expect.objectContaining({ optimizeForSpeed: false }),
+		);
 	});
 });
