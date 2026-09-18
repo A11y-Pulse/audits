@@ -1,5 +1,15 @@
 # @a11y-pulse/tab-orchestrator
 
+## 0.6.1
+
+### Patch Changes
+
+- [#69](https://github.com/A11y-Pulse/audits/pull/69) [`662a089`](https://github.com/A11y-Pulse/audits/commit/662a0893d6366a022c50c47ac126d7df072eb138) Thanks [@wildlyinaccurate](https://github.com/wildlyinaccurate)! - Centre an element in the viewport before capturing its focused and unfocused screenshots when the padded clip would hang past a viewport edge, not only when its centre is covered. Screenshots only capture what is inside the viewport, and Tab scrolls an element just barely into view, so an indicator drawn in the clip padding at that edge could be lost.
+  
+  `scrollToCenterScript` scrolls the window directly instead of calling `scrollIntoView()`. Chromium moves the sequential focus navigation starting point to the element passed to `scrollIntoView()`, so when focus could not be handed back afterwards (a closed shadow host) the next Tab re-entered the same element and the session looped until it hit its element limit.
+- Updated dependencies [[`662a089`](https://github.com/A11y-Pulse/audits/commit/662a0893d6366a022c50c47ac126d7df072eb138)]:
+  - @a11y-pulse/browser-adaptor@0.5.0
+
 ## 0.6.0
 
 ### Minor Changes
