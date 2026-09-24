@@ -20,18 +20,20 @@ Browser-based WCAG testing for things static accessibility scanners like axe-cor
 
 ## Coverage
 
-What each tool reports for the success criteria these audits cover:
-
 | Success criterion | A11y-Pulse/audits | axe-core | pa11y (HTML_CodeSniffer) |
 | --- | --- | --- | --- |
-| [2.4.7 Focus Visible](https://www.w3.org/WAI/WCAG22/Understanding/focus-visible) (AA) | Pass/fail per focusable element, with screenshots | Not checked | Manual review |
-| [2.4.11 Focus Not Obscured (Minimum)](https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum) (AA) | Pass/fail per focusable element, with screenshots | Not checked | Not checked |
-| [3.2.1 On Focus](https://www.w3.org/WAI/WCAG22/Understanding/on-focus) (A) | Pass/fail per focusable element | Not checked | Manual review |
-| [1.4.10 Reflow](https://www.w3.org/WAI/WCAG22/Understanding/reflow) (AA) | Pass/fail, plus the offending elements and their overflow | Not checked | Manual review |
-| [1.4.12 Text Spacing](https://www.w3.org/WAI/WCAG22/Understanding/text-spacing) (AA) | Applies the spacing overrides, then reports clipped and overlapping text | `avoid-inline-spacing` (only flags inline `!important` declarations) | Manual review |
-| [2.4.1 Bypass Blocks](https://www.w3.org/WAI/WCAG22/Understanding/bypass-blocks) (A) | Activates the skip link and verifies focus actually moved | `bypass`, (only checks a mechanism exists) | Manual review |
+| [2.4.7 Focus Visible](https://www.w3.org/WAI/WCAG22/Understanding/focus-visible) (AA) | ✅ | ❌ | 🟡<sup>1</sup> |
+| [2.4.11 Focus Not Obscured (Minimum)](https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum) (AA) | ✅ | ❌ | ❌ |
+| [3.2.1 On Focus](https://www.w3.org/WAI/WCAG22/Understanding/on-focus) (A) | ✅ | ❌ | 🟡<sup>1</sup> |
+| [1.4.10 Reflow](https://www.w3.org/WAI/WCAG22/Understanding/reflow) (AA) | ✅ | ❌ | 🟡<sup>1</sup> |
+| [1.4.12 Text Spacing](https://www.w3.org/WAI/WCAG22/Understanding/text-spacing) (AA) | ✅ | 🟡<sup>2</sup> | 🟡<sup>1</sup> |
+| [2.4.1 Bypass Blocks](https://www.w3.org/WAI/WCAG22/Understanding/bypass-blocks) (A) | ✅ | 🟡<sup>3</sup> | 🟡<sup>1</sup> |
 
-> "Manual review" means the tool emits a note asking a human to check the criterion, not a pass or a fail.
+<small>
+1. Manual review only: emits a note asking a human to check the criterion.<br />
+2. The `avoid-inline-spacing` audit only flags inline `!important` spacing declarations.<br />
+3. The `bypass` audit only checks that a bypass mechanism exists, not that it works.<br />
+</small>
 
 ## Quick Start
 
