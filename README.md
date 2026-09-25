@@ -43,13 +43,13 @@ A collection of audits that are designed to complement static analysis tools lik
 
 ## Quick Start
 
-We recommend using the [`@a11y-pulse/audit-runner` package](./packages/audit-runner) as an example of how to integrate these audits into your own pipeline. This package can also be run as a CLI to audit a single URL:
+The [@a11y-pulse/audit-runner package](./packages/audit-runner) is a simple command line tool to run the audits against a single URL:
 
 ```bash
 npx @a11y-pulse/audit-runner https://example.com/
 ```
 
-Individual audits can also be used on their own. See the README in each package for details.
+It also serves as an implementation reference for integrating the audits in your own automation pipeline. Individual audits can also be used on their own - see the README in each package for details.
 
 ## Packages
 
