@@ -12,11 +12,7 @@
 
 Browser-based WCAG testing for things static accessibility scanners like axe-core and Lighthouse can't test. Works with Puppeteer, Playwright, or your own browser automation. Developed by the [A11y Pulse](https://www.a11ypulse.com/?utm_source=github&utm_content=audits-lead) team.
 
-<picture>
-    <source srcset="./docs/images/focus-failure-dark.png" media="(prefers-color-scheme: dark)" />
-    <source srcset="./docs/images/focus-failure-light.png" media="(prefers-color-scheme: light), (prefers-color-scheme: no-preference)" />
-    <img src="./docs/images/focus-failure-light.png" alt="A reported WCAG 2.4.7 failure for button.primary at tab stop 4, showing the focused and unfocused screenshots of a 'Sign in' button side by side. They are identical.">
-</picture>
+<img src="./docs/images/audit-runner-cli.gif" alt="Running npx @a11y-pulse/audit-runner https://who.likesdogs.nz/ --format simple. A spinner steps through launching Chrome, loading the page, running axe-core and each A11y Pulse audit, then three failed audits are listed with their impact, description, selector and HTML.">
 
 ## Coverage
 
