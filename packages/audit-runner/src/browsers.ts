@@ -5,9 +5,12 @@ import { PuppeteerAdaptor as ReflowPuppeteerAdaptor } from "@a11y-pulse/reflow-a
 import { PlaywrightAdaptor as TextSpacingPlaywrightAdaptor } from "@a11y-pulse/text-spacing-audit/playwright";
 import { PuppeteerAdaptor as TextSpacingPuppeteerAdaptor } from "@a11y-pulse/text-spacing-audit/puppeteer";
 import type { Browser, Engine } from "./cli-args";
-import type { AuditAdaptors } from "./run-audits";
+import type { AuditAdaptors, ProgressCallback } from "./run-audits";
 
 const DEFAULT_VIEWPORT = { width: 1280, height: 800 };
+
+// Puppeteer's `networkidle2`: no more than two connections open for 500ms.
+const PUPPETEER_NETWORK_IDLE_CONCURRENCY = 2;
 
 const SCREENSHOT_CLIP_SCALE = 2;
 
@@ -35,17 +38,23 @@ async function load<T>(specifier: string, install: string): Promise<T> {
 	}
 }
 
-async function launchPuppeteer(url: string): Promise<Session> {
+async function launchPuppeteer(url: string, onProgress: ProgressCallback): Promise<Session> {
 	const { default: puppeteer } = await load<typeof import("puppeteer")>(
 		"puppeteer",
 		"npm install puppeteer",
 	);
 
+	onProgress("Launching Chrome");
 	const browser = await puppeteer.launch({ defaultViewport: DEFAULT_VIEWPORT });
 
 	try {
 		const page = await browser.newPage();
-		await page.goto(url, { waitUntil: "networkidle2" });
+
+		onProgress("Loading page");
+		await page.goto(url, { waitUntil: "load" });
+
+		onProgress("Waiting for network idle");
+		await page.waitForNetworkIdle({ concurrency: PUPPETEER_NETWORK_IDLE_CONCURRENCY });
 
 		return {
 			adaptors: {
@@ -64,7 +73,11 @@ async function launchPuppeteer(url: string): Promise<Session> {
 	}
 }
 
-async function launchPlaywright(url: string, browserName: Browser): Promise<Session> {
+async function launchPlaywright(
+	url: string,
+	browserName: Browser,
+	onProgress: ProgressCallback,
+): Promise<Session> {
 	const playwright = await load<typeof import("playwright-core")>(
 		"playwright-core",
 		"npm install playwright-core && npx playwright-core install",
@@ -74,11 +87,17 @@ async function launchPlaywright(url: string, browserName: Browser): Promise<Sess
 	// higher pixel density.
 	const screenshotClipScale = browserName === "chromium" ? SCREENSHOT_CLIP_SCALE : 1;
 
+	onProgress(`Launching ${browserName}`);
 	const browser = await playwright[browserName].launch();
 
 	try {
 		const page = await browser.newPage({ viewport: DEFAULT_VIEWPORT });
-		await page.goto(url, { waitUntil: "networkidle" });
+
+		onProgress("Loading page");
+		await page.goto(url, { waitUntil: "load" });
+
+		onProgress("Waiting for network idle");
+		await page.waitForLoadState("networkidle");
 
 		return {
 			adaptors: {
@@ -98,6 +117,13 @@ async function launchPlaywright(url: string, browserName: Browser): Promise<Sess
 /**
  * Launch the chosen engine, open `url`, and build the adaptors every audit is driven through.
  */
-export function openPage(url: string, engine: Engine, browser: Browser): Promise<Session> {
-	return engine === "playwright" ? launchPlaywright(url, browser) : launchPuppeteer(url);
+export function openPage(
+	url: string,
+	engine: Engine,
+	browser: Browser,
+	onProgress: ProgressCallback = () => {},
+): Promise<Session> {
+	return engine === "playwright"
+		? launchPlaywright(url, browser, onProgress)
+		: launchPuppeteer(url, onProgress);
 }

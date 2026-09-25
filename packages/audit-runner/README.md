@@ -28,6 +28,22 @@ Launches headless Chromium at a 1280x800 viewport, loads the URL, runs every aud
 npx @a11y-pulse/audit-runner https://who.likesdogs.nz/ | jq '.violations[].id'
 ```
 
+For a readable summary of just the failed audits, use `--format simple`:
+
+```bash
+npx @a11y-pulse/audit-runner https://who.likesdogs.nz/ --format simple
+```
+
+Each failed audit is listed with its impact, a description, the selector and HTML of up to five failing elements, and a link to more help. Colours are used when stdout is a terminal.
+
+Write either format to a file with `--output`. Missing parent directories are created:
+
+```bash
+npx @a11y-pulse/audit-runner https://who.likesdogs.nz/ --output reports/likesdogs.json
+```
+
+While it runs, a spinner on stderr shows the current step (loading the page, waiting for network idle, running axe-core, and so on). The spinner only appears when stderr is a terminal, so CI logs and redirected output stay clean.
+
 `--engine playwright` drives the page with Playwright rather than Puppeteer, and `--browser` then picks the engine to launch:
 
 ```bash
@@ -36,6 +52,8 @@ npx @a11y-pulse/audit-runner https://who.likesdogs.nz/ --engine playwright --bro
 
 | Option | Values | Default |
 | --- | --- | --- |
+| `-o`, `--output` | A file path | stdout |
+| `--format` | `json`, `simple` | `json` |
 | `--engine` | `puppeteer`, `playwright` | `puppeteer` |
 | `--browser` | `chromium`, `firefox`, `webkit` | `chromium` |
 
@@ -79,7 +97,7 @@ await browser.close();
 
 `runAllAudits(adaptors, options?)` takes one adaptor per audit interface, all three wrapping the same already-loaded page. Swap in the `PlaywrightAdaptor` from each of those subpaths to run the same audits under Playwright; nothing else changes.
 
-`options` takes each audit's own options object under its key, all optional. `axe` is passed straight to `axe.run()`:
+`options` takes each audit's own options object under its key, all optional. `axe` is passed straight to `axe.run()`, and `onProgress` is called with a short description of each step as it starts:
 
 ```js
 const results = await runAllAudits(adaptors, {

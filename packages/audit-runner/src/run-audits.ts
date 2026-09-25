@@ -48,6 +48,9 @@ export type AuditAdaptors = {
 	textSpacing: TextSpacingAuditAdaptor;
 };
 
+/** Receives a short, human-readable description of each step as it starts. */
+export type ProgressCallback = (step: string) => void;
+
 export type AuditRunnerOptions = {
 	axe?: AxeRunOptions;
 	focusAppearance?: FocusAppearanceOptions;
@@ -56,6 +59,7 @@ export type AuditRunnerOptions = {
 	skipLink?: SkipLinkOptions;
 	textSpacing?: TextSpacingOptions;
 	reflow?: ReflowOptions;
+	onProgress?: ProgressCallback;
 };
 
 /**
@@ -121,17 +125,23 @@ export async function runAllAudits(
 	options: AuditRunnerOptions = {},
 ): Promise<AuditRunnerResult> {
 	const { browser } = adaptors;
+	const onProgress = options.onProgress ?? (() => {});
 
+	onProgress("Running axe-core");
 	const axeResults = await runAxeCore(browser, options.axe);
 
+	onProgress("Tabbing through focusable elements");
 	const tabAudits = await runTabAuditsInSharedSession(browser, options);
 
+	onProgress("Running skip link audit");
 	await browser.evaluate(blurAndScrollToTopScript);
 	const skipLink = await runSkipLinkAudit(browser, options.skipLink);
 
+	onProgress("Running text spacing audit");
 	await browser.evaluate(blurAndScrollToTopScript);
 	const textSpacing = await runTextSpacingAudit(adaptors.textSpacing, options.textSpacing);
 
+	onProgress("Running reflow audit");
 	const reflow = await runReflowAudit(adaptors.reflow, options.reflow);
 
 	const merged = mergeOutputs([
