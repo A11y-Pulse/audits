@@ -16,9 +16,11 @@
     <a href="https://polyformproject.org/licenses/shield/1.0.0/"><img src="https://img.shields.io/badge/license-PolyForm%20Shield-blue" alt="License: PolyForm Shield"></a>
 </p>
 
-# Automated accessibility audits that go beyond axe-core
+# Automated interaction-driven web accessibility testing
 
-Browser-based WCAG testing for things static accessibility scanners like axe-core and Lighthouse can't test. Works with Puppeteer, Playwright, or your own browser automation. Developed by the [A11y Pulse](https://www.a11ypulse.com/?utm_source=github&utm_content=audits-lead) team.
+A collection of audits that are designed to complement static analysis tools like axe-core and HTML_CodeSniffer. They work by simulating user interaction through a real web browser, allowing them to test against WCAG success criteria that static analysis tools cannot.
+
+<sup>Developed with ❤️ by the [A11y Pulse](https://www.a11ypulse.com/?utm_source=github&utm_content=audits-lead) team in New Zealand.</sup>
 
 <img src="./docs/images/audit-runner-cli.gif" alt="Running npx @a11y-pulse/audit-runner https://who.likesdogs.nz/ --format simple. A spinner steps through launching Chrome, loading the page, running axe-core and each A11y Pulse audit, then three failed audits are listed with their impact, description, selector and HTML.">
 
@@ -33,18 +35,18 @@ Browser-based WCAG testing for things static accessibility scanners like axe-cor
 | [1.4.12 Text Spacing](https://www.w3.org/WAI/WCAG22/Understanding/text-spacing) (AA) | ✅ | 🟡<sup>2</sup> | 🟡<sup>1</sup> |
 | [2.4.1 Bypass Blocks](https://www.w3.org/WAI/WCAG22/Understanding/bypass-blocks) (A) | ✅ | 🟡<sup>3</sup> | 🟡<sup>1</sup> |
 
-<small>
+<sup>
 1. Manual review only: emits a note asking a human to check the criterion.<br />
 2. The `avoid-inline-spacing` audit only flags inline `!important` spacing declarations.<br />
 3. The `bypass` audit only checks that a bypass mechanism exists, not that it works.<br />
-</small>
+</sup>
 
 ## Quick Start
 
-We recommend using the [`@a11y-pulse/audit-runner` package](./packages/audit-runner) as an example of how to integrate these audits into your own pipeline. However this package can also be run as a CLI to audit a single URL:
+We recommend using the [`@a11y-pulse/audit-runner` package](./packages/audit-runner) as an example of how to integrate these audits into your own pipeline. This package can also be run as a CLI to audit a single URL:
 
 ```bash
-npx @a11y-pulse/audit-runner https://example.com
+npx @a11y-pulse/audit-runner https://example.com/
 ```
 
 Individual audits can also be used on their own. See the README in each package for details.
