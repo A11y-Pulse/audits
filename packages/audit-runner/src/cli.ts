@@ -1,8 +1,12 @@
 #!/usr/bin/env node
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
 import { openPage } from "./browsers";
 import { parseArgs, USAGE } from "./cli-args";
+import { formatSimple } from "./format-simple";
 import { runAllAudits } from "./run-audits";
 import { toJson } from "./serialise";
+import { createSpinner } from "./spinner";
 
 async function main(argv: readonly string[]): Promise<number> {
 	const parsed = parseArgs(argv);
@@ -19,13 +23,35 @@ async function main(argv: readonly string[]): Promise<number> {
 		return 1;
 	}
 
-	const session = await openPage(parsed.url, parsed.engine, parsed.browser);
+	const spinner = createSpinner(process.stderr);
+	let report: string;
 
 	try {
-		console.log(toJson(await runAllAudits(session.adaptors)));
+		const session = await openPage(parsed.url, parsed.engine, parsed.browser, spinner.update);
+
+		try {
+			const results = await runAllAudits(session.adaptors, { onProgress: spinner.update });
+			const color = parsed.output === undefined && process.stdout.hasColors?.() === true;
+
+			report = parsed.format === "simple" ? formatSimple(results, color) : toJson(results);
+		} finally {
+			spinner.update("Closing browser");
+			await session.close();
+		}
 	} finally {
-		await session.close();
+		spinner.stop();
 	}
+
+	if (parsed.output === undefined) {
+		console.log(report);
+
+		return 0;
+	}
+
+	const outputPath = resolve(parsed.output);
+	await mkdir(dirname(outputPath), { recursive: true });
+	await writeFile(outputPath, `${report}\n`);
+	console.error(`Results written to ${outputPath}`);
 
 	return 0;
 }

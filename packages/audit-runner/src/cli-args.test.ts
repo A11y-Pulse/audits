@@ -8,12 +8,14 @@ describe("parseArgs", () => {
 			url: "https://example.com/a",
 			engine: "puppeteer",
 			browser: "chromium",
+			format: "json",
 		});
 		expect(parseArgs(["http://localhost:3000"])).toEqual({
 			kind: "run",
 			url: "http://localhost:3000/",
 			engine: "puppeteer",
 			browser: "chromium",
+			format: "json",
 		});
 	});
 
@@ -23,12 +25,14 @@ describe("parseArgs", () => {
 			url: "https://a.test/",
 			engine: "playwright",
 			browser: "chromium",
+			format: "json",
 		});
 		expect(parseArgs(["https://a.test", "--engine=playwright", "--browser=webkit"])).toEqual({
 			kind: "run",
 			url: "https://a.test/",
 			engine: "playwright",
 			browser: "webkit",
+			format: "json",
 		});
 	});
 
@@ -40,6 +44,43 @@ describe("parseArgs", () => {
 		expect(parseArgs(["--engine", "playwright", "--browser", "edge", "https://a.test"])).toEqual({
 			kind: "error",
 			message: "Unsupported browser: edge. Expected chromium, firefox, webkit.",
+		});
+	});
+
+	it("accepts an output file, spelled any way", () => {
+		const expected = {
+			kind: "run",
+			url: "https://a.test/",
+			engine: "puppeteer",
+			browser: "chromium",
+			format: "json",
+			output: "out/results.json",
+		};
+
+		expect(parseArgs(["https://a.test", "-o", "out/results.json"])).toStrictEqual(expected);
+		expect(parseArgs(["--output", "out/results.json", "https://a.test"])).toStrictEqual(expected);
+		expect(parseArgs(["https://a.test", "--output=out/results.json"])).toStrictEqual(expected);
+	});
+
+	it("accepts a format", () => {
+		expect(parseArgs(["https://a.test", "--format", "simple"])).toMatchObject({
+			kind: "run",
+			format: "simple",
+		});
+		expect(parseArgs(["https://a.test"])).toMatchObject({ kind: "run", format: "json" });
+	});
+
+	it("rejects an unsupported format", () => {
+		expect(parseArgs(["https://a.test", "--format=pretty"])).toEqual({
+			kind: "error",
+			message: "Unsupported format: pretty. Expected json or simple.",
+		});
+	});
+
+	it("rejects an empty output file", () => {
+		expect(parseArgs(["https://a.test", "--output="])).toEqual({
+			kind: "error",
+			message: "Missing value for --output.",
 		});
 	});
 

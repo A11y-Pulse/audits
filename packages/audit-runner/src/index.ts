@@ -5,12 +5,14 @@ export type { ReflowResult } from "@a11y-pulse/reflow-audit";
 export type { SkipLinkResult } from "@a11y-pulse/skip-link-audit";
 export type { TextSpacingResult } from "@a11y-pulse/text-spacing-audit";
 export { runAxeCore } from "./axe-core";
-export type { Browser, Engine, ParsedArgs } from "./cli-args";
-export { BROWSERS, ENGINES, parseArgs, USAGE } from "./cli-args";
+export type { Browser, Engine, Format, ParsedArgs } from "./cli-args";
+export { BROWSERS, ENGINES, FORMATS, parseArgs, USAGE } from "./cli-args";
+export { formatSimple } from "./format-simple";
 export type {
 	AuditAdaptors,
 	AuditRunnerOptions,
 	AuditRunnerResult,
+	ProgressCallback,
 } from "./run-audits";
 export { runAllAudits } from "./run-audits";
 export { base64Replacer, toJson } from "./serialise";
