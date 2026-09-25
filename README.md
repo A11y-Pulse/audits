@@ -8,6 +8,14 @@
     </a>
 </p>
 
+<p align="center">
+    <a href="https://github.com/A11y-Pulse/audits/actions/workflows/ci.yml"><img src="https://github.com/A11y-Pulse/audits/actions/workflows/ci.yml/badge.svg" alt="Lint"></a>
+    <a href="https://github.com/A11y-Pulse/audits/actions/workflows/release.yml"><img src="https://github.com/A11y-Pulse/audits/actions/workflows/release.yml/badge.svg" alt="Release"></a>
+    <a href="https://www.npmjs.com/package/@a11y-pulse/audit-runner"><img src="https://img.shields.io/npm/v/@a11y-pulse/audit-runner" alt="npm version"></a>
+    <a href="https://www.npmjs.com/package/@a11y-pulse/audit-runner"><img src="https://img.shields.io/npm/dm/@a11y-pulse/audit-runner" alt="npm downloads"></a>
+    <a href="https://polyformproject.org/licenses/shield/1.0.0/"><img src="https://img.shields.io/badge/license-PolyForm%20Shield-blue" alt="License: PolyForm Shield"></a>
+</p>
+
 # Automated accessibility audits that go beyond axe-core
 
 Browser-based WCAG testing for things static accessibility scanners like axe-core and Lighthouse can't test. Works with Puppeteer, Playwright, or your own browser automation. Developed by the [A11y Pulse](https://www.a11ypulse.com/?utm_source=github&utm_content=audits-lead) team.
