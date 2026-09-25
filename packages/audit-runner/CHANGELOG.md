@@ -1,5 +1,11 @@
 # @a11y-pulse/audit-runner
 
+## 0.5.0
+
+### Minor Changes
+
+- [`41d6d77`](https://github.com/A11y-Pulse/audits/commit/41d6d773aafc59c2e9e293c9892cbbe94d544268) Thanks [@wildlyinaccurate](https://github.com/wildlyinaccurate)! - Add `-o`/`--output <file>` to write results to a file instead of stdout, `--format simple` for a readable list of failed audits, and show a spinner on stderr with the current step while the audits run. `runAllAudits` accepts an `onProgress` callback that receives the same step descriptions.
+
 ## 0.4.0
 
 ### Minor Changes
