@@ -20,7 +20,7 @@
 
 A collection of audits that are designed to complement static analysis tools like axe-core and HTML_CodeSniffer. They work by simulating user interaction through a real web browser, allowing them to test against WCAG success criteria that static analysis tools cannot.
 
-<sup>Developed with ❤️ by the [A11y Pulse](https://www.a11ypulse.com/?utm_source=github&utm_content=audits-lead) team in New Zealand.</sup>
+<sup>Made with ❤️ by the [A11y Pulse](https://www.a11ypulse.com/?utm_source=github&utm_content=audits-lead) team in New Zealand.</sup>
 
 <img src="./docs/images/audit-runner-cli.gif" alt="Running npx @a11y-pulse/audit-runner https://who.likesdogs.nz/ --format simple. A spinner steps through launching Chrome, loading the page, running axe-core and each A11y Pulse audit, then three failed audits are listed with their impact, description, selector and HTML.">
 
