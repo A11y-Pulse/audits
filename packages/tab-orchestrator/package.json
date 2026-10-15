@@ -47,7 +47,7 @@
 		"@a11y-pulse/context-change-on-focus-audit": "*",
 		"@a11y-pulse/focus-appearance-audit": "*",
 		"@a11y-pulse/focus-not-obscured-audit": "*",
-		"happy-dom": "^20.14.5",
+		"happy-dom": "^21.0.1",
 		"playwright-core": "^1.63.0",
 		"puppeteer": "^25.12.0"
 	}
