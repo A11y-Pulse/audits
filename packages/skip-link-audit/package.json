@@ -54,7 +54,7 @@
 		"@a11y-pulse/browser-adaptor": "*"
 	},
 	"devDependencies": {
-		"happy-dom": "^20.14.5",
+		"happy-dom": "^21.0.1",
 		"puppeteer": "^25.12.0"
 	}
 }
