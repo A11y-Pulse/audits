@@ -61,7 +61,7 @@ export const content: PageGroup = {
 			scenario: "button whose aria-label omits its visible text",
 			audit: "label-content-name-mismatch",
 			target: "#send-feedback",
-			outcome: "incomplete",
+			outcome: "violations",
 		},
 		{
 			scenario: "paragraphs faking a list with hyphens",
