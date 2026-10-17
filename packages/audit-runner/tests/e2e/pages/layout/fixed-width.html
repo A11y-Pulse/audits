@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Trail conditions | Trailhead Outfitters</title>
+<style>
+	body { margin: 0; background: #fff; color: #1f2937; font: 16px/1.5 Arial, sans-serif; }
+	a { color: #1d4ed8; }
+	:focus-visible { outline: 2px solid #1a73e8; outline-offset: 2px; }
+	#page { width: 980px; margin: 0 auto; }
+	header { display: flex; align-items: center; gap: 24px; height: 64px; padding: 0 16px; background: #1c1c1c; color: #111; }
+	header img { display: block; }
+	header nav a { color: #fff; margin-right: 16px; }
+	#hero { height: 260px; padding: 80px 32px 0; box-sizing: border-box; background: url(../assets/pale-mountains.svg) center / cover; }
+	#hero-title { margin: 0; color: #fff; font-size: 16px; font-weight: 400; }
+	.columns { display: flex; gap: 24px; padding: 24px 16px; }
+	.columns > section { width: 300px; }
+	#promo-card { position: relative; width: 300px; height: 48px; padding: 0 40px 0 12px; box-sizing: border-box; overflow: hidden; background: #fef3c7; line-height: 24px; }
+	#close-promo { position: absolute; top: 12px; right: 12px; width: 24px; height: 24px; padding: 0; border: 0; background: none; }
+	#close-promo svg { display: block; width: 24px; height: 24px; fill: #bbb; }
+	table { border-collapse: collapse; }
+	td, th { padding: 4px 8px; border: 1px solid #d1d5db; }
+	footer { padding: 16px; background: #f3f4f6; }
+</style>
+</head>
+<body>
+<div id="page">
+	<header>
+		<a id="logo-link" href="fixed-width.html"><img id="header-logo" src="../assets/logo-light.svg" alt="Trailhead Outfitters" width="180" height="40"></a>
+		<img id="award-badge" src="../assets/badge-award.svg" alt="Best outdoor retailer 2025" width="40" height="40">
+		<nav aria-label="Main">
+			<a id="nav-conditions" href="fixed-width.html" aria-current="page">Trail conditions</a>
+			<a id="nav-huts" href="huts.html">Huts</a>
+		</nav>
+	</header>
+
+	<main>
+		<div id="hero">
+			<h1 id="hero-title">Tongariro Alpine Crossing: open, with snow above 1,600 m</h1>
+		</div>
+
+		<div class="columns">
+			<section>
+				<h2>Promotions</h2>
+				<div id="promo-card">
+					<p id="promo-text" style="margin: 12px 0">Crampons 20% off this week only</p>
+					<button id="close-promo" type="button" aria-label="Dismiss promotion"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" stroke="#bbb" stroke-width="3"/></svg></button>
+				</div>
+			</section>
+
+			<section>
+				<h2>Hut bookings</h2>
+				<table id="hut-table">
+					<tr><th scope="col">Hut</th><th scope="col">Bunks</th><th scope="col">Free tonight</th><th scope="col">Warden</th></tr>
+					<tr><th scope="row">Mangatepopo</th><td>20</td><td>4</td><td>Yes</td></tr>
+					<tr><th scope="row">Ketetahi</th><td>0</td><td>0</td><td>No</td></tr>
+				</table>
+			</section>
+
+			<section>
+				<h2>Track reports</h2>
+				<p><a id="report-link" href="reports.html">Read this week's track reports</a></p>
+			</section>
+		</div>
+	</main>
+
+	<footer>
+		<p>Conditions are updated every morning at 7am.</p>
+	</footer>
+</div>
+</body>
+</html>

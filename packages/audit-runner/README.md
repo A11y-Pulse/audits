@@ -120,6 +120,17 @@ The return value is in the shape of [axe-core's results object](https://github.c
 | Reflow (WCAG 1.4.10) | `reflow` |
 | Text spacing (WCAG 1.4.12) | `text-spacing` |
 
+## Known false positives
+
+Each audit documents the cases where it reports a problem that is not one, and which bucket they land in:
+
+- [Focus appearance](../focus-appearance-audit#known-false-positives)
+- [Focus not obscured](../focus-not-obscured-audit#known-false-positives)
+- [Context change on focus](../context-change-on-focus-audit#known-false-positives)
+- [Skip link activation](../skip-link-audit#known-false-positives)
+- [Reflow](../reflow-audit#known-false-positives)
+- [Text spacing](../text-spacing-audit#known-false-positives)
+
 ## JSON output
 
 Audit evidence is attached to the node it belongs to, as a single axe-core check under `any`, carrying PNG bytes as raw `Uint8Array`s. `toJson` is a thin `JSON.stringify` wrapper that encodes those as base64:

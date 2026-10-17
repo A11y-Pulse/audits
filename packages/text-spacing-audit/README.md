@@ -148,7 +148,7 @@ Use [`src/adaptors/puppeteer.ts`](./src/adaptors/puppeteer.ts) or [`src/adaptors
 
 ## Limitations
 
-- **Overlap is incomplete, never a violation.** Overlap detection is heuristic (nearby pairs only; sticky/fixed skipped). Decorative overlaps and stacking contexts can still produce noise.
+- **Overlap is incomplete, never a violation.** Overlap detection is heuristic: nearby pairs only, with sticky and fixed elements skipped. See [Known false positives](#known-false-positives).
 - **Inline `!important` spacing is left to axe.** A user stylesheet cannot beat an inline `!important` declaration. axe-core `avoid-inline-spacing` covers that blocker; this audit cannot restyle those elements.
 - **Already-clipped content is not attributed to the override.** Only new overflow inside a clipping box is reported as `clipped`.
 - **Intentional truncation.** Single-line ellipsis and line-clamp that were already truncating route to `truncation-increased` (incomplete), not `clipped`.
@@ -157,6 +157,14 @@ Use [`src/adaptors/puppeteer.ts`](./src/adaptors/puppeteer.ts) or [`src/adaptors
 - **Paragraph spacing is `p` only.** That matches the bookmarklet. Pages that use `div`s as paragraphs are under-tested.
 - **Loss of functionality** without a geometric symptom (for example a click target covered by a transparent sibling) is not detected.
 - **Forcing `line-height: 1.5`** can reduce spacing on a page that already exceeds the minimum. That is faithful to the bookmarklet. Clipping under 1.5 still implies clipping under anything larger.
+
+## Known false positives
+
+Cases where the audit reports a problem that is not one. Each says which bucket it lands in: `incomplete` asks for a human to check, `violations` claims a failure.
+
+- **Overlap with content clipped by a scrolling ancestor** (`incomplete`). Overlap is measured between raw element boxes. Content that grows past the edge of a horizontally scrolling wrapper (cells of a wide table, say) is reported as overlapping its neighbours, although the wrapper clips it and it never paints over them.
+- **Deliberate overlaps** (`incomplete`). Decorative or absolutely positioned text that overlaps nearby text by design is reported for review.
+- **Text that was already truncated** (`incomplete`). An ellipsis or line clamp that truncates a little more under the extra spacing is reported for review, never as a violation.
 
 ## Releasing
 

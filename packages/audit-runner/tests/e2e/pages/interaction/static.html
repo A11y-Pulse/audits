@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tents | Trailhead Outfitters</title>
+<link rel="stylesheet" href="../assets/storefront.css">
+</head>
+<body>
+<a id="skip-link" class="sr-only-focusable" href="#main">Skip to main content</a>
+
+<header class="site-header">
+	<a id="logo-link" class="logo" href="static.html"><img src="../assets/logo.svg" alt="Trailhead Outfitters"></a>
+
+	<form class="search" role="search" action="search.html">
+		<input id="search-input" type="search" name="q" placeholder="Search tents, packs and more" aria-label="Search products" autocomplete="off">
+		<ul id="search-suggestions" class="suggestions" role="listbox" aria-label="Suggestions" hidden></ul>
+	</form>
+
+	<nav class="main-nav" aria-label="Main">
+		<ul>
+			<li id="menu-tents-item">
+				<button id="menu-tents" type="button">Tents</button>
+				<ul id="menu-tents-panel" class="panel">
+					<li><a id="menu-tents-1" href="static.html?people=1">Solo tents</a></li>
+					<li><a id="menu-tents-2" href="static.html?people=2">Two-person tents</a></li>
+					<li><a id="menu-tents-3" href="static.html?people=4">Family tents</a></li>
+				</ul>
+			</li>
+			<li id="menu-packs-item">
+				<button id="menu-packs" type="button" aria-expanded="false" aria-controls="menu-packs-panel">Backpacks</button>
+				<ul id="menu-packs-panel" class="panel">
+					<li><a id="menu-packs-1" href="packs.html?size=day">Day packs</a></li>
+					<li><a id="menu-packs-2" href="packs.html?size=multi-day">Multi-day packs</a></li>
+				</ul>
+			</li>
+			<li><a id="nav-sale" href="sale.html">Sale</a></li>
+		</ul>
+	</nav>
+</header>
+
+<div id="filter-drawer" class="drawer" role="region" aria-label="Filter drawer">
+	<p>Filters</p>
+	<button id="drawer-close" type="button">Close filters</button>
+</div>
+
+<div class="layout">
+	<aside class="filters">
+		<h2>Filters</h2>
+		<form id="filters" action="static.html">
+			<label><input id="filter-2-person" type="checkbox" name="people" value="2"> Two-person</label>
+			<label><input id="filter-waterproof" type="checkbox" name="waterproof" value="1"> Waterproof</label>
+			<label for="sort-select">Sort by</label>
+			<select id="sort-select" name="sort">
+				<option value="static.html">Recommended</option>
+				<option value="static.html?sort=price">Price, low to high</option>
+				<option value="static.html?sort=weight">Weight</option>
+			</select>
+		</form>
+
+		<p id="price-label">Maximum price</p>
+		<div id="price-slider" class="slider" role="slider" tabindex="0" aria-labelledby="price-label" aria-valuemin="0" aria-valuemax="1000" aria-valuenow="600">
+			<span class="thumb"></span>
+		</div>
+
+		<label for="weight-range">Maximum weight (kg)</label>
+		<input id="weight-range" type="range" min="1" max="6" value="4">
+
+		<h3><button id="size-guide-toggle" type="button" aria-expanded="false" aria-controls="size-guide">Size guide</button></h3>
+		<div id="size-guide" class="accordion-region">
+			<p>Pick a tent rated for one more person than will sleep in it.</p>
+			<a id="size-guide-link" href="../assets/size-guide.pdf">Download the size chart (PDF)</a>
+		</div>
+	</aside>
+
+	<main id="main" tabindex="-1">
+		<h1>Tents</h1>
+		<div id="results-count">3 results</div>
+
+		<div class="segmented" role="group" aria-label="Layout">
+			<button id="view-grid" type="button" class="selected">Grid</button>
+			<button id="view-list" type="button">List</button>
+			<button id="view-compact" type="button">Compact</button>
+		</div>
+
+		<ul id="products" class="products">
+			<li class="card">
+				<div id="card-1" class="card-link">
+					<h2>Ridgeline 2</h2>
+					<p>$349</p>
+				</div>
+				<span class="tooltip-anchor">
+					<button id="delivery-info" type="button" aria-describedby="delivery-tooltip">Delivery</button>
+					<span id="delivery-tooltip" class="tooltip" role="tooltip" hidden>Free delivery on orders over $200. Ships in 2 to 3 working days.</span>
+				</span>
+				<div id="card-1-actions" class="card-actions" style="flex-direction: row-reverse; justify-content: flex-end">
+					<button id="wishlist-1" class="icon-button" type="button" aria-label="Add Ridgeline 2 to wishlist"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21 3 12a5 5 0 0 1 9-6 5 5 0 0 1 9 6z"/></svg></button>
+					<button id="compare-1" class="icon-button" type="button" aria-label="Compare Ridgeline 2"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v16H4zM13 4h7v16h-7z"/></svg></button>
+				</div>
+				<button id="add-1" type="button" data-product="ridgeline-2">Add to basket</button>
+			</li>
+			<li class="card">
+				<h2><a id="card-2-link" href="summit-3.html">Summit 3</a></h2>
+				<p>$529</p>
+				<div id="card-2-actions" class="card-actions">
+					<button id="quick-view-2" type="button" onclick="location.assign('summit-3.html')">Quick view</button>
+					<button id="wishlist-2" class="icon-button" type="button" aria-label="Add Summit 3 to wishlist"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21 3 12a5 5 0 0 1 9-6 5 5 0 0 1 9 6z"/></svg></button>
+				</div>
+				<button id="add-2" type="button" data-product="summit-3">Add to basket</button>
+			</li>
+			<li class="card">
+				<h2><a id="card-3-link" href="meadow-4.html">Meadow 4</a></h2>
+				<p>$289</p>
+				<div class="card-actions">
+					<a id="compare-3" href="javascript:void(0)">Compare</a>
+				</div>
+				<button id="add-3" type="button" data-product="meadow-4">Add to basket</button>
+			</li>
+		</ul>
+
+		<section class="help">
+			<h2>Need help choosing?</h2>
+			<a id="help-solid" href="guides/choosing-a-tent.html">How to choose a tent</a>
+			<a id="help-faint" href="guides/seasons.html">Three-season or four-season?</a>
+			<a id="help-colour-only" href="guides/pitching.html">Pitching in the wind</a>
+			<button id="no-indicator" type="button">Chat with an expert</button>
+		</section>
+
+		<section>
+			<h2>Newsletter</h2>
+			<form method="post" action="newsletter">
+				<label for="newsletter-email">Email</label>
+				<input id="newsletter-email" type="email" name="email" onfocus="window.open('newsletter-offer.html')">
+				<button id="newsletter-submit" type="submit">Subscribe</button>
+			</form>
+		</section>
+
+		<section>
+			<h2>Recently viewed</h2>
+			<div class="recently-viewed">
+				<a id="recent-1" href="trail-pack.html" style="top: 3000px">Trail pack 30L</a>
+				<a id="recent-2" href="camp-stove.html" style="top: 2000px">Camp stove</a>
+				<a id="recent-3" href="sleeping-mat.html" style="top: 1000px">Sleeping mat</a>
+				<a id="recent-4" href="head-torch.html" style="top: 0">Head torch</a>
+			</div>
+		</section>
+	</main>
+</div>
+
+<footer class="site-footer">
+	<a id="footer-about" href="about.html">About us</a>
+	<a id="footer-careers" href="careers.html">Careers</a>
+	<a id="footer-contact" href="contact.html">Contact</a>
+	<a id="footer-terms" href="terms.html">Terms and conditions</a>
+</footer>
+
+<section id="cookie-banner" class="cookie-banner" aria-label="Cookie consent">
+	<p>We use cookies to remember your basket.</p>
+	<button id="cookie-accept" type="button">Accept</button>
+</section>
+
+<script>
+	const SUGGESTIONS = ["Tent pegs", "Tent footprint", "Tent repair kit", "Tarp", "Trekking poles", "Tent lantern"];
+
+	const search = document.getElementById("search-input");
+	const suggestions = document.getElementById("search-suggestions");
+
+	// Opens while typing and never closes on blur or Escape.
+	search.addEventListener("input", () => {
+		const query = search.value.trim().toLowerCase();
+		const matches = query ? SUGGESTIONS.filter((item) => item.toLowerCase().includes(query[0])) : [];
+		suggestions.innerHTML = matches.map((item) => `<li role="option">${item}</li>`).join("");
+		suggestions.hidden = matches.length === 0;
+	});
+
+	function bindMenu(itemId, panelId, trigger, exposeState) {
+		const item = document.getElementById(itemId);
+		const panel = document.getElementById(panelId);
+		const button = document.getElementById(trigger);
+		const setOpen = (open) => {
+			panel.classList.toggle("open", open);
+
+			if (exposeState) {
+				button.setAttribute("aria-expanded", String(open));
+			}
+		};
+
+		item.addEventListener("focusin", () => setOpen(true));
+		item.addEventListener("focusout", (event) => setOpen(item.contains(event.relatedTarget)));
+		item.addEventListener("mouseenter", () => setOpen(true));
+		item.addEventListener("mouseleave", () => setOpen(false));
+	}
+
+	bindMenu("menu-tents-item", "menu-tents-panel", "menu-tents", false);
+	bindMenu("menu-packs-item", "menu-packs-panel", "menu-packs", true);
+
+	document.getElementById("filter-2-person").addEventListener("change", () => location.reload());
+
+	document.getElementById("filter-waterproof").addEventListener("change", async (event) => {
+		const products = await (await fetch("../assets/products.json")).json();
+		const shown = event.target.checked ? products.filter((product) => product.waterproof) : products;
+		document.getElementById("results-count").textContent = `${shown.length} results`;
+		history.replaceState(null, "", event.target.checked ? "?waterproof=1" : location.pathname);
+	});
+
+	document.getElementById("sort-select").addEventListener("change", (event) => {
+		location.href = event.target.value;
+	});
+
+	const slider = document.getElementById("price-slider");
+	const thumb = slider.querySelector(".thumb");
+	let dragging = false;
+
+	thumb.addEventListener("pointerdown", (event) => {
+		dragging = true;
+		thumb.setPointerCapture(event.pointerId);
+	});
+	thumb.addEventListener("pointermove", (event) => {
+		if (!dragging) {
+			return;
+		}
+
+		const box = slider.getBoundingClientRect();
+		const ratio = Math.min(1, Math.max(0, (event.clientX - box.left) / box.width));
+		thumb.style.left = `${ratio * 100}%`;
+		slider.setAttribute("aria-valuenow", String(Math.round(ratio * 1000)));
+	});
+	thumb.addEventListener("pointerup", () => {
+		dragging = false;
+	});
+
+	const sizeGuideToggle = document.getElementById("size-guide-toggle");
+	sizeGuideToggle.addEventListener("click", () => {
+		const open = sizeGuideToggle.getAttribute("aria-expanded") !== "true";
+		sizeGuideToggle.setAttribute("aria-expanded", String(open));
+		document.getElementById("size-guide").classList.toggle("open", open);
+	});
+
+	for (const button of document.querySelectorAll(".segmented button")) {
+		button.addEventListener("click", () => {
+			for (const other of document.querySelectorAll(".segmented button")) {
+				other.classList.toggle("selected", other === button);
+			}
+		});
+	}
+
+	document.getElementById("card-1").addEventListener("click", () => location.assign("ridgeline-2.html"));
+
+	const deliveryInfo = document.getElementById("delivery-info");
+	const deliveryTooltip = document.getElementById("delivery-tooltip");
+	// Hides as soon as the pointer leaves the trigger, so it cannot be hovered, and ignores Escape.
+	for (const type of ["mouseenter", "focus"]) {
+		deliveryInfo.addEventListener(type, () => {
+			deliveryTooltip.hidden = false;
+		});
+	}
+	for (const type of ["mouseleave", "blur"]) {
+		deliveryInfo.addEventListener(type, () => {
+			deliveryTooltip.hidden = true;
+		});
+	}
+
+	document.getElementById("compare-3").addEventListener("click", (event) => {
+		event.target.textContent = event.target.textContent === "Compare" ? "Comparing" : "Compare";
+	});
+
+	for (const button of document.querySelectorAll("[data-product]")) {
+		button.addEventListener("click", () => fetch(`/__tripwire/add-to-basket/${button.dataset.product}`));
+	}
+</script>
+</body>
+</html>

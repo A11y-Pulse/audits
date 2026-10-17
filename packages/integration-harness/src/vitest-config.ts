@@ -78,11 +78,11 @@ export function unitConfig() {
 /**
  * Builds the Vitest config each package's integration suite runs under.
  */
-export function integrationConfig() {
+export function integrationConfig(include = "tests/integration/**/*.test.ts") {
 	return defineConfig({
 		resolve: sourceResolution,
 		test: {
-			include: ["tests/integration/**/*.test.ts"],
+			include: [include],
 			environment: "node",
 			testTimeout: TEST_TIMEOUT_MS,
 			hookTimeout: HOOK_TIMEOUT_MS,

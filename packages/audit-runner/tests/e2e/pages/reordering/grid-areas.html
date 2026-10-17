@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pitching in the wind | Trailhead Guides</title>
+<style>
+	body { margin: 0; background: #fff; color: #1f2937; font: 16px/1.6 Georgia, serif; }
+	a { color: #1d4ed8; display: block; }
+	:focus-visible { outline: 2px solid #1a73e8; outline-offset: 2px; }
+	.sr-only-focusable { position: absolute; left: 8px; top: -100px; background: #fff; padding: 8px; }
+	.sr-only-focusable:focus { top: 8px; }
+	#page-grid, #footer-grid { display: grid; gap: 16px; padding: 16px; }
+	#article { grid-area: article; }
+	#toc { grid-area: toc; }
+	#section-nav { grid-area: nav; }
+	#footer-about { grid-area: about; }
+	#footer-contact { grid-area: contact; }
+	#footer-social { grid-area: social; }
+
+	/* Mobile first: the table of contents is pulled above the article it belongs to. */
+	#page-grid { grid-template-areas: "toc" "article" "nav"; }
+	#footer-grid { grid-template-areas: "about" "contact" "social"; }
+
+	/* Desktop: section navigation becomes a left column, though it comes last in the source. */
+	@media (min-width: 900px) {
+		#page-grid { grid-template-columns: 200px 1fr 220px; grid-template-areas: "nav article toc"; }
+		#footer-grid { grid-template-columns: repeat(3, 1fr); grid-template-areas: "about contact social"; }
+	}
+</style>
+</head>
+<body>
+<a id="skip-link" class="sr-only-focusable" href="#main">Skip to main content</a>
+
+<div id="page-grid">
+	<main id="article">
+		<h1 id="main" tabindex="-1">Pitching in the wind</h1>
+		<p>Point the narrow end of the tent into the wind and peg the windward corners first.</p>
+		<a id="article-guy-lines" href="#guy-lines">Tensioning guy lines</a>
+		<p>Use every guy line, and angle pegs at 45 degrees away from the tent.</p>
+		<a id="article-video" href="pitching-video.html">Watch the video</a>
+	</main>
+
+	<aside id="toc" aria-label="On this page">
+		<a id="toc-orientation" href="#orientation">Orientation</a>
+		<a id="toc-guy-lines" href="#guy-lines">Guy lines</a>
+	</aside>
+
+	<nav id="section-nav" aria-label="Guides">
+		<a id="nav-choosing" href="choosing-a-tent.html">Choosing a tent</a>
+		<a id="nav-seasons" href="seasons.html">Three-season or four-season?</a>
+		<a id="nav-pitching" href="grid-areas.html" aria-current="page">Pitching in the wind</a>
+	</nav>
+</div>
+
+<footer id="footer-grid">
+	<a id="footer-about" href="../site/about.html">About Trailhead</a>
+	<a id="footer-contact" href="../site/contact.html">Contact us</a>
+	<a id="footer-social" href="https://example.com/trailhead">Follow us</a>
+</footer>
+</body>
+</html>

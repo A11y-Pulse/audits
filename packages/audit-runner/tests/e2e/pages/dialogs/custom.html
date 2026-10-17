@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Account settings | Trailhead Outfitters</title>
+<link rel="stylesheet" href="../assets/settings.css">
+</head>
+<body>
+<main>
+	<h1>Account settings</h1>
+
+	<section>
+		<h2>Delivery address</h2>
+		<button id="open-apg" type="button" data-modal="apg-modal">Edit address</button>
+		<button id="open-no-focus-in" type="button" data-modal="no-focus-modal">Add a delivery note</button>
+	</section>
+
+	<section>
+		<h2>Membership</h2>
+		<button id="open-trap" type="button" data-modal="trap-modal">Renew membership</button>
+		<button id="open-no-return" type="button" data-modal="no-return-modal">Membership benefits</button>
+		<button id="open-leaky" type="button" data-modal="leaky-modal">Pause membership</button>
+	</section>
+
+	<section>
+		<h2>Packing list notes</h2>
+		<label for="code-editor">Notes (Tab inserts a tab character)</label>
+		<textarea id="code-editor">Tent	1
+Stove	1</textarea>
+	</section>
+</main>
+
+<div class="backdrop" hidden></div>
+
+<div id="apg-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="apg-title" hidden data-focus-in data-contain data-escape data-return>
+	<h2 id="apg-title">Edit address</h2>
+	<label for="apg-address">Address</label>
+	<input id="apg-address" value="12 Ridge Road">
+	<button type="button" data-close>Done</button>
+</div>
+
+<div id="no-focus-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="no-focus-title" hidden data-contain data-escape data-return>
+	<h2 id="no-focus-title">Delivery note</h2>
+	<label for="note">Note for the courier</label>
+	<input id="note">
+	<button type="button" data-close>Save</button>
+</div>
+
+<div id="trap-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="trap-title" hidden data-focus-in data-contain>
+	<h2 id="trap-title">Renew membership</h2>
+	<p>Your membership renews automatically next month.</p>
+	<a href="membership-terms.html">Membership terms</a>
+</div>
+
+<div id="no-return-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="no-return-title" hidden data-focus-in data-contain data-escape>
+	<h2 id="no-return-title">Membership benefits</h2>
+	<p>Members get free repairs and early access to sales.</p>
+	<button type="button" data-close>Close</button>
+</div>
+
+<div id="leaky-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="leaky-title" hidden data-focus-in data-escape data-return>
+	<h2 id="leaky-title">Pause membership</h2>
+	<button type="button" data-close>Keep my membership</button>
+</div>
+
+<script>
+	const backdrop = document.querySelector(".backdrop");
+	let open = null;
+
+	function focusables(modal) {
+		return [...modal.querySelectorAll("a[href], button, input, textarea, select")];
+	}
+
+	function close() {
+		if (!open) {
+			return;
+		}
+
+		const { modal, trigger } = open;
+		modal.hidden = true;
+		backdrop.hidden = true;
+		open = null;
+
+		if (modal.hasAttribute("data-return")) {
+			trigger.focus();
+		} else {
+			document.activeElement?.blur();
+		}
+	}
+
+	for (const trigger of document.querySelectorAll("[data-modal]")) {
+		trigger.addEventListener("click", () => {
+			const modal = document.getElementById(trigger.dataset.modal);
+			modal.hidden = false;
+			backdrop.hidden = false;
+			open = { modal, trigger };
+
+			if (modal.hasAttribute("data-focus-in")) {
+				focusables(modal)[0]?.focus();
+			}
+		});
+	}
+
+	for (const button of document.querySelectorAll("[data-close]")) {
+		button.addEventListener("click", close);
+	}
+
+	document.addEventListener("keydown", (event) => {
+		if (!open) {
+			return;
+		}
+
+		const { modal } = open;
+
+		if (event.key === "Escape" && modal.hasAttribute("data-escape")) {
+			close();
+
+			return;
+		}
+
+		if (event.key === "Tab" && modal.hasAttribute("data-contain")) {
+			const items = focusables(modal);
+			const index = items.indexOf(document.activeElement);
+			const next = event.shiftKey ? index - 1 : index + 1;
+			event.preventDefault();
+			items[(next + items.length) % items.length].focus();
+		}
+	});
+
+	// Swallows Tab and Shift+Tab to indent, and offers no other way out from the keyboard.
+	document.getElementById("code-editor").addEventListener("keydown", (event) => {
+		if (event.key !== "Tab") {
+			return;
+		}
+
+		event.preventDefault();
+		const editor = event.target;
+		const { selectionStart, selectionEnd, value } = editor;
+		editor.value = `${value.slice(0, selectionStart)}\t${value.slice(selectionEnd)}`;
+		editor.selectionStart = editor.selectionEnd = selectionStart + 1;
+	});
+</script>
+</body>
+</html>

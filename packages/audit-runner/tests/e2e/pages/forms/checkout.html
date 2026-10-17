@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checkout | Trailhead Outfitters</title>
+<link rel="stylesheet" href="../assets/settings.css">
+<style>
+	fieldset { display: grid; gap: 8px; max-width: 420px; margin: 16px 0; border: 1px solid #d1d5db; }
+	input, select { padding: 8px; font: inherit; border: 1px solid #6b7280; border-radius: 4px; }
+	.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+	.floating { position: relative; }
+	.floating label { position: absolute; top: 2px; left: 9px; font-size: 12px; }
+	.floating input { padding-top: 18px; width: 100%; box-sizing: border-box; }
+	.segmented { display: flex; }
+	.segmented input { position: absolute; opacity: 0; }
+	.segmented label { padding: 6px 12px; border: 1px solid #6b7280; }
+	.segmented input:checked + label { background: #1f2937; color: #fff; }
+	.radio-like { display: flex; gap: 16px; }
+	.radio-like div { position: relative; padding-left: 24px; cursor: pointer; }
+	.radio-like div::before { content: ""; position: absolute; left: 0; top: 3px; width: 14px; height: 14px; border: 2px solid #374151; border-radius: 50%; }
+	.radio-like div.chosen::after { content: ""; position: absolute; left: 5px; top: 8px; width: 8px; height: 8px; border-radius: 50%; background: #374151; }
+</style>
+</head>
+<body>
+<main>
+	<h1>Checkout</h1>
+
+	<form id="checkout-form" method="post" action="/__tripwire/place-order">
+		<fieldset>
+			<legend>Delivery address</legend>
+			<label for="full-name">Full name</label>
+			<input id="full-name" name="name" autocomplete="name">
+
+			<div class="floating">
+				<label for="email">Email</label>
+				<input id="email" type="email" name="email" autocomplete="email">
+			</div>
+
+			<label class="sr-only" for="city">City</label>
+			<input id="city" name="city" placeholder="City" autocomplete="address-level2">
+
+			<span>Postcode</span>
+			<input id="postcode" name="postcode" placeholder="e.g. 1010" autocomplete="postal-code">
+
+			<input id="phone" type="tel" name="phone" title="Phone number" placeholder="021 123 4567" autocomplete="tel">
+
+			<label for="country">Country</label>
+			<select id="country" name="country" autocomplete="country">
+				<option>New Zealand</option>
+				<option>Australia</option>
+			</select>
+		</fieldset>
+
+		<fieldset>
+			<legend>Delivery speed</legend>
+			<div class="segmented">
+				<input id="speed-standard" type="radio" name="speed" value="standard" checked><label for="speed-standard">Standard</label>
+				<input id="speed-express" type="radio" name="speed" value="express"><label for="speed-express">Express</label>
+			</div>
+		</fieldset>
+
+		<fieldset>
+			<legend>Gift wrap</legend>
+			<div id="gift-wrap-options" class="radio-like">
+				<div id="wrap-none" class="chosen">No wrapping</div>
+				<div id="wrap-paper">Recycled paper</div>
+				<div id="wrap-bag">Reusable bag</div>
+			</div>
+		</fieldset>
+
+		<fieldset>
+			<legend>Promo code</legend>
+			<input id="promo-code" name="promo" placeholder="ABC123">
+			<button id="apply-promo" type="button">Apply</button>
+			<div id="promo-status" role="status"></div>
+		</fieldset>
+
+		<label><input id="marketing-consent" type="checkbox" name="consent"> Send me offers by email</label>
+
+		<button id="pay-now" type="submit">Pay now</button>
+	</form>
+</main>
+
+<script>
+	document.getElementById("apply-promo").addEventListener("click", () => {
+		document.getElementById("promo-status").textContent = "Code applied: 10% off";
+	});
+
+	for (const option of document.querySelectorAll(".radio-like div")) {
+		option.addEventListener("click", () => {
+			for (const other of document.querySelectorAll(".radio-like div")) {
+				other.classList.toggle("chosen", other === option);
+			}
+		});
+	}
+
+	document.getElementById("country").addEventListener("change", () => fetch("/__tripwire/change-country"));
+	document.getElementById("marketing-consent").addEventListener("change", () => fetch("/__tripwire/marketing-consent"));
+	document.getElementById("pay-now").addEventListener("click", () => fetch("/__tripwire/pay-now-click"));
+</script>
+</body>
+</html>

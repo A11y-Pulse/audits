@@ -15,6 +15,7 @@
 			"packages/*/src/**/*",
 			"packages/*/tests/**/*",
 			"!packages/*/tests/integration/fixtures",
+			"!packages/*/tests/e2e/pages",
 			"packages/*/examples/**/*"
 		]
 	},

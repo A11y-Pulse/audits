@@ -5,6 +5,8 @@ import {
 	type AdaptorFactories,
 	describeEachEngine,
 	type EnginePage,
+	type FixtureServer,
+	startFixtureServer,
 	WEBKIT_PARTIAL_TAB_LOOP,
 } from "@a11y-pulse/integration-harness";
 import { afterAll, beforeAll, expect, it } from "vitest";
@@ -13,12 +15,11 @@ import {
 	type ContextChangeOnFocusResult,
 	runContextChangeOnFocusAudit,
 } from "../../src/index";
-import { type FixtureServer, startFixtureServer } from "./helpers/serve-fixtures";
 
 let server: FixtureServer;
 
 beforeAll(async () => {
-	server = await startFixtureServer();
+	server = await startFixtureServer(new URL("fixtures", import.meta.url));
 });
 
 afterAll(async () => {

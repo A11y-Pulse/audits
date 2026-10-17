@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Account settings | Trailhead Outfitters</title>
+<link rel="stylesheet" href="../assets/settings.css">
+</head>
+<body>
+<main>
+	<h1>Account settings</h1>
+
+	<section>
+		<h2>Delivery address</h2>
+		<p>12 Ridge Road, Auckland</p>
+		<button id="open-good" type="button">Edit address</button>
+		<dialog id="good-dialog" aria-labelledby="good-title">
+			<h2 id="good-title">Edit address</h2>
+			<label for="address-line">Address</label>
+			<input id="address-line" value="12 Ridge Road">
+			<button id="good-close" type="button">Done</button>
+		</dialog>
+	</section>
+
+	<section>
+		<h2>Marketing preferences</h2>
+		<button id="open-broken" type="button">Change preferences</button>
+		<dialog id="broken-dialog" aria-labelledby="broken-title">
+			<h2 id="broken-title">Marketing preferences</h2>
+			<label><input type="checkbox"> Weekly gear deals</label>
+			<button id="broken-save" type="button">Save</button>
+		</dialog>
+	</section>
+
+	<section>
+		<h2>Next trip</h2>
+		<button id="open-datepicker" type="button">Choose a date</button>
+		<dialog id="datepicker" aria-label="Choose a date">
+			<button type="button">14 November</button>
+			<button type="button">15 November</button>
+		</dialog>
+	</section>
+
+	<section>
+		<h2>Help</h2>
+		<details id="faq-details">
+			<summary>Why can't I change my email address?</summary>
+			<p id="faq-low-contrast">Email changes need a confirmation link, which we send to your old address first.</p>
+		</details>
+
+		<button id="faq-toggle" type="button" aria-controls="faq-1">How do I export my order history?</button>
+		<div id="faq-1" hidden>
+			<p>Choose Orders, then Export, and we will email you a spreadsheet.</p>
+		</div>
+	</section>
+
+	<section>
+		<h2>Photos</h2>
+		<div role="tablist" aria-label="Photo settings">
+			<button id="tab-profile" role="tab" aria-selected="true" aria-controls="panel-profile" type="button">Profile</button>
+			<button id="tab-trips" role="tab" aria-selected="false" aria-controls="panel-trips" type="button" tabindex="-1">Trip photos</button>
+		</div>
+		<div id="panel-profile" role="tabpanel" aria-labelledby="tab-profile">
+			<p>Your profile photo appears on reviews.</p>
+		</div>
+		<div id="panel-trips" role="tabpanel" aria-labelledby="tab-trips" hidden>
+			<img id="trip-photo" src="../assets/IMG_4032.svg" width="320" height="200">
+		</div>
+	</section>
+
+	<section>
+		<h2>Danger zone</h2>
+		<a id="sign-out" href="/__tripwire/sign-out">Sign out everywhere</a>
+		<form method="post" action="/__tripwire/delete-account">
+			<button id="delete-account" type="submit">Delete my account</button>
+		</form>
+	</section>
+</main>
+
+<script>
+	const pairs = [
+		["open-good", "good-dialog", "showModal"],
+		["open-broken", "broken-dialog", "showModal"],
+		["open-datepicker", "datepicker", "show"],
+	];
+
+	for (const [trigger, id, method] of pairs) {
+		document.getElementById(trigger).addEventListener("click", () => document.getElementById(id)[method]());
+	}
+
+	document.getElementById("good-close").addEventListener("click", () => document.getElementById("good-dialog").close());
+	document.getElementById("broken-save").addEventListener("click", () => document.getElementById("broken-dialog").close());
+
+	// Escape no longer closes this one, even though it is a native modal dialog.
+	document.getElementById("broken-dialog").addEventListener("cancel", (event) => event.preventDefault());
+
+	const faqToggle = document.getElementById("faq-toggle");
+	faqToggle.addEventListener("click", () => {
+		const panel = document.getElementById("faq-1");
+		panel.hidden = !panel.hidden;
+	});
+
+	for (const tab of document.querySelectorAll("[role=tab]")) {
+		tab.addEventListener("click", () => {
+			for (const other of document.querySelectorAll("[role=tab]")) {
+				const selected = other === tab;
+				other.setAttribute("aria-selected", String(selected));
+				other.tabIndex = selected ? 0 : -1;
+				document.getElementById(other.getAttribute("aria-controls")).hidden = !selected;
+			}
+		});
+	}
+
+	document.getElementById("delete-account").addEventListener("click", () => fetch("/__tripwire/delete-account-click"));
+</script>
+</body>
+</html>

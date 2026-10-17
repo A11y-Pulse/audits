@@ -178,6 +178,16 @@ Use [`@a11y-pulse/browser-adaptor`'s `src/adaptors/puppeteer.ts`](../browser-ada
 - **Tab order only.** The audit tabs through elements in native tab order. It does not yet exercise arrow-key composite widgets (menus, comboboxes, toolbars, etc.) where focus moves via `aria-activedescendant` or roving `tabindex` instead of native Tab.
 - **Heuristic accuracy.** Detection is heuristic and can produce false positives and false negatives. See [Accuracy](#accuracy) and [docs/accuracy.md](./docs/accuracy.md) for known cases.
 
+## Known false positives
+
+Cases where the audit reports a problem that is not one. Each says which bucket it lands in: `incomplete` asks for a human to check, `violations` claims a failure.
+
+[docs/accuracy.md](./docs/accuracy.md) covers these in more depth under "False negatives", where the negative is an accessible indicator judged missing.
+
+- **Indicators drawn outside the element** (`violations`). The style comparison only watches the focused element, and the pixel diff only captures its box plus a small buffer, so an indicator drawn elsewhere (the highlighted option of an `aria-activedescendant` listbox, a remote "you are here" marker) is not seen.
+- **Elements that disappear when they lose focus** (`violations`, or a pass, arbitrarily). Links inside a menu that opens on focus are hidden again when the audit blurs them to take the unfocused screenshot, so that screenshot is of an empty box at the top-left of the page. The comparison is then against unrelated content and the result does not reflect the element's indicator.
+- **Indicators that only move the element** (`violations`, by design). The pixel diff lines the two screenshots up on the element's position, so a focus style that only shifts it (a `translate` or `margin`) shows no difference and is not counted as an indicator.
+
 ## Releasing
 
 Releases are managed in the [A11y-Pulse/audits](https://github.com/A11y-Pulse/audits) monorepo with [Changesets](https://github.com/changesets/changesets). Publishing uses [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/) (OIDC). There is no long-lived `NPM_TOKEN`.

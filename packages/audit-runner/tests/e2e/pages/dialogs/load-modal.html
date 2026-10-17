@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trail alerts | Trailhead Outfitters</title>
+<link rel="stylesheet" href="../assets/settings.css">
+<style>
+	.sr-only-focusable { position: absolute; left: 8px; top: -100px; background: #fff; padding: 8px; }
+	.sr-only-focusable:focus { top: 8px; }
+	[role="toolbar"] { display: flex; gap: 4px; }
+</style>
+</head>
+<body>
+<a id="skip-link" class="sr-only-focusable" href="#main">Skip to main content</a>
+
+<main id="main" tabindex="-1">
+	<h1>Trail alerts</h1>
+	<p>Get a message when a track you follow closes or reopens.</p>
+	<div id="map-tools" role="toolbar" aria-label="Map tools">
+		<button id="tool-zoom-in" type="button" tabindex="0">Zoom in</button>
+		<button id="tool-zoom-out" type="button" tabindex="-1">Zoom out</button>
+		<button id="tool-layers" type="button" tabindex="-1">Layers</button>
+	</div>
+	<p><a id="alerts-link" href="alerts.html">Manage your alerts</a></p>
+</main>
+
+<div class="backdrop"></div>
+<div id="newsletter" class="modal" role="dialog" aria-modal="true" aria-labelledby="newsletter-title">
+	<h2 id="newsletter-title">Never miss a closure</h2>
+	<label for="newsletter-email">Email</label>
+	<input id="newsletter-email" type="email">
+	<button id="newsletter-close" type="button">No thanks</button>
+</div>
+
+<script>
+	const modal = document.getElementById("newsletter");
+	const backdrop = document.querySelector(".backdrop");
+	const items = [...modal.querySelectorAll("input, button")];
+
+	const close = () => {
+		modal.hidden = true;
+		backdrop.hidden = true;
+	};
+
+	document.getElementById("newsletter-close").addEventListener("click", close);
+
+	// Keeps Tab inside the dialog while it is open, and closes it on Escape.
+	document.addEventListener("keydown", (event) => {
+		if (modal.hidden) {
+			return;
+		}
+
+		if (event.key === "Escape") {
+			close();
+
+			return;
+		}
+
+		if (event.key !== "Tab") {
+			return;
+		}
+
+		event.preventDefault();
+		const index = items.indexOf(document.activeElement);
+		items[(index + (event.shiftKey ? -1 : 1) + items.length) % items.length].focus();
+	});
+
+	// A roving toolbar: one tab stop, arrows move between the tools.
+	const tools = [...document.querySelectorAll("#map-tools button")];
+	document.getElementById("map-tools").addEventListener("keydown", (event) => {
+		if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") {
+			return;
+		}
+
+		const index = tools.indexOf(document.activeElement);
+		const next = tools[(index + (event.key === "ArrowRight" ? 1 : -1) + tools.length) % tools.length];
+
+		for (const tool of tools) {
+			tool.tabIndex = tool === next ? 0 : -1;
+		}
+
+		next.focus();
+	});
+</script>
+</body>
+</html>

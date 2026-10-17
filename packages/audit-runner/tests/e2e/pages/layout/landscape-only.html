@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trail map | Trailhead Outfitters</title>
+<style>
+	body { margin: 0; background: #fff; color: #1f2937; font: 16px/1.5 Arial, sans-serif; }
+	:focus-visible { outline: 2px solid #1a73e8; outline-offset: 2px; }
+	main { padding: 16px; }
+	#map { width: 100%; height: 60vh; background: url(../assets/pale-mountains.svg) center / cover; }
+	.map-controls { display: flex; gap: 8px; margin-top: 8px; }
+
+	@media (orientation: portrait) {
+		html { rotate: 90deg; transform-origin: center; }
+	}
+</style>
+</head>
+<body>
+<main>
+	<h1>Tongariro trail map</h1>
+	<div id="map" role="img" aria-label="Map of the Tongariro Alpine Crossing"></div>
+	<div class="map-controls">
+		<button id="zoom-in" type="button">Zoom in</button>
+		<button id="zoom-out" type="button">Zoom out</button>
+		<a id="download-gpx" href="../assets/tongariro.gpx">Download the GPX track</a>
+	</div>
+</main>
+</body>
+</html>

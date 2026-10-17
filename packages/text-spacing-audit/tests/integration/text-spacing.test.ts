@@ -1,4 +1,9 @@
-import { type AdaptorFactories, describeEachEngine } from "@a11y-pulse/integration-harness";
+import {
+	type AdaptorFactories,
+	describeEachEngine,
+	type FixtureServer,
+	startFixtureServer,
+} from "@a11y-pulse/integration-harness";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { PlaywrightAdaptor } from "../../src/adaptors/playwright";
 import { PuppeteerAdaptor } from "../../src/adaptors/puppeteer";
@@ -8,12 +13,11 @@ import {
 	type TextSpacingOptions,
 	type TextSpacingResult,
 } from "../../src/index";
-import { type FixtureServer, startFixtureServer } from "./helpers/serve-fixtures";
 
 let server: FixtureServer;
 
 beforeAll(async () => {
-	server = await startFixtureServer();
+	server = await startFixtureServer(new URL("fixtures", import.meta.url));
 });
 
 afterAll(async () => {
