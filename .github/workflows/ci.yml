@@ -49,9 +49,20 @@ jobs:
       - run: npm run test:integration
       - run: npm run test:e2e
 
-  integration-playwright:
+  playwright-version:
     runs-on: ubuntu-latest
-    container: mcr.microsoft.com/playwright:v1.63.0-noble
+    outputs:
+      version: ${{ steps.lock.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: lock
+        run: echo "version=$(node -p 'require("./package-lock.json").packages["node_modules/playwright-core"].version')" >> "$GITHUB_OUTPUT"
+
+  integration-playwright:
+    needs: playwright-version
+    runs-on: ubuntu-latest
+    # The image's browsers only work with the playwright-core version they were built for.
+    container: mcr.microsoft.com/playwright:v${{ needs.playwright-version.outputs.version }}-noble
     strategy:
       fail-fast: false
       matrix:
