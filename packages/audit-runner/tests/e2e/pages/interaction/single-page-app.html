@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tents | Trailhead Outfitters</title>
+<link rel="stylesheet" href="../assets/storefront.css">
+</head>
+<body>
+<div id="app"></div>
+
+<script type="module">
+	const HOME = location.pathname;
+
+	const PRODUCTS = [
+		{ id: "ridgeline-2", name: "Ridgeline 2", price: 349, people: 2, waterproof: true },
+		{ id: "summit-3", name: "Summit 3", price: 529, people: 3, waterproof: true },
+		{ id: "meadow-4", name: "Meadow 4", price: 289, people: 4, waterproof: false },
+	];
+
+	const SUGGESTIONS = ["Tent pegs", "Tent footprint", "Tent repair kit", "Tarp", "Trekking poles", "Tent lantern"];
+
+	const HEART = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21 3 12a5 5 0 0 1 9-6 5 5 0 0 1 9 6z"/></svg>';
+
+	const COLUMNS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v16H4zM13 4h7v16h-7z"/></svg>';
+
+	const state = { twoPerson: false, waterproof: false, sort: "recommended", layout: "grid" };
+
+	function header() {
+		return `
+			<a id="skip-link" class="sr-only-focusable" href="#main">Skip to main content</a>
+			<header class="site-header">
+				<a id="logo-link" class="logo" href="${HOME}" data-route><img src="../assets/logo.svg" alt="Trailhead Outfitters"></a>
+				<form class="search" role="search" action="search.html">
+					<input id="search-input" type="search" name="q" placeholder="Search tents, packs and more" aria-label="Search products" autocomplete="off">
+					<ul id="search-suggestions" class="suggestions" role="listbox" aria-label="Suggestions" hidden></ul>
+				</form>
+				<nav class="main-nav" aria-label="Main">
+					<ul>
+						<li id="menu-tents-item" data-menu="menu-tents">
+							<button id="menu-tents" type="button">Tents</button>
+							<ul id="menu-tents-panel" class="panel">
+								<li><a id="menu-tents-1" href="${HOME}?people=1" data-route>Solo tents</a></li>
+								<li><a id="menu-tents-2" href="${HOME}?people=2" data-route>Two-person tents</a></li>
+								<li><a id="menu-tents-3" href="${HOME}?people=4" data-route>Family tents</a></li>
+							</ul>
+						</li>
+						<li id="menu-packs-item" data-menu="menu-packs" data-expose-state>
+							<button id="menu-packs" type="button" aria-expanded="false" aria-controls="menu-packs-panel">Backpacks</button>
+							<ul id="menu-packs-panel" class="panel">
+								<li><a id="menu-packs-1" href="packs.html?size=day">Day packs</a></li>
+								<li><a id="menu-packs-2" href="packs.html?size=multi-day">Multi-day packs</a></li>
+							</ul>
+						</li>
+						<li><a id="nav-sale" href="sale.html">Sale</a></li>
+					</ul>
+				</nav>
+			</header>
+			<div id="filter-drawer" class="drawer" role="region" aria-label="Filter drawer">
+				<p>Filters</p>
+				<button id="drawer-close" type="button">Close filters</button>
+			</div>`;
+	}
+
+	function filters() {
+		return `
+			<aside class="filters">
+				<h2>Filters</h2>
+				<div id="filters">
+					<label><input id="filter-2-person" type="checkbox" ${state.twoPerson ? "checked" : ""}> Two-person</label>
+					<label><input id="filter-waterproof" type="checkbox" ${state.waterproof ? "checked" : ""}> Waterproof</label>
+					<label for="sort-select">Sort by</label>
+					<select id="sort-select">
+						<option value="recommended">Recommended</option>
+						<option value="price">Price, low to high</option>
+						<option value="weight">Weight</option>
+					</select>
+				</div>
+				<p id="price-label">Maximum price</p>
+				<div id="price-slider" class="slider" role="slider" tabindex="0" aria-labelledby="price-label" aria-valuemin="0" aria-valuemax="1000" aria-valuenow="600">
+					<span class="thumb"></span>
+				</div>
+				<label for="weight-range">Maximum weight (kg)</label>
+				<input id="weight-range" type="range" min="1" max="6" value="4">
+				<h3><button id="size-guide-toggle" type="button" aria-expanded="false" aria-controls="size-guide">Size guide</button></h3>
+				<div id="size-guide" class="accordion-region">
+					<p>Pick a tent rated for one more person than will sleep in it.</p>
+					<a id="size-guide-link" href="../assets/size-guide.pdf">Download the size chart (PDF)</a>
+				</div>
+			</aside>`;
+	}
+
+	function card(product, index) {
+		const n = index + 1;
+
+		if (index === 0) {
+			return `
+				<li class="card">
+					<div id="card-${n}" class="card-link" data-href="${product.id}.html">
+						<h2>${product.name}</h2>
+						<p>$${product.price}</p>
+					</div>
+					<span class="tooltip-anchor">
+						<button id="delivery-info" type="button" aria-describedby="delivery-tooltip">Delivery</button>
+						<span id="delivery-tooltip" class="tooltip" role="tooltip" hidden>Free delivery on orders over $200. Ships in 2 to 3 working days.</span>
+					</span>
+					<div id="card-${n}-actions" class="card-actions" style="flex-direction: row-reverse; justify-content: flex-end">
+						<button id="wishlist-${n}" class="icon-button" type="button" aria-label="Add ${product.name} to wishlist">${HEART}</button>
+						<button id="compare-${n}" class="icon-button" type="button" aria-label="Compare ${product.name}">${COLUMNS}</button>
+					</div>
+					<button id="add-${n}" type="button" data-product="${product.id}">Add to basket</button>
+				</li>`;
+		}
+
+		if (index === 1) {
+			return `
+				<li class="card">
+					<h2><a id="card-${n}-link" href="/interaction/tents/${product.id}" data-route>${product.name}</a></h2>
+					<p>$${product.price}</p>
+					<div id="card-${n}-actions" class="card-actions">
+						<button id="quick-view-${n}" type="button" data-quick-view="${product.id}">Quick view</button>
+						<button id="wishlist-${n}" class="icon-button" type="button" aria-label="Add ${product.name} to wishlist">${HEART}</button>
+					</div>
+					<button id="add-${n}" type="button" data-product="${product.id}">Add to basket</button>
+				</li>`;
+		}
+
+		return `
+			<li class="card">
+				<h2><a id="card-${n}-link" href="/interaction/tents/${product.id}" data-route>${product.name}</a></h2>
+				<p>$${product.price}</p>
+				<div class="card-actions">
+					<a id="compare-${n}" href="javascript:void(0)" data-compare>Compare</a>
+				</div>
+				<button id="add-${n}" type="button" data-product="${product.id}">Add to basket</button>
+			</li>`;
+	}
+
+	function visibleProducts() {
+		return PRODUCTS.filter(
+			(product) => (!state.twoPerson || product.people === 2) && (!state.waterproof || product.waterproof),
+		);
+	}
+
+	function listing() {
+		const products = visibleProducts();
+
+		return `
+			<div class="layout">
+				${filters()}
+				<main id="main" tabindex="-1">
+					<h1>Tents</h1>
+					<div id="results-count">${products.length} results</div>
+					<div class="segmented" role="group" aria-label="Layout">
+						${["grid", "list", "compact"]
+							.map((layout) => `<button id="view-${layout}" type="button" data-layout="${layout}" class="${state.layout === layout ? "selected" : ""}">${layout[0].toUpperCase()}${layout.slice(1)}</button>`)
+							.join("")}
+					</div>
+					<ul id="products" class="products">${products.map(card).join("")}</ul>
+					<section class="help">
+						<h2>Need help choosing?</h2>
+						<a id="help-solid" href="guides/choosing-a-tent.html">How to choose a tent</a>
+						<a id="help-faint" href="guides/seasons.html">Three-season or four-season?</a>
+						<a id="help-colour-only" href="guides/pitching.html">Pitching in the wind</a>
+						<button id="no-indicator" type="button">Chat with an expert</button>
+					</section>
+					<section>
+						<h2>Newsletter</h2>
+						<form method="post" action="newsletter">
+							<label for="newsletter-email">Email</label>
+							<input id="newsletter-email" type="email" name="email">
+							<button id="newsletter-submit" type="submit">Subscribe</button>
+						</form>
+					</section>
+					<section>
+						<h2>Recently viewed</h2>
+						<div class="recently-viewed">
+							<a id="recent-1" href="trail-pack.html" style="top: 3000px">Trail pack 30L</a>
+							<a id="recent-2" href="camp-stove.html" style="top: 2000px">Camp stove</a>
+							<a id="recent-3" href="sleeping-mat.html" style="top: 1000px">Sleeping mat</a>
+							<a id="recent-4" href="head-torch.html" style="top: 0">Head torch</a>
+						</div>
+					</section>
+				</main>
+			</div>`;
+	}
+
+	function productPage(id) {
+		const product = PRODUCTS.find((candidate) => candidate.id === id) ?? PRODUCTS[0];
+
+		return `
+			<main id="main" tabindex="-1" class="layout">
+				<h1>${product.name}</h1>
+				<p>$${product.price}</p>
+				<a href="${HOME}" data-route>Back to tents</a>
+			</main>`;
+	}
+
+	function footer() {
+		return `
+			<footer class="site-footer">
+				<a id="footer-about" href="about.html">About us</a>
+				<a id="footer-careers" href="careers.html">Careers</a>
+				<a id="footer-contact" href="contact.html">Contact</a>
+				<a id="footer-terms" href="terms.html">Terms and conditions</a>
+			</footer>
+			<section id="cookie-banner" class="cookie-banner" aria-label="Cookie consent">
+				<p>We use cookies to remember your basket.</p>
+				<button id="cookie-accept" type="button">Accept</button>
+			</section>`;
+	}
+
+	function render() {
+		const product = location.pathname.match(/^\/interaction\/tents\/([\w-]+)$/)?.[1];
+		document.getElementById("app").innerHTML = header() + (product ? productPage(product) : listing()) + footer();
+		const sort = document.getElementById("sort-select");
+
+		if (sort) {
+			sort.value = state.sort;
+		}
+
+		bindMenus();
+	}
+
+	function rerenderProducts() {
+		const products = visibleProducts();
+		document.getElementById("products").innerHTML = products.map(card).join("");
+		document.getElementById("results-count").textContent = `${products.length} results`;
+	}
+
+	function navigate(url) {
+		history.pushState(null, "", url);
+		render();
+	}
+
+	function bindMenus() {
+		for (const item of document.querySelectorAll("[data-menu]")) {
+			const button = document.getElementById(item.dataset.menu);
+			const panel = document.getElementById(`${item.dataset.menu}-panel`);
+			const setOpen = (open) => {
+				panel.classList.toggle("open", open);
+
+				if (item.hasAttribute("data-expose-state")) {
+					button.setAttribute("aria-expanded", String(open));
+				}
+			};
+
+			item.addEventListener("focusin", () => setOpen(true));
+			item.addEventListener("focusout", (event) => setOpen(item.contains(event.relatedTarget)));
+			item.addEventListener("mouseenter", () => setOpen(true));
+			item.addEventListener("mouseleave", () => setOpen(false));
+		}
+	}
+
+	// Everything else is delegated from the document, the way most SPA frameworks attach handlers.
+	document.addEventListener("click", (event) => {
+		const target = event.target instanceof Element ? event.target : null;
+		const route = target?.closest("a[data-route]");
+
+		if (route) {
+			event.preventDefault();
+			navigate(route.href);
+
+			return;
+		}
+
+		const cardLink = target?.closest(".card-link");
+
+		if (cardLink) {
+			navigate(`/interaction/tents/${cardLink.dataset.href.replace(".html", "")}`);
+
+			return;
+		}
+
+		const quickView = target?.closest("[data-quick-view]");
+
+		if (quickView) {
+			navigate(`/interaction/tents/${quickView.dataset.quickView}`);
+
+			return;
+		}
+
+		if (target?.closest("[data-compare]")) {
+			event.preventDefault();
+			target.textContent = target.textContent === "Compare" ? "Comparing" : "Compare";
+
+			return;
+		}
+
+		const layout = target?.closest("[data-layout]");
+
+		if (layout) {
+			state.layout = layout.dataset.layout;
+
+			for (const button of document.querySelectorAll("[data-layout]")) {
+				button.classList.toggle("selected", button === layout);
+			}
+
+			return;
+		}
+
+		const add = target?.closest("[data-product]");
+
+		if (add) {
+			fetch(`/__tripwire/add-to-basket/${add.dataset.product}`);
+
+			return;
+		}
+
+		const sizeGuide = target?.closest("#size-guide-toggle");
+
+		if (sizeGuide) {
+			const open = sizeGuide.getAttribute("aria-expanded") !== "true";
+			sizeGuide.setAttribute("aria-expanded", String(open));
+			document.getElementById("size-guide").classList.toggle("open", open);
+		}
+	});
+
+	document.addEventListener("change", async (event) => {
+		const target = event.target;
+
+		if (target.id === "filter-2-person") {
+			// Replaces the whole filter column, so focus falls back to <body>.
+			state.twoPerson = target.checked;
+			render();
+
+			return;
+		}
+
+		if (target.id === "filter-waterproof") {
+			await fetch("../assets/products.json");
+			state.waterproof = target.checked;
+			rerenderProducts();
+			history.replaceState(null, "", state.waterproof ? "?waterproof=1" : HOME);
+
+			return;
+		}
+
+		if (target.id === "sort-select") {
+			state.sort = target.value;
+			navigate(`/interaction/tents/sorted/${target.value}`);
+		}
+	});
+
+	document.addEventListener("input", (event) => {
+		if (event.target.id !== "search-input") {
+			return;
+		}
+
+		// Opens while typing and never closes on blur or Escape.
+		const suggestions = document.getElementById("search-suggestions");
+		const query = event.target.value.trim().toLowerCase();
+		const matches = query ? SUGGESTIONS.filter((item) => item.toLowerCase().includes(query[0])) : [];
+		suggestions.innerHTML = matches.map((item) => `<li role="option">${item}</li>`).join("");
+		suggestions.hidden = matches.length === 0;
+	});
+
+	document.addEventListener("focusin", (event) => {
+		if (event.target.id === "newsletter-email") {
+			window.open("newsletter-offer.html");
+		}
+
+		if (event.target.id === "delivery-info") {
+			document.getElementById("delivery-tooltip").hidden = false;
+		}
+	});
+
+	document.addEventListener("focusout", (event) => {
+		if (event.target.id === "delivery-info") {
+			document.getElementById("delivery-tooltip").hidden = true;
+		}
+	});
+
+	// Hides as soon as the pointer leaves the trigger, so it cannot be hovered, and ignores Escape.
+	document.addEventListener("mouseover", (event) => {
+		const tooltip = document.getElementById("delivery-tooltip");
+
+		if (tooltip) {
+			tooltip.hidden = event.target.id !== "delivery-info";
+		}
+	});
+
+	let dragging = false;
+
+	document.addEventListener("pointerdown", (event) => {
+		if (event.target.closest?.("#price-slider .thumb")) {
+			dragging = true;
+		}
+	});
+	document.addEventListener("pointermove", (event) => {
+		if (!dragging) {
+			return;
+		}
+
+		const slider = document.getElementById("price-slider");
+		const box = slider.getBoundingClientRect();
+		const ratio = Math.min(1, Math.max(0, (event.clientX - box.left) / box.width));
+		slider.querySelector(".thumb").style.left = `${ratio * 100}%`;
+		slider.setAttribute("aria-valuenow", String(Math.round(ratio * 1000)));
+	});
+	document.addEventListener("pointerup", () => {
+		dragging = false;
+	});
+
+	// Re-renders on every history entry, including the one a skip link's fragment adds, which
+	// replaces the skip link's target before Firefox moves focus to it.
+	window.addEventListener("popstate", render);
+
+	render();
+</script>
+</body>
+</html>

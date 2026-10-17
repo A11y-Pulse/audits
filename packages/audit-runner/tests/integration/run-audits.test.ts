@@ -1,14 +1,9 @@
-import { PlaywrightAdaptor } from "@a11y-pulse/browser-adaptor/playwright";
-import { PuppeteerAdaptor } from "@a11y-pulse/browser-adaptor/puppeteer";
 import {
-	type AdaptorFactories,
 	describeEachEngine,
+	type FixtureServer,
+	startFixtureServer,
 	WEBKIT_PARTIAL_TAB_LOOP,
 } from "@a11y-pulse/integration-harness";
-import { PlaywrightAdaptor as ReflowPlaywrightAdaptor } from "@a11y-pulse/reflow-audit/playwright";
-import { PuppeteerAdaptor as ReflowAdaptor } from "@a11y-pulse/reflow-audit/puppeteer";
-import { PlaywrightAdaptor as TextSpacingPlaywrightAdaptor } from "@a11y-pulse/text-spacing-audit/playwright";
-import { PuppeteerAdaptor as TextSpacingAdaptor } from "@a11y-pulse/text-spacing-audit/puppeteer";
 import type { Result } from "axe-core";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { type AuditAdaptors, type AuditRunnerResult, runAllAudits } from "../../src/run-audits";
@@ -18,30 +13,17 @@ import { FOCUS_NOT_OBSCURED_AUDIT_ID } from "../../src/to-axe/focus-not-obscured
 import { REFLOW_AUDIT_ID } from "../../src/to-axe/reflow";
 import { SKIP_LINK_AUDIT_ID } from "../../src/to-axe/skip-link";
 import { TEXT_SPACING_AUDIT_ID } from "../../src/to-axe/text-spacing";
-import { type FixtureServer, startFixtureServer } from "./helpers/serve-fixtures";
+import { adaptors } from "./helpers/adaptors";
 
 let server: FixtureServer;
 
 beforeAll(async () => {
-	server = await startFixtureServer();
+	server = await startFixtureServer(new URL("fixtures", import.meta.url));
 });
 
 afterAll(async () => {
 	await server.close();
 });
-
-const adaptors: AdaptorFactories<AuditAdaptors> = {
-	puppeteer: (page) => ({
-		browser: new PuppeteerAdaptor(page),
-		reflow: new ReflowAdaptor(page),
-		textSpacing: new TextSpacingAdaptor(page),
-	}),
-	playwright: (page) => ({
-		browser: new PlaywrightAdaptor(page),
-		reflow: new ReflowPlaywrightAdaptor(page),
-		textSpacing: new TextSpacingPlaywrightAdaptor(page),
-	}),
-};
 
 function auditIds(result: AuditRunnerResult): Set<string> {
 	const buckets = [result.violations, result.incomplete, result.passes, result.inapplicable];

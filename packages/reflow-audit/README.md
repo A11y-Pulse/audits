@@ -141,6 +141,13 @@ Use [`src/adaptors/puppeteer.ts`](./src/adaptors/puppeteer.ts) or [`src/adaptors
 - **Height reflow.** v1 measures the 320px-wide case for vertical-scrolling content. The criterion's 256px-tall case for horizontal-scrolling content is out of scope.
 - **Requires-2D judgment.** Whether a given wide widget truly needs two-dimensional layout is left to human review beyond the published exemptions.
 
+## Known false positives
+
+Cases where the audit reports a problem that is not one. Each says which bucket it lands in: `incomplete` asks for a human to check, `violations` claims a failure.
+
+- **Two-dimensional content built from ordinary elements** (`violations`). Data tables, the ARIA `table`, `grid`, `treegrid` and `toolbar` roles, an `aria-roledescription` of `slide`, `slides` or `presentation`, and `svg`, `canvas`, `video`, `img`, `iframe`, `embed` and `object` are exempt. A spreadsheet-style grid or a map built from `div`s without any of those is reported even where it genuinely needs two-dimensional layout.
+- **Overflow the width of a scrollbar** (`incomplete`). An excess of 2 to 20px, typically `100vw` beside a vertical scrollbar, is reported for review rather than ignored or flagged.
+
 ## Releasing
 
 Releases are managed in the [A11y-Pulse/audits](https://github.com/A11y-Pulse/audits) monorepo with [Changesets](https://github.com/changesets/changesets). Publishing uses [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/) (OIDC). There is no long-lived `NPM_TOKEN`.

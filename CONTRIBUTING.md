@@ -31,9 +31,14 @@ npm run test:unit
 
 # Integration tests (launches a real headless Chromium via Puppeteer)
 npm run test:integration
+
+# End-to-end tests (runs the audit runner over crafted multi-defect pages)
+npm run test:e2e
 ```
 
 Unit tests live alongside source files as `*.test.ts` inside each package. Integration tests live in `packages/<package>/tests/integration/` and exercise real browser behaviour against HTML fixtures.
+
+End-to-end tests live in `packages/audit-runner/tests/e2e/`. Each page group in `pages/` has several variants (for example a static page and a single-page app with the same defects), and `groups/` lists what each page should produce. Expectations can be written ahead of the audit that reports them: an expectation on an id that is neither an A11y Pulse audit in the runner nor an axe-core rule that runs by default is reported as a todo, and starts running once the audit exists. The runner's audit ids are read from the `*_AUDIT_ID` constants it exports, so a new audit's expectations start running once the runner exports its id.
 
 ## Linting and formatting
 

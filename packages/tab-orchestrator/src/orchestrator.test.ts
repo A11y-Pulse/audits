@@ -15,8 +15,10 @@ import {
 	elementStylesScript,
 	focusScript,
 	hasFocusScript,
+	heldFocusScript,
 	installContextObserverScript,
 	locationHrefScript,
+	markActiveElementScript,
 	measureObscuringScript,
 	needsCentringScript,
 	obscurerHandleScript,
@@ -25,7 +27,7 @@ import {
 	scrollToCenterScript,
 } from "./browser-scripts";
 import { createTabOrchestrator, isContextDestroyedError } from "./orchestrator";
-import type { ActiveElementInfo, TabConsumer, TabStopSnapshot } from "./types";
+import type { ActiveElementInfo, SessionEndDetail, TabConsumer, TabStopSnapshot } from "./types";
 
 function dummyAdaptor(): BrowserAdaptor {
 	return {
@@ -34,6 +36,7 @@ function dummyAdaptor(): BrowserAdaptor {
 		disposeRef: vi.fn(async () => undefined),
 		pressTab: vi.fn(async () => undefined),
 		pressEnter: vi.fn(async () => undefined),
+		pressKey: vi.fn(async () => undefined),
 		screenshotClip: vi.fn(async () => new Uint8Array()),
 		ensureFocusReporting: vi.fn(async () => undefined),
 	};
@@ -88,17 +91,23 @@ function info(index: number, extra: Partial<ActiveElementInfo> = {}): ActiveElem
 function recordingConsumer(
 	capabilities: Array<TabConsumer["capabilities"] extends ReadonlySet<infer C> ? C : never> = [],
 	onStop?: (snapshot: TabStopSnapshot, disconnect: () => void) => void | Promise<void>,
-): TabConsumer & { stops: TabStopSnapshot[]; sessionEnds: string[] } {
+): TabConsumer & {
+	stops: TabStopSnapshot[];
+	sessionEnds: string[];
+	revisitedIndexes: Array<number | null>;
+} {
 	const record = {
 		stops: [] as TabStopSnapshot[],
 		sessionEnds: [] as string[],
+		revisitedIndexes: [] as Array<number | null>,
 		capabilities: new Set(capabilities),
 		async onTabStop(snapshot: TabStopSnapshot, session: { disconnect(): void }) {
 			record.stops.push(snapshot);
 			await onStop?.(snapshot, () => session.disconnect());
 		},
-		onSessionEnd(reason: string) {
+		onSessionEnd(reason: string, detail: SessionEndDetail) {
 			record.sessionEnds.push(reason);
+			record.revisitedIndexes.push(detail.revisitedIndex);
 		},
 	};
 
@@ -120,15 +129,29 @@ function loopAdaptor(script: {
 	// Whether ensureFocusReporting() restores a page that has lost focus.
 	restoresFocus?: boolean;
 	active?: Array<Omit<ActiveElementInfo, "selector"> | null>;
+	// Why a repeated element held focus. Defaults to a control moving between its own parts.
+	heldFocus?: { prevented: boolean; followed: boolean };
 }): BrowserAdaptor {
 	let activeCall = 0;
+	let dynamicMarker: number | undefined;
 	let stopIndex = -1;
 	let tabbed = false;
 	let postTabReads = 0;
 
 	return {
 		ensureFocusReporting: vi.fn(async () => {}),
-		evaluate: (async (fn, ..._args) => {
+		evaluate: (async (fn, ...args) => {
+			if (fn === markActiveElementScript) {
+				// One unmarked element per script: it keeps the marker it was first given.
+				dynamicMarker ??= args[1] as number;
+
+				return dynamicMarker;
+			}
+
+			if (fn === heldFocusScript) {
+				return script.heldFocus ?? { prevented: false, followed: true };
+			}
+
 			if (fn === baselineScript) {
 				return { styles: [EMPTY_STYLES], entries: [] };
 			}
@@ -193,6 +216,7 @@ function loopAdaptor(script: {
 			postTabReads = 0;
 		},
 		async pressEnter() {},
+		async pressKey() {},
 		async screenshotClip() {
 			return new Uint8Array([1]);
 		},
@@ -214,6 +238,7 @@ describe("tab loop", () => {
 		expect(a.stops.map((s) => s.activeElement.index)).toEqual([0, 1]);
 		expect(a.stops.map((s) => s.tabIndex)).toEqual([1, 2]);
 		expect(a.sessionEnds).toEqual(["completed"]);
+		expect(a.revisitedIndexes).toEqual([null]);
 	});
 
 	it("skips iframe tab stops", async () => {
@@ -231,6 +256,31 @@ describe("tab loop", () => {
 		expect(a.stops[0]?.tabIndex).toBe(1);
 	});
 
+	it("allows exactly 256 consecutive iframe stops before focus counts as stuck in a frame", async () => {
+		const run = async (iframeStops: number) => {
+			const consumer = recordingConsumer();
+			const orchestrator = createTabOrchestrator(
+				loopAdaptor({
+					hasFocus: Array(iframeStops + 3).fill(true),
+					active: [...Array(iframeStops).fill(info(0, { isIframe: true })), info(1)],
+				}),
+				{ screenshotSettleDelay: 0 },
+			);
+			orchestrator.attach(consumer);
+			await orchestrator.run();
+
+			return consumer;
+		};
+
+		const atLimit = await run(256);
+		const pastLimit = await run(257);
+
+		expect(atLimit.stops.map((s) => s.activeElement.index)).toEqual([1]);
+		expect(atLimit.sessionEnds).toEqual(["completed"]);
+		expect(pastLimit.stops).toEqual([]);
+		expect(pastLimit.sessionEnds).toEqual(["stuck"]);
+	});
+
 	it("aborts on marker cycle", async () => {
 		const a = recordingConsumer();
 		const orchestrator = createTabOrchestrator(
@@ -244,6 +294,124 @@ describe("tab loop", () => {
 		await orchestrator.run();
 		expect(a.stops).toHaveLength(1);
 		expect(a.sessionEnds).toEqual(["completed"]);
+	});
+
+	it("reports a control once while focus moves between its own parts", async () => {
+		const a = recordingConsumer();
+		const orchestrator = createTabOrchestrator(
+			loopAdaptor({
+				hasFocus: Array(6).fill(true),
+				active: [info(0), info(1), info(1), info(1), info(2)],
+			}),
+			{ screenshotSettleDelay: 0 },
+		);
+		orchestrator.attach(a);
+		await orchestrator.run();
+		expect(a.stops.map((s) => s.activeElement.index)).toEqual([0, 1, 2]);
+		expect(a.revisitedIndexes).toEqual([null]);
+	});
+
+	it("allows exactly ten internal stops before an element counts as stuck", async () => {
+		const tenRepeats = recordingConsumer();
+		const elevenRepeats = recordingConsumer();
+		const run = async (consumer: typeof tenRepeats, repeats: number) => {
+			const orchestrator = createTabOrchestrator(
+				loopAdaptor({
+					hasFocus: Array(20).fill(true),
+					active: [info(0), info(1), ...Array(repeats).fill(info(1)), info(2)],
+				}),
+				{ screenshotSettleDelay: 0 },
+			);
+			orchestrator.attach(consumer);
+			await orchestrator.run();
+		};
+
+		await run(tenRepeats, 10);
+		await run(elevenRepeats, 11);
+
+		expect(tenRepeats.stops.map((s) => s.activeElement.index)).toEqual([0, 1, 2]);
+		expect(elevenRepeats.stops.map((s) => s.activeElement.index)).toEqual([0, 1]);
+		expect(elevenRepeats.revisitedIndexes).toEqual([1]);
+	});
+
+	it("ends as a cycle of one when an element never lets focus go", async () => {
+		const a = recordingConsumer();
+		const orchestrator = createTabOrchestrator(
+			loopAdaptor({
+				hasFocus: Array(20).fill(true),
+				active: [info(0), ...Array(15).fill(info(1))],
+			}),
+			{ screenshotSettleDelay: 0 },
+		);
+		orchestrator.attach(a);
+		await orchestrator.run();
+		expect(a.stops.map((s) => s.activeElement.index)).toEqual([0, 1]);
+		expect(a.sessionEnds).toEqual(["completed"]);
+		expect(a.revisitedIndexes).toEqual([1]);
+	});
+
+	it("ends as a cycle of one straight away when the page cancels Tab", async () => {
+		const a = recordingConsumer();
+		const orchestrator = createTabOrchestrator(
+			loopAdaptor({
+				hasFocus: Array(20).fill(true),
+				active: [info(0), info(1), info(1)],
+				heldFocus: { prevented: true, followed: true },
+			}),
+			{ screenshotSettleDelay: 0 },
+		);
+		orchestrator.attach(a);
+		await orchestrator.run();
+		expect(a.stops.map((s) => s.activeElement.index)).toEqual([0, 1]);
+		expect(a.revisitedIndexes).toEqual([1]);
+	});
+
+	it("ends normally when focus stays on the last element with nothing after it", async () => {
+		const a = recordingConsumer();
+		const orchestrator = createTabOrchestrator(
+			loopAdaptor({
+				hasFocus: Array(20).fill(true),
+				active: [info(0), info(1), info(1)],
+				heldFocus: { prevented: false, followed: false },
+			}),
+			{ screenshotSettleDelay: 0 },
+		);
+		orchestrator.attach(a);
+		await orchestrator.run();
+		expect(a.stops.map((s) => s.activeElement.index)).toEqual([0, 1]);
+		expect(a.sessionEnds).toEqual(["completed"]);
+		expect(a.revisitedIndexes).toEqual([null]);
+	});
+
+	it("marks an element the baseline missed so its repeats are recognised", async () => {
+		const a = recordingConsumer();
+		const unmarked = { ...info(0), index: null };
+		const orchestrator = createTabOrchestrator(
+			loopAdaptor({
+				hasFocus: Array(20).fill(true),
+				active: [info(0), ...Array(15).fill(unmarked)],
+			}),
+			{ screenshotSettleDelay: 0 },
+		);
+		orchestrator.attach(a);
+		await orchestrator.run();
+		expect(a.stops).toHaveLength(2);
+		expect(a.stops[1]?.activeElement.index).not.toBeNull();
+	});
+
+	it("names the revisited element when a cycle ends the session", async () => {
+		const a = recordingConsumer();
+		const orchestrator = createTabOrchestrator(
+			loopAdaptor({
+				hasFocus: [true, true, true, true],
+				active: [info(0), info(1), info(2), info(1)],
+			}),
+			{ screenshotSettleDelay: 0 },
+		);
+		orchestrator.attach(a);
+		await orchestrator.run();
+		expect(a.stops.map((s) => s.activeElement.index)).toEqual([0, 1, 2]);
+		expect(a.revisitedIndexes).toEqual([1]);
 	});
 
 	it("aborts when the document loses focus", async () => {

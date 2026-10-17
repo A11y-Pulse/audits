@@ -1,5 +1,5 @@
-import type { CDPSession, JSHandle, Page } from "puppeteer";
-import type { BrowserAdaptor, ElementRef, Rect } from "../adaptor";
+import type { CDPSession, JSHandle, KeyInput, Page } from "puppeteer";
+import type { BrowserAdaptor, ElementRef, KeyName, Rect } from "../adaptor";
 import { nextPaintScript } from "../paint";
 
 // Keep track of the CDP session for each page so that we can reuse it. The session is kept
@@ -86,6 +86,25 @@ export class PuppeteerAdaptor implements BrowserAdaptor {
 
 	async pressEnter(): Promise<void> {
 		await this.page.keyboard.press("Enter");
+	}
+
+	async pressKey(key: KeyName): Promise<void> {
+		const { keyboard } = this.page;
+		// Puppeteer has no syntax for a combination, so modifiers are held down by hand.
+		const modifiers = key.split("+") as KeyInput[];
+		const name = modifiers.pop()!;
+
+		for (const modifier of modifiers) {
+			await keyboard.down(modifier);
+		}
+
+		try {
+			await keyboard.press(name);
+		} finally {
+			for (const modifier of modifiers) {
+				await keyboard.up(modifier);
+			}
+		}
 	}
 
 	async screenshotClip(clip: Rect, scale = 1): Promise<Uint8Array> {

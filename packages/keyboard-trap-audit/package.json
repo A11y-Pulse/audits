@@ -1,0 +1,63 @@
+{
+	"name": "@a11y-pulse/keyboard-trap-audit",
+	"version": "0.0.0",
+	"description": "WCAG 2.1.2 No Keyboard Trap audit that tabs through a page, detects focus cycling within part of it, and tries the standard keyboard exits before reporting a trap.",
+	"type": "module",
+	"license": "SEE LICENSE IN LICENSE.md",
+	"author": "A11y Pulse",
+	"homepage": "https://github.com/A11y-Pulse/audits/tree/main/packages/keyboard-trap-audit#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/A11y-Pulse/audits.git",
+		"directory": "packages/keyboard-trap-audit"
+	},
+	"bugs": {
+		"url": "https://github.com/A11y-Pulse/audits/issues"
+	},
+	"keywords": [
+		"accessibility",
+		"a11y",
+		"wcag",
+		"keyboard-trap",
+		"no-keyboard-trap",
+		"puppeteer",
+		"playwright",
+		"audit"
+	],
+	"engines": {
+		"node": ">=22"
+	},
+	"exports": {
+		".": {
+			"source": "./src/index.ts",
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
+	},
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE.md"
+	],
+	"scripts": {
+		"build": "tsup && tsc -p tsconfig.build.json",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check",
+		"lint:fix": "biome check --fix",
+		"test:unit": "vitest run",
+		"test:integration": "vitest run --config vitest.integration.config.ts",
+		"test": "npm run typecheck && npm run test:unit",
+		"prepublishOnly": "npm run build"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"dependencies": {
+		"@a11y-pulse/browser-adaptor": "*",
+		"@a11y-pulse/tab-orchestrator": "*"
+	},
+	"devDependencies": {
+		"playwright-core": "^1.63.0",
+		"puppeteer": "^25.11.0"
+	}
+}

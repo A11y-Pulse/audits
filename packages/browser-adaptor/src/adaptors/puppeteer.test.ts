@@ -68,6 +68,23 @@ describe("PuppeteerAdaptor.pressEnter", () => {
 	});
 });
 
+describe("PuppeteerAdaptor.pressKey", () => {
+	it("holds a named modifier down around the key", async () => {
+		const calls: string[] = [];
+		const keyboard = {
+			down: async (key: string) => calls.push(`down ${key}`),
+			press: async (key: string) => calls.push(`press ${key}`),
+			up: async (key: string) => calls.push(`up ${key}`),
+		};
+		const page = { keyboard } as unknown as Page;
+
+		await new PuppeteerAdaptor(page).pressKey("Shift+Tab");
+		await new PuppeteerAdaptor(page).pressKey("Escape");
+
+		expect(calls).toEqual(["down Shift", "press Tab", "up Shift", "press Escape"]);
+	});
+});
+
 describe("PuppeteerAdaptor.screenshotClipScale", () => {
 	it("defaults to 2 and honours an override", () => {
 		const page = {} as unknown as Page;

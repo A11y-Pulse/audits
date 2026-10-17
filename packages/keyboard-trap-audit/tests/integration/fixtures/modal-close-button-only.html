@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>modal-close-button-only</title></head><body>
+<a id="behind" href="#a">Behind the dialog</a>
+<div id="dialog" role="dialog" aria-modal="true" aria-label="Newsletter">
+	<input id="email" aria-label="Email">
+	<button id="close">Close</button>
+</div>
+<script>
+	const dialog = document.getElementById("dialog");
+	const items = [...dialog.querySelectorAll("input, button")];
+	document.addEventListener("keydown", (event) => {
+		if (dialog.hidden || event.key !== "Tab") return;
+		event.preventDefault();
+		const index = items.indexOf(document.activeElement);
+		items[(index + (event.shiftKey ? -1 : 1) + items.length) % items.length].focus();
+	});
+	document.getElementById("close").addEventListener("click", () => { dialog.hidden = true; });
+</script>
+</body></html>

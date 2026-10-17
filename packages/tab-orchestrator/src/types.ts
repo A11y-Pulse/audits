@@ -14,6 +14,13 @@ export type ActiveElementInfo = {
 	html: string;
 	styles: StyleSnapshot;
 	rect: Rect;
+	/**
+	 * The element sits on a fixed or sticky ancestor (or is one), so its page position depends on
+	 * scrolling rather than on where it is in the page.
+	 */
+	pinned?: boolean;
+	/** The element is inside an open dialog, where focus management may legitimately leave the page order. */
+	inDialog?: boolean;
 };
 
 export type Capability =
@@ -23,7 +30,17 @@ export type Capability =
 	| "screenshot"
 	| "unfocusedPair";
 
-export type SessionEndReason = "completed" | "lostFocus" | "navigation" | "failed";
+/** `stuck`: focus never came back out of an iframe. */
+export type SessionEndReason = "completed" | "lostFocus" | "navigation" | "failed" | "stuck";
+
+export type SessionEndDetail = {
+	/**
+	 * Marker index of the element whose second visit ended the session, or `null` when the session
+	 * ended any other way. A `"completed"` session with an index here ended on a cycle rather than by
+	 * tabbing off the end of the page.
+	 */
+	revisitedIndex: number | null;
+};
 
 export type UnfocusedPair = {
 	focusedScreenshot: Uint8Array;
@@ -80,5 +97,5 @@ export type TabConsumer = {
 	readonly capabilities: ReadonlySet<Capability>;
 	onSessionStart?(session: TabSessionHandle): void | Promise<void>;
 	onTabStop(snapshot: TabStopSnapshot, session: TabSessionHandle): void | Promise<void>;
-	onSessionEnd?(reason: SessionEndReason): void;
+	onSessionEnd?(reason: SessionEndReason, detail: SessionEndDetail): void;
 };

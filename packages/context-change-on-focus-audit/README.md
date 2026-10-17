@@ -136,7 +136,7 @@ type ContextChangeOnFocusResult = {
      * Why the tab session ended, or `null` when this consumer disconnected
      * itself (element limit, failed-element limit, or timeout).
      */
-    sessionEnd: "completed" | "lostFocus" | "navigation" | "failed" | null;
+    sessionEnd: "completed" | "lostFocus" | "navigation" | "failed" | "stuck" | null;
   };
 };
 ```
@@ -169,7 +169,16 @@ Use [`@a11y-pulse/browser-adaptor`'s `src/adaptors/puppeteer.ts`](../browser-ada
 
 - **Tab order only.** The audit tabs through elements in native tab order. It does not yet exercise arrow-key composite widgets (menus, comboboxes, toolbars, etc.) where focus moves via `aria-activedescendant` or roving `tabindex` instead of native Tab.
 - **Navigation ends the session.** Once a full navigation is detected, the whole shared tab session ends (there is no more original page to tab through), so this audit (and any others sharing the same orchestrator) stops after that stop.
+- **URL changes inside iframes and native controls are missed.** A soft URL change made while focus is inside an iframe, or moving between the parts of a media player or date input, is not reported.
 - **Best-effort interception.** `window.open` and form submission are intercepted so the audit does not actually leave the page or open real popups, but unusual navigation mechanisms (e.g. a service worker or extension-driven redirect) may not be caught.
+
+## Known false positives
+
+Cases where the audit reports a problem that is not one. Each says which bucket it lands in: `incomplete` asks for a human to check, `violations` claims a failure.
+
+- **Changes the page makes on its own timer** (`violations`). Every signal seen while an element holds focus is attributed to that element, so a carousel that moves focus, a chat widget that opens a window, or a session-timeout prompt that steals focus at that moment is reported against whatever was focused.
+- **Focus delegated within a widget** (`incomplete`). A wrapper that forwards focus to its own inner control, or a composite widget that moves focus among its items, is a correct pattern. Focus moving within the element's own subtree is reported for review, never as a violation.
+- **Soft URL changes on focus** (`incomplete`). A `pushState` or hash change on focus is suspicious but may not change what the page means, so it is reported for review.
 
 ## Releasing
 

@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>date-then-late-content</title></head><body>
+<button id="first">First</button>
+<label>Departure <input id="departure" type="date"></label>
+<div id="later"></div>
+<script>
+	// Renders the next control only once the date field is used, so the tab loop's baseline never
+	// sees it.
+	document.getElementById("departure").addEventListener("focus", () => {
+		document.getElementById("later").innerHTML = '<button id="search">Search</button>';
+	}, { once: true });
+</script>
+</body></html>

@@ -1,0 +1,5 @@
+[
+	{ "id": "ridgeline-2", "name": "Ridgeline 2", "price": 349, "people": 2, "waterproof": true },
+	{ "id": "summit-3", "name": "Summit 3", "price": 529, "people": 3, "waterproof": true },
+	{ "id": "meadow-4", "name": "Meadow 4", "price": 289, "people": 4, "waterproof": false }
+]

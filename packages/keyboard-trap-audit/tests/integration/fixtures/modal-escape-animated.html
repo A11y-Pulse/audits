@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>modal-escape-animated</title>
+<style>#dialog { transition: opacity 400ms; } #dialog.closing { opacity: 0; }</style>
+</head><body>
+<a id="behind" href="#a">Behind the dialog</a>
+<div id="dialog" role="dialog" aria-modal="true" aria-label="Newsletter">
+	<input id="email" aria-label="Email">
+	<button id="close">Close</button>
+</div>
+<script>
+	// Escape starts a fade and only hides the dialog once it finishes.
+	const dialog = document.getElementById("dialog");
+	const items = [...dialog.querySelectorAll("input, button")];
+	document.addEventListener("keydown", (event) => {
+		if (dialog.hidden) return;
+		if (event.key === "Escape") {
+			dialog.classList.add("closing");
+			setTimeout(() => { dialog.hidden = true; document.getElementById("behind").focus(); }, 400);
+			return;
+		}
+		if (event.key !== "Tab") return;
+		event.preventDefault();
+		const index = items.indexOf(document.activeElement);
+		items[(index + (event.shiftKey ? -1 : 1) + items.length) % items.length].focus();
+	});
+</script>
+</body></html>

@@ -1,0 +1,63 @@
+{
+	"name": "@a11y-pulse/focus-order-audit",
+	"version": "0.0.0",
+	"description": "Experimental WCAG 2.4.3 Focus Order audit that tabs through a page and flags tab sequences that repeatedly jump backwards against the reading order.",
+	"type": "module",
+	"license": "SEE LICENSE IN LICENSE.md",
+	"author": "A11y Pulse",
+	"homepage": "https://github.com/A11y-Pulse/audits/tree/main/packages/focus-order-audit#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/A11y-Pulse/audits.git",
+		"directory": "packages/focus-order-audit"
+	},
+	"bugs": {
+		"url": "https://github.com/A11y-Pulse/audits/issues"
+	},
+	"keywords": [
+		"accessibility",
+		"a11y",
+		"wcag",
+		"focus-order",
+		"tab-order",
+		"puppeteer",
+		"playwright",
+		"audit"
+	],
+	"engines": {
+		"node": ">=22"
+	},
+	"exports": {
+		".": {
+			"source": "./src/index.ts",
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
+	},
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE.md"
+	],
+	"scripts": {
+		"build": "tsup && tsc -p tsconfig.build.json",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check",
+		"lint:fix": "biome check --fix",
+		"test:unit": "vitest run",
+		"test:integration": "vitest run --config vitest.integration.config.ts",
+		"test": "npm run typecheck && npm run test:unit",
+		"prepublishOnly": "npm run build"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"dependencies": {
+		"@a11y-pulse/browser-adaptor": "*",
+		"@a11y-pulse/tab-orchestrator": "*"
+	},
+	"devDependencies": {
+		"playwright-core": "^1.63.0",
+		"puppeteer": "^25.11.0"
+	}
+}

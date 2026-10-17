@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>native-modal-no-exit</title></head><body>
+<a id="behind" href="#a">Behind the dialog</a>
+<dialog id="dialog">
+	<p>Accept the terms to continue.</p>
+	<button id="accept">Accept</button>
+	<button id="terms">Read the terms</button>
+</dialog>
+<a id="after" href="#b">After the dialog</a>
+<script>
+	const dialog = document.getElementById("dialog");
+	dialog.addEventListener("cancel", (event) => event.preventDefault());
+	dialog.addEventListener("keydown", (event) => {
+		if (event.key === "Escape") event.preventDefault();
+	});
+	const items = [...dialog.querySelectorAll("button")];
+	dialog.addEventListener("keydown", (event) => {
+		if (event.key !== "Tab") return;
+		event.preventDefault();
+		const index = items.indexOf(document.activeElement);
+		items[(index + (event.shiftKey ? -1 : 1) + items.length) % items.length].focus();
+	});
+	dialog.showModal();
+</script>
+</body></html>

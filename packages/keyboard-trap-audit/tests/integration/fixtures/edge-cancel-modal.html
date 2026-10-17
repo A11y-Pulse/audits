@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>edge-cancel-modal</title></head><body>
+<a id="behind" href="#a">Behind the dialog</a>
+<div id="dialog" role="dialog" aria-modal="true" aria-label="Offer">
+	<button id="first">Accept</button>
+	<button id="middle">Settings</button>
+	<button id="last">Decline</button>
+</div>
+<script>
+	// Like most focus-trap libraries: Tab moves natively inside, and is only cancelled at the edges.
+	document.getElementById("first").focus();
+	document.getElementById("dialog").addEventListener("keydown", (event) => {
+		if (event.key !== "Tab") return;
+		if (!event.shiftKey && document.activeElement.id === "last") {
+			event.preventDefault();
+			document.getElementById("first").focus();
+		} else if (event.shiftKey && document.activeElement.id === "first") {
+			event.preventDefault();
+			document.getElementById("last").focus();
+		}
+	});
+</script>
+</body></html>

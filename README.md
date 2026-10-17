@@ -31,6 +31,7 @@ A collection of audits that are designed to complement static analysis tools lik
 | [2.4.7 Focus Visible](https://www.w3.org/WAI/WCAG22/Understanding/focus-visible) (AA) | ✅ | ❌ | 🟡<sup>1</sup> |
 | [2.4.11 Focus Not Obscured](https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum) (AA) | ✅ | ❌ | ❌ |
 | [3.2.1 On Focus](https://www.w3.org/WAI/WCAG22/Understanding/on-focus) (A) | ✅ | ❌ | 🟡<sup>1</sup> |
+| [2.1.2 No Keyboard Trap](https://www.w3.org/WAI/WCAG22/Understanding/no-keyboard-trap) (A) | 🟡<sup>4</sup> | ❌ | 🟡<sup>1</sup> |
 | [1.4.10 Reflow](https://www.w3.org/WAI/WCAG22/Understanding/reflow) (AA) | ✅ | ❌ | 🟡<sup>1</sup> |
 | [1.4.12 Text Spacing](https://www.w3.org/WAI/WCAG22/Understanding/text-spacing) (AA) | ✅ | 🟡<sup>2</sup> | 🟡<sup>1</sup> |
 | [2.4.1 Bypass Blocks](https://www.w3.org/WAI/WCAG22/Understanding/bypass-blocks) (A) | ✅ | 🟡<sup>3</sup> | 🟡<sup>1</sup> |
@@ -39,6 +40,7 @@ A collection of audits that are designed to complement static analysis tools lik
 1. Manual review only: emits a note asking a human to check the criterion.<br />
 2. The `avoid-inline-spacing` audit only flags inline `!important` spacing declarations.<br />
 3. The `bypass` audit only checks that a bypass mechanism exists, not that it works.<br />
+4. Detects focus confined to part of the page and tries the standard keyboard exits, but reports a trap for human review, since WCAG allows an exit users are told about.<br />
 </sup>
 
 ## Quick Start
@@ -58,6 +60,8 @@ It also serves as an implementation reference for integrating the audits in your
 | [@a11y-pulse/focus-appearance-audit](./packages/focus-appearance-audit) | [WCAG 2.4.7 Focus Visible](https://www.w3.org/WAI/WCAG22/Understanding/focus-visible): tabs through a page and detects a visible focus indicator |
 | [@a11y-pulse/focus-not-obscured-audit](./packages/focus-not-obscured-audit) | [WCAG 2.4.11 Focus Not Obscured (Minimum)](https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum): tabs through a page and detects focused elements entirely hidden behind other content |
 | [@a11y-pulse/context-change-on-focus-audit](./packages/context-change-on-focus-audit) | [WCAG 3.2.1 On Focus](https://www.w3.org/WAI/WCAG22/Understanding/on-focus): tabs through a page and detects focus-triggered context changes (new windows, auto-submits, navigation, focus theft/removal) |
+| [@a11y-pulse/keyboard-trap-audit](./packages/keyboard-trap-audit) | [WCAG 2.1.2 No Keyboard Trap](https://www.w3.org/WAI/WCAG22/Understanding/no-keyboard-trap): tabs through a page, detects focus confined to part of it, and tries the standard keyboard exits before reporting a trap |
+| [@a11y-pulse/focus-order-audit](./packages/focus-order-audit) | Experimental. [WCAG 2.4.3 Focus Order](https://www.w3.org/WAI/WCAG22/Understanding/focus-order): tabs through a page and flags focus that repeatedly jumps a long way against the reading order, for human review |
 | [@a11y-pulse/reflow-audit](./packages/reflow-audit) | [WCAG 1.4.10 Reflow](https://www.w3.org/WAI/WCAG22/Understanding/reflow): narrows to 320px and checks for content that requires horizontal scrolling |
 | [@a11y-pulse/skip-link-audit](./packages/skip-link-audit) | [WCAG 2.4.1 Bypass Blocks](https://www.w3.org/WAI/WCAG22/Understanding/bypass-blocks.html): verifies that skip links are present and functional |
 | [@a11y-pulse/text-spacing-audit](./packages/text-spacing-audit) | [WCAG 1.4.12 Text Spacing](https://www.w3.org/WAI/WCAG22/Understanding/text-spacing): applies extra spacing and detects clipped or overlapping text |

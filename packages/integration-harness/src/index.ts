@@ -5,6 +5,12 @@ import type { Page as PuppeteerPage } from "puppeteer";
 import puppeteer from "puppeteer";
 import { afterAll, beforeAll, describe, it } from "vitest";
 
+export {
+	type FixtureServer,
+	type RecordedRequest,
+	startFixtureServer,
+} from "./serve-fixtures";
+
 export type EngineName =
 	| "puppeteer"
 	| "playwright-chromium"

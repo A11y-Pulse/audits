@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ridgeline 2 tent | Trailhead Outfitters</title>
+<style>
+	body { margin: 0; background: #fff; color: #1f2937; font: 16px/1.5 system-ui, sans-serif; }
+	a { color: #1d4ed8; }
+	:focus-visible { outline: 2px solid #1a73e8; outline-offset: 2px; }
+	button, select { font: inherit; padding: 6px 12px; }
+	.sr-only-focusable { position: absolute; left: 8px; top: -100px; background: #fff; padding: 8px; }
+	.sr-only-focusable:focus { top: 8px; }
+	header, main { padding: 16px; }
+	#breadcrumbs { display: flex; gap: 8px; margin: 0; padding: 0; list-style: none; }
+	img { display: block; max-width: 100%; height: auto; }
+	section, aside { box-sizing: border-box; padding: 12px; border: 1px solid #e5e7eb; }
+	.toolbar { display: flex; gap: 8px; }
+
+	/* Mobile first: one column, with the buy box pulled above the gallery. */
+	#product-layout { display: flex; flex-direction: column; gap: 16px; }
+	#buy-box { order: -1; }
+
+	/* Desktop: related products become a left sidebar, and the share buttons are right-aligned by reversing them. */
+	@media (min-width: 900px) {
+		#product-layout { flex-direction: row; flex-wrap: wrap; }
+		#buy-box { order: 0; }
+		#related { order: -1; flex: 0 0 180px; }
+		#gallery { flex: 1 1 0; }
+		#buy-box { flex: 0 0 300px; }
+		#details { flex: 1 0 100%; }
+		#share-toolbar { flex-direction: row-reverse; justify-content: flex-end; }
+	}
+</style>
+</head>
+<body>
+<a id="skip-link" class="sr-only-focusable" href="#main">Skip to main content</a>
+<header>
+	<nav aria-label="Breadcrumb">
+		<ol id="breadcrumbs">
+			<li><a id="crumb-home" href="../site/home.html">Home</a></li>
+			<li><a id="crumb-tents" href="../interaction/static.html">Tents</a></li>
+		</ol>
+	</nav>
+</header>
+
+<main id="main" tabindex="-1">
+	<h1>Ridgeline 2</h1>
+	<div id="product-layout">
+		<section id="gallery" aria-label="Photos">
+			<img src="../assets/packed-tent.svg" alt="Ridgeline 2 packed in its carry bag" width="320" height="200">
+			<button id="thumb-1" type="button">Photo 1</button>
+			<button id="thumb-2" type="button">Photo 2</button>
+		</section>
+
+		<section id="buy-box" aria-label="Buy">
+			<p>$349</p>
+			<label for="colour">Colour</label>
+			<select id="colour">
+				<option>Forest green</option>
+				<option>Sand</option>
+			</select>
+			<button id="add-to-basket" type="button">Add to basket</button>
+		</section>
+
+		<section id="details" aria-label="Details">
+			<h2>Details</h2>
+			<p>A two-person, three-season tent weighing 1.6 kg.</p>
+			<a id="specs-link" href="ridgeline-2-specs.html">Full specifications</a>
+			<div id="share-toolbar" class="toolbar">
+				<a id="share-email" href="mailto:?subject=Ridgeline%202">Email</a>
+				<a id="share-copy" href="#copy">Copy link</a>
+			</div>
+		</section>
+
+		<aside id="related" aria-label="Related products">
+			<h2>Related</h2>
+			<a id="related-1" href="footprint.html">Ridgeline footprint</a>
+			<a id="related-2" href="pegs.html">Alloy pegs</a>
+		</aside>
+	</div>
+</main>
+
+<script>
+	document.getElementById("add-to-basket").addEventListener("click", () => fetch("/__tripwire/add-to-basket/ridgeline-2"));
+</script>
+</body>
+</html>

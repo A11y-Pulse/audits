@@ -159,6 +159,15 @@ Use [`@a11y-pulse/browser-adaptor`'s `src/adaptors/puppeteer.ts`](../browser-ada
 - **Tab order only.** The audit tabs through elements in native tab order. It does not yet exercise arrow-key composite widgets (menus, comboboxes, toolbars, etc.) where focus moves via `aria-activedescendant` or roving `tabindex` instead of native Tab.
 - **Minimum, not Enhanced.** This audit checks 2.4.11 only. It does not check 2.4.12 (AAA), which requires that *no part* of the focused element be obscured, including by the user's own assistive technology.
 - **Opaque hit-testing.** Coverage is measured by sampling the focused element's box for unrelated content on top of it; unusual stacking/clip-path/mask combinations could in rare cases confuse the opacity classification, which is why those cases are routed to `"incomplete"` rather than guessed.
+- **See-through backgrounds pass.** A cover whose background colour is transparent counts as see-through even when a background image or its content hides the element, so it passes.
+
+## Known false positives
+
+Cases where the audit reports a problem that is not one. Each says which bucket it lands in: `incomplete` asks for a human to check, `violations` claims a failure.
+
+- **Overlays that are only briefly on screen** (`violations`). Each element is measured once, the moment it takes focus, so a toast, loading veil or entrance animation covering it at that instant is reported as obscuring it.
+- **Content whose own focus opens it** (`violations`). A panel opened by focusing one element that then fully covers the next tab stop is reported, although the user arguably opened it.
+- **Covers whose background colour cannot be read** (`incomplete`). The opacity check reads `rgb()` and `rgba()` colours; a cover with its background in another colour space, such as `oklch()`, is reported for review rather than as a violation.
 
 ## Releasing
 

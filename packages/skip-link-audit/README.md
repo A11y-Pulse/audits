@@ -144,6 +144,12 @@ Use [`@a11y-pulse/browser-adaptor`'s `src/adaptors/puppeteer.ts`](../browser-ada
 - **Closed shadow roots** are opaque; a skip link inside one is invisible to the scan.
 - **Landmarks and headings** that satisfy 2.4.1 without a skip link are out of scope by design.
 
+## Known false positives
+
+Cases where the audit reports a problem that is not one. Each says which bucket it lands in: `incomplete` asks for a human to check, `violations` claims a failure.
+
+- **Skip links that move focus slowly** (`violations`). The audit waits 250ms (`activationPollMs`) for focus to arrive. A skip link that only moves focus after a longer smooth-scroll animation is reported as having no effect.
+
 ## Releasing
 
 Releases are managed in the [A11y-Pulse/audits](https://github.com/A11y-Pulse/audits) monorepo with [Changesets](https://github.com/changesets/changesets). Publishing uses [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/) (OIDC). There is no long-lived `NPM_TOKEN`.

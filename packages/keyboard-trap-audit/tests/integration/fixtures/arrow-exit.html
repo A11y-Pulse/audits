@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>arrow-exit</title></head><body>
+<a id="before" href="#a">Before</a>
+<div id="widget">
+	<button data-item>Bold</button>
+	<button data-item>Italic</button>
+</div>
+<a id="after" href="#b">After</a>
+<script>
+	// Tab is kept for the toolbar; ArrowDown is its documented way out.
+	const items = [...document.querySelectorAll("#widget [data-item]")];
+	document.getElementById("widget").addEventListener("keydown", (event) => {
+		if (event.key !== "Tab") return;
+		event.preventDefault();
+		const index = items.indexOf(document.activeElement);
+		items[(index + (event.shiftKey ? -1 : 1) + items.length) % items.length].focus();
+	});
+	document.getElementById("widget").addEventListener("keydown", (event) => {
+		if (event.key === "ArrowDown") document.getElementById("after").focus();
+	});
+</script>
+</body></html>

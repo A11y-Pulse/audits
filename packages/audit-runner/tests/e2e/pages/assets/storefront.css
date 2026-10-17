@@ -1,0 +1,63 @@
+/* Shared by the interaction variants. Defects live in the per-id rules near the bottom. */
+
+html { scroll-padding-bottom: 64px; }
+body { margin: 0; background: #fff; color: #1f2937; font: 16px/1.5 system-ui, sans-serif; }
+a { color: #1d4ed8; }
+:focus-visible { outline: 2px solid #1a73e8; outline-offset: 2px; }
+button { font: inherit; padding: 6px 12px; border: 1px solid #6b7280; border-radius: 4px; background: #fff; color: inherit; cursor: pointer; }
+h1, h2, h3 { line-height: 1.2; }
+
+.sr-only-focusable { position: absolute; left: 8px; top: -100px; padding: 8px 12px; background: #fff; z-index: 100; }
+.sr-only-focusable:focus { top: 8px; }
+
+.site-header { display: grid; grid-template-columns: 200px 1fr; gap: 8px 24px; padding: 16px 24px; border-bottom: 1px solid #e5e7eb; }
+.site-header .logo { grid-row: 1; grid-column: 1; }
+.site-header .logo img { display: block; height: 40px; }
+.search { position: relative; grid-row: 1; grid-column: 2; max-width: 480px; }
+.search input { width: 100%; box-sizing: border-box; padding: 8px 12px; font: inherit; border: 1px solid #6b7280; border-radius: 4px; }
+.suggestions { position: absolute; top: 100%; left: 0; right: 0; margin: 0; padding: 0; list-style: none; background: #fff; border: 1px solid #6b7280; z-index: 20; }
+.suggestions li { padding: 8px 12px; height: 32px; }
+.main-nav { grid-row: 2; grid-column: 2; }
+.main-nav > ul { display: flex; gap: 16px; margin: 0; padding: 0; list-style: none; }
+.main-nav li { position: relative; }
+.main-nav .panel { display: none; position: absolute; top: 100%; left: 0; width: 220px; margin: 0; padding: 8px 0; list-style: none; background: #fff; border: 1px solid #6b7280; z-index: 10; }
+.main-nav .panel.open { display: block; }
+.main-nav .panel a { display: block; padding: 4px 12px; }
+
+.layout { display: grid; grid-template-columns: 260px 1fr; gap: 32px; padding: 24px; }
+.filters label { display: block; margin: 8px 0; }
+.slider { position: relative; height: 24px; margin: 16px 0; background: #e5e7eb; border-radius: 12px; }
+.slider .thumb { position: absolute; top: 0; left: 60%; width: 24px; height: 24px; border-radius: 50%; background: #1f2937; }
+.accordion-region { height: 0; overflow: hidden; }
+.accordion-region.open { height: auto; }
+
+.segmented { display: flex; gap: 0; margin: 16px 0; }
+.segmented button { border-radius: 0; }
+.segmented button.selected { background: #1f2937; color: #fff; }
+
+.products { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin: 0; padding: 0; list-style: none; }
+.card { padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; }
+.card-link { cursor: pointer; }
+.card-actions { display: flex; gap: 8px; margin: 12px 0; }
+.icon-button { display: inline-flex; padding: 6px; }
+.icon-button svg { width: 20px; height: 20px; fill: #1f2937; }
+.tooltip-anchor { position: relative; display: inline-block; }
+.tooltip { position: absolute; top: 100%; left: 0; width: 220px; padding: 8px; background: #1f2937; color: #fff; z-index: 5; }
+.tooltip[hidden] { display: none; }
+
+.drawer { position: fixed; top: 0; left: 0; width: 300px; height: 100vh; padding: 24px; box-sizing: border-box; background: #fff; transform: translateX(-100%); }
+
+.help a { display: block; margin: 8px 0; }
+.recently-viewed { position: relative; height: 3400px; }
+.recently-viewed a { position: absolute; left: 24px; display: block; width: 240px; padding: 16px; border: 1px solid #e5e7eb; }
+
+.site-footer { padding: 24px 24px 0; background: #f3f4f6; }
+.site-footer a { display: block; padding: 8px 0; line-height: 24px; }
+.cookie-banner { position: fixed; left: 0; right: 0; bottom: 0; height: 64px; display: flex; align-items: center; gap: 16px; padding: 0 24px; background: #111827; color: #fff; z-index: 50; }
+.cookie-banner button { background: #fff; color: #111827; }
+
+/* Planted defects. */
+#help-faint:focus-visible { outline-color: #d4edda; }
+#help-colour-only { color: #333; }
+#help-colour-only:focus-visible { outline: none; color: #2e5d2e; }
+#no-indicator:focus-visible { outline: none; }

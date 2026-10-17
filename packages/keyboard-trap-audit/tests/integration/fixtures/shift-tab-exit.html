@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>shift-tab-exit</title></head><body>
+<a id="before" href="#a">Before</a>
+<div id="widget">
+	<button id="w1">One</button>
+	<button id="w2">Two</button>
+</div>
+<a id="after" href="#b">After</a>
+<script>
+	// Traps forward Tab only; Shift+Tab behaves normally.
+	const buttons = [...document.querySelectorAll("#widget button")];
+	document.getElementById("widget").addEventListener("keydown", (event) => {
+		if (event.key !== "Tab" || event.shiftKey) return;
+		event.preventDefault();
+		const index = buttons.indexOf(document.activeElement);
+		buttons[(index + 1) % buttons.length].focus();
+	});
+</script>
+</body></html>

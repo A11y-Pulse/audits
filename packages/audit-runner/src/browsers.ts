@@ -4,6 +4,8 @@ import { PlaywrightAdaptor as ReflowPlaywrightAdaptor } from "@a11y-pulse/reflow
 import { PuppeteerAdaptor as ReflowPuppeteerAdaptor } from "@a11y-pulse/reflow-audit/puppeteer";
 import { PlaywrightAdaptor as TextSpacingPlaywrightAdaptor } from "@a11y-pulse/text-spacing-audit/playwright";
 import { PuppeteerAdaptor as TextSpacingPuppeteerAdaptor } from "@a11y-pulse/text-spacing-audit/puppeteer";
+import type { Page as PlaywrightPage } from "playwright-core";
+import type { Page as PuppeteerPage } from "puppeteer";
 import type { Browser, Engine } from "./cli-args";
 import type { AuditAdaptors, ProgressCallback } from "./run-audits";
 
@@ -18,6 +20,31 @@ export type Session = {
 	adaptors: AuditAdaptors;
 	close: () => Promise<void>;
 };
+
+/**
+ * Build every audit's adaptor around one Puppeteer page.
+ */
+export function puppeteerAdaptors(page: PuppeteerPage): AuditAdaptors {
+	return {
+		browser: new PuppeteerAdaptor(page),
+		reflow: new ReflowPuppeteerAdaptor(page),
+		textSpacing: new TextSpacingPuppeteerAdaptor(page),
+	};
+}
+
+/**
+ * Build every audit's adaptor around one Playwright page.
+ */
+export function playwrightAdaptors(
+	page: PlaywrightPage,
+	screenshotClipScale?: number,
+): AuditAdaptors {
+	return {
+		browser: new PlaywrightAdaptor(page, { screenshotClipScale }),
+		reflow: new ReflowPlaywrightAdaptor(page),
+		textSpacing: new TextSpacingPlaywrightAdaptor(page),
+	};
+}
 
 async function load<T>(specifier: string, install: string): Promise<T> {
 	try {
@@ -57,11 +84,7 @@ async function launchPuppeteer(url: string, onProgress: ProgressCallback): Promi
 		await page.waitForNetworkIdle({ concurrency: PUPPETEER_NETWORK_IDLE_CONCURRENCY });
 
 		return {
-			adaptors: {
-				browser: new PuppeteerAdaptor(page),
-				reflow: new ReflowPuppeteerAdaptor(page),
-				textSpacing: new TextSpacingPuppeteerAdaptor(page),
-			},
+			adaptors: puppeteerAdaptors(page),
 			close: () => browser.close(),
 		};
 	} catch (error) {
@@ -100,11 +123,7 @@ async function launchPlaywright(
 		await page.waitForLoadState("networkidle");
 
 		return {
-			adaptors: {
-				browser: new PlaywrightAdaptor(page, { screenshotClipScale }),
-				reflow: new ReflowPlaywrightAdaptor(page),
-				textSpacing: new TextSpacingPlaywrightAdaptor(page),
-			},
+			adaptors: playwrightAdaptors(page, screenshotClipScale),
 			close: () => browser.close(),
 		};
 	} catch (error) {

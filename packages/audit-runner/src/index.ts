@@ -1,6 +1,8 @@
 export type { ContextChangeOnFocusResult } from "@a11y-pulse/context-change-on-focus-audit";
 export type { FocusAppearanceResult } from "@a11y-pulse/focus-appearance-audit";
 export type { FocusNotObscuredResult } from "@a11y-pulse/focus-not-obscured-audit";
+export type { FocusOrderResult } from "@a11y-pulse/focus-order-audit";
+export type { KeyboardTrapResult } from "@a11y-pulse/keyboard-trap-audit";
 export type { ReflowResult } from "@a11y-pulse/reflow-audit";
 export type { SkipLinkResult } from "@a11y-pulse/skip-link-audit";
 export type { TextSpacingResult } from "@a11y-pulse/text-spacing-audit";
@@ -37,6 +39,8 @@ export {
 	FOCUS_NOT_OBSCURED_EVIDENCE_CHECK_ID,
 	focusNotObscuredToAxe,
 } from "./to-axe/focus-not-obscured";
+export { FOCUS_ORDER_AUDIT_ID, focusOrderToAxe } from "./to-axe/focus-order";
+export { KEYBOARD_TRAP_AUDIT_ID, keyboardTrapToAxe } from "./to-axe/keyboard-trap";
 export { REFLOW_AUDIT_ID, REFLOW_EVIDENCE_CHECK_ID, reflowToAxe } from "./to-axe/reflow";
 export { SKIP_LINK_AUDIT_ID, skipLinkToAxe } from "./to-axe/skip-link";
 export {

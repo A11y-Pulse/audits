@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in | Trailhead Outfitters</title>
+<link rel="stylesheet" href="../assets/settings.css">
+<style>
+	form { display: grid; gap: 8px; max-width: 360px; }
+	input { padding: 8px; font: inherit; border: 1px solid #6b7280; border-radius: 4px; }
+	.error { color: #b91c1c; }
+</style>
+</head>
+<body>
+<main>
+	<h1>Sign in</h1>
+
+	<form id="login-form" method="post" action="/__tripwire/login">
+		<label for="email">Email address</label>
+		<input id="email" type="email" name="email" autocomplete="username" required>
+		<div id="email-error" class="error"></div>
+
+		<label for="password">Password</label>
+		<input id="password" type="password" name="password" onpaste="return false">
+
+		<label><input id="remember-me" type="checkbox" name="remember"> Keep me signed in</label>
+
+		<button id="sign-in" type="submit">Sign in</button>
+	</form>
+
+	<h2>Or sign in with a code</h2>
+	<form id="code-form" method="post" action="/__tripwire/verify-code">
+		<p>We sent a 6-digit code to your phone.</p>
+		<input id="otp" name="code" inputmode="numeric" placeholder="6-digit code">
+		<button id="verify-code" type="submit">Verify</button>
+	</form>
+
+	<p><a id="forgot-password" href="forgot-password.html">Forgotten your password?</a></p>
+</main>
+
+<script>
+	const email = document.getElementById("email");
+
+	// Validation text appears on blur in a plain container, so it is never announced.
+	email.addEventListener("blur", () => {
+		document.getElementById("email-error").textContent = email.validity.valid ? "" : "Enter an email address like name@example.com";
+	});
+
+	document.getElementById("remember-me").addEventListener("change", () => fetch("/__tripwire/remember-me"));
+</script>
+</body>
+</html>

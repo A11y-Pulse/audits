@@ -177,6 +177,7 @@ function loopAdaptor(script: {
 			tabbed = true;
 		},
 		async pressEnter() {},
+		async pressKey() {},
 		async screenshotClip() {
 			adaptor.clipCalls++;
 			const pngs = script.pngs;
@@ -483,7 +484,8 @@ function fakeAdaptor(script: AdaptorScript = {}): {
 			if (fn === probeActiveElementScript) {
 				tabbed = false;
 
-				return active;
+				// Each tab stop is a different element unless the test scripts one.
+				return script.active ?? { ...active, index: stopIndex };
 			}
 
 			if (fn === getSelector) {
@@ -538,6 +540,7 @@ function fakeAdaptor(script: AdaptorScript = {}): {
 			tabbed = true;
 		},
 		async pressEnter() {},
+		async pressKey() {},
 		async screenshotClip(clip: Rect, _scale?: number) {
 			record.clips.push(clip);
 

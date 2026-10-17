@@ -4,15 +4,19 @@ import { PuppeteerAdaptor } from "@a11y-pulse/browser-adaptor/puppeteer";
 import { createContextChangeOnFocusAudit } from "@a11y-pulse/context-change-on-focus-audit";
 import { createFocusAppearanceAudit } from "@a11y-pulse/focus-appearance-audit";
 import { createFocusNotObscuredAudit } from "@a11y-pulse/focus-not-obscured-audit";
-import { type AdaptorFactories, describeEachEngine } from "@a11y-pulse/integration-harness";
+import {
+	type AdaptorFactories,
+	describeEachEngine,
+	type FixtureServer,
+	startFixtureServer,
+} from "@a11y-pulse/integration-harness";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { createTabOrchestrator } from "../../src/orchestrator";
-import { type FixtureServer, startFixtureServer } from "./helpers/serve-fixtures";
 
 let server: FixtureServer;
 
 beforeAll(async () => {
-	server = await startFixtureServer();
+	server = await startFixtureServer(new URL("fixtures", import.meta.url));
 });
 
 afterAll(async () => {
@@ -37,6 +41,7 @@ describeEachEngine<BrowserAdaptor>(
 				disposeRef: inner.disposeRef.bind(inner),
 				pressTab: inner.pressTab.bind(inner),
 				pressEnter: inner.pressEnter.bind(inner),
+				pressKey: inner.pressKey.bind(inner),
 				screenshotClip: async (clip, scale) => {
 					clips++;
 
