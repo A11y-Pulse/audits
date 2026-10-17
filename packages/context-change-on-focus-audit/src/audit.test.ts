@@ -110,6 +110,7 @@ function loopAdaptor(script: {
 			tabbed = true;
 		},
 		async pressEnter() {},
+		async pressKey() {},
 		async screenshotClip() {
 			return new Uint8Array([1]);
 		},

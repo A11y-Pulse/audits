@@ -1,6 +1,17 @@
 /** A screenshot clip region in CSS pixels. */
 export type Rect = { x: number; y: number; width: number; height: number };
 
+/** A key, or a modifier and a key joined by `+`, as the adaptor's `pressKey` accepts it. */
+export type KeyName =
+	| "Tab"
+	| "Shift+Tab"
+	| "Enter"
+	| "Escape"
+	| "ArrowUp"
+	| "ArrowDown"
+	| "ArrowLeft"
+	| "ArrowRight";
+
 /**
  * An element handle in the page. This type is adaptor-specific and is opaque to the audit.
  */
@@ -39,6 +50,11 @@ export interface BrowserAdaptor {
 	 * Press the enter key
 	 */
 	pressEnter(): Promise<void>;
+
+	/**
+	 * Press `key` with any modifier it names held down
+	 */
+	pressKey(key: KeyName): Promise<void>;
 
 	/**
 	 * Screenshot a clipped region of the page defined by `clip`, in document coordinates. `scale` is

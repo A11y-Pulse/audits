@@ -1,2 +1,2 @@
-export type { BrowserAdaptor, ElementRef, Rect } from "./adaptor";
+export type { BrowserAdaptor, ElementRef, KeyName, Rect } from "./adaptor";
 export { bufferedClip } from "./clip";

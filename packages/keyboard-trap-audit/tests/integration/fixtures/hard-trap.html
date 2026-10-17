@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>hard-trap</title></head><body>
+<a id="before" href="#a">Before</a>
+<div id="widget">
+	<button id="w1">Bold</button>
+	<button id="w2">Italic</button>
+</div>
+<a id="after" href="#b">After</a>
+<script>
+	// Cycles Tab and Shift+Tab between its own buttons and ignores Escape.
+	const buttons = [...document.querySelectorAll("#widget button")];
+	document.getElementById("widget").addEventListener("keydown", (event) => {
+		if (event.key !== "Tab") return;
+		event.preventDefault();
+		const index = buttons.indexOf(document.activeElement);
+		buttons[(index + 1) % buttons.length].focus();
+	});
+</script>
+</body></html>

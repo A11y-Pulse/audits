@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>escape-navigates</title></head><body>
+<a id="before" href="#a">Before</a>
+<div id="widget">
+	<button data-item>One</button>
+	<button data-item>Two</button>
+</div>
+<a id="after" href="#b">After</a>
+<script>
+	const items = [...document.querySelectorAll("#widget [data-item]")];
+	document.getElementById("widget").addEventListener("keydown", (event) => {
+		if (event.key !== "Tab") return;
+		event.preventDefault();
+		const index = items.indexOf(document.activeElement);
+		items[(index + (event.shiftKey ? -1 : 1) + items.length) % items.length].focus();
+	});
+	document.addEventListener("keydown", (event) => {
+		if (event.key === "Escape") location.href = "no-trap.html";
+	});
+</script>
+</body></html>

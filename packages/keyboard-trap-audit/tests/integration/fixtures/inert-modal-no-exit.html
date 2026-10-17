@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>inert-modal-no-exit</title></head><body>
+<main inert>
+	<a id="behind" href="#a">Behind the dialog</a>
+	<button id="also-behind">Also behind</button>
+</main>
+<div id="dialog" role="dialog" aria-modal="true" aria-label="Terms">
+	<button id="accept">Accept</button>
+	<button id="terms">Read the terms</button>
+</div>
+<script>
+	const items = [...document.querySelectorAll("#dialog button")];
+	document.addEventListener("keydown", (event) => {
+		if (event.key !== "Tab") return;
+		event.preventDefault();
+		const index = items.indexOf(document.activeElement);
+		items[(index + (event.shiftKey ? -1 : 1) + items.length) % items.length].focus();
+	});
+</script>
+</body></html>

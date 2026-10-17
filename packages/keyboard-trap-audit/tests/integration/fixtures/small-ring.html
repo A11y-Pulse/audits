@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>small-ring</title></head><body>
+<nav id="nav">
+	<a id="home" href="#home">Home</a>
+	<a id="trails" href="#trails">Trails</a>
+	<a id="gear" href="#gear">Gear</a>
+</nav>
+<script>
+	// The whole page is one cycle: Tab from the last link wraps to the first.
+	const links = [...document.querySelectorAll("a")];
+	document.addEventListener("keydown", (event) => {
+		if (event.key !== "Tab") return;
+		event.preventDefault();
+		const index = links.indexOf(document.activeElement);
+		links[(index + (event.shiftKey ? -1 : 1) + links.length) % links.length].focus();
+	});
+</script>
+</body></html>

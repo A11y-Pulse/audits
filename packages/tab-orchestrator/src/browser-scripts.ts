@@ -179,6 +179,146 @@ export function baselineScript(
 	return { styles, entries };
 }
 
+/** Every element that can be a sequential focus stop, before tabindex, state and visibility. */
+export const TABBABLE_SELECTOR = [
+	"a[href]",
+	"area[href]",
+	"button",
+	"input:not([type='hidden'])",
+	"select",
+	"textarea",
+	"iframe",
+	"summary",
+	"audio[controls]",
+	"video[controls]",
+	"[tabindex]",
+	"[contenteditable]:not([contenteditable='false'])",
+].join(", ");
+
+type TabObserverWindow = Window & {
+	__a11yPulseTabListener?: (event: KeyboardEvent) => void;
+	__a11yPulseLastTab?: KeyboardEvent;
+};
+
+/**
+ * Keep the most recent Tab key event. The listener sits on the window in the capture phase, so the
+ * page cannot stop it seeing the event, and `defaultPrevented` is read once dispatch has finished.
+ */
+export function installTabObserverScript(): void {
+	const win = window as TabObserverWindow;
+
+	if (win.__a11yPulseTabListener) {
+		return;
+	}
+
+	win.__a11yPulseTabListener = (event) => {
+		if (event.key === "Tab") {
+			win.__a11yPulseLastTab = event;
+		}
+	};
+	window.addEventListener("keydown", win.__a11yPulseTabListener, true);
+}
+
+/** Whether the page cancelled the most recent Tab key press, as seen by `installTabObserverScript`. */
+export function tabPreventedScript(): boolean {
+	return (window as TabObserverWindow).__a11yPulseLastTab?.defaultPrevented === true;
+}
+
+export function removeTabObserverScript(): void {
+	const win = window as TabObserverWindow;
+
+	if (win.__a11yPulseTabListener) {
+		window.removeEventListener("keydown", win.__a11yPulseTabListener, true);
+	}
+
+	delete win.__a11yPulseTabListener;
+	delete win.__a11yPulseLastTab;
+}
+
+export type HeldFocus = {
+	/** The page cancelled the Tab press that left focus where it was. */
+	prevented: boolean;
+	/** Something tabbable follows the focused element in document order, so the tab order goes on. */
+	followed: boolean;
+};
+
+/**
+ * Why a Tab press left focus on the same element: the page cancelled it, or there is nothing
+ * tabbable after the element to move to.
+ */
+export function heldFocusScript(tabbableSelector: string): HeldFocus {
+	let el = document.activeElement;
+
+	while (el?.shadowRoot?.activeElement) {
+		el = el.shadowRoot.activeElement;
+	}
+
+	// Compare light-DOM positions: an element inside a shadow root stands in for its outermost host.
+	let anchor: Element | null = el;
+
+	while (anchor && anchor.getRootNode() instanceof ShadowRoot) {
+		anchor = (anchor.getRootNode() as ShadowRoot).host;
+	}
+
+	const modal = document.querySelector("dialog:modal");
+
+	const isTabbable = (candidate: Element): boolean => {
+		if (
+			(candidate as HTMLElement).tabIndex < 0 ||
+			candidate.matches(":disabled") ||
+			candidate.closest("[inert]") ||
+			(modal && !modal.contains(candidate))
+		) {
+			return false;
+		}
+
+		const visibility = candidate as Element & {
+			checkVisibility?: (options?: { checkVisibilityCSS?: boolean }) => boolean;
+		};
+
+		if (typeof visibility.checkVisibility === "function") {
+			return visibility.checkVisibility({ checkVisibilityCSS: true });
+		}
+
+		return candidate.getClientRects().length > 0;
+	};
+
+	const prevented = (window as TabObserverWindow).__a11yPulseLastTab?.defaultPrevented === true;
+	const followed =
+		anchor !== null &&
+		Array.from(document.querySelectorAll(tabbableSelector)).some(
+			(candidate) =>
+				candidate !== anchor &&
+				!anchor.contains(candidate) &&
+				(anchor.compareDocumentPosition(candidate) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0 &&
+				isTabbable(candidate),
+		);
+
+	return { prevented, followed };
+}
+
+/**
+ * Give the focused element (descending open shadow roots) the marker `index` unless it already has
+ * one, and return its marker.
+ */
+export function markActiveElementScript(markerAttr: string, index: number): number {
+	let el = document.activeElement;
+
+	while (el?.shadowRoot?.activeElement) {
+		el = el.shadowRoot.activeElement;
+	}
+
+	const existing = el?.getAttribute(markerAttr);
+
+	if (existing !== null && existing !== undefined) {
+		return Number(existing);
+	}
+
+	el?.setAttribute(markerAttr, String(index));
+
+	return index;
+}
+
 export type ActiveElementBase = {
 	index: number | null;
 	isBody: boolean;

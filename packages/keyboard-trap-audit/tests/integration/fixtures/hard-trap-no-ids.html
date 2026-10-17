@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>hard-trap-no-ids</title></head><body>
+<nav><a href="#a">Home</a><a href="#b">Shop</a></nav>
+<div class="toolbar">
+	<button class="tool">Bold</button>
+	<button class="tool">Italic</button>
+	<button class="tool">Link</button>
+</div>
+<footer><a href="#c">Terms</a></footer>
+<script>
+	const tools = [...document.querySelectorAll(".tool")];
+	document.querySelector(".toolbar").addEventListener("keydown", (event) => {
+		if (event.key !== "Tab") return;
+		event.preventDefault();
+		const index = tools.indexOf(document.activeElement);
+		tools[(index + 1) % tools.length].focus();
+	});
+</script>
+</body></html>

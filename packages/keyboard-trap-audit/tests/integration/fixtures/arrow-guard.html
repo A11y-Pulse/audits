@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>arrow-guard</title></head><body>
+<a id="before" href="#a">Before</a>
+<div id="widget">
+	<div id="splitter" role="separator" tabindex="0" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100" aria-label="Resize panels" data-item></div>
+	<button data-item>Reset</button>
+</div>
+<a id="after" href="#b">After</a>
+<script>
+	const items = [...document.querySelectorAll("#widget [data-item]")];
+	document.getElementById("widget").addEventListener("keydown", (event) => {
+		if (event.key !== "Tab") return;
+		event.preventDefault();
+		const index = items.indexOf(document.activeElement);
+		items[(index + (event.shiftKey ? -1 : 1) + items.length) % items.length].focus();
+	});
+	const splitter = document.getElementById("splitter");
+	splitter.addEventListener("keydown", (event) => {
+		if (!event.key.startsWith("Arrow")) return;
+		splitter.setAttribute("aria-valuenow", String(Number(splitter.getAttribute("aria-valuenow")) + 1));
+	});
+</script>
+</body></html>

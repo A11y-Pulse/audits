@@ -1,5 +1,5 @@
 import type { CDPSession, JSHandle, Page } from "playwright-core";
-import type { BrowserAdaptor, ElementRef, Rect } from "../adaptor";
+import type { BrowserAdaptor, ElementRef, KeyName, Rect } from "../adaptor";
 import { nextPaintScript } from "../paint";
 
 // The CDP session for each page, shared by focus emulation and clipped screenshots. A fresh adaptor
@@ -114,6 +114,10 @@ export class PlaywrightAdaptor implements BrowserAdaptor {
 
 	async pressEnter(): Promise<void> {
 		await this.page.keyboard.press("Enter");
+	}
+
+	async pressKey(key: KeyName): Promise<void> {
+		await this.page.keyboard.press(key);
 	}
 
 	async screenshotClip(clip: Rect, scale = 1): Promise<Uint8Array> {

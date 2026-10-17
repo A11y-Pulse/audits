@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>search-escape</title></head><body>
+<a id="before" href="#a">Before</a>
+<div id="widget">
+	<input id="search" type="search" value="shoes" aria-label="Search" data-item>
+	<button data-item>Go</button>
+</div>
+<a id="after" href="#b">After</a>
+<script>
+	const items = [...document.querySelectorAll("#widget [data-item]")];
+	document.getElementById("widget").addEventListener("keydown", (event) => {
+		if (event.key !== "Tab") return;
+		event.preventDefault();
+		const index = items.indexOf(document.activeElement);
+		items[(index + (event.shiftKey ? -1 : 1) + items.length) % items.length].focus();
+	});
+</script>
+</body></html>

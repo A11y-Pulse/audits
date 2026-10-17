@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>dom-churn</title></head><body>
+<a id="before" href="#a">Before</a>
+<div id="carousel"></div>
+<a id="after" href="#b">After</a>
+<script>
+	// Re-creates its slides on a timer, so every visit lands on an element the page has never shown before.
+	const carousel = document.getElementById("carousel");
+	let slide = 0;
+	const render = () => {
+		slide++;
+		carousel.innerHTML = `<a href="#s${slide}">Slide ${slide}</a><a href="#t${slide}">Next ${slide}</a>`;
+		carousel.firstElementChild.focus();
+	};
+	render();
+	carousel.addEventListener("keydown", (event) => {
+		if (event.key !== "Tab") return;
+		event.preventDefault();
+		render();
+	});
+</script>
+</body></html>

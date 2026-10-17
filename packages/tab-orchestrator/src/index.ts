@@ -20,11 +20,17 @@ export {
 	elementStylesScript,
 	focusScript,
 	hasFocusScript,
+	heldFocusScript,
+	installTabObserverScript,
 	isCenterObscuredScript,
+	markActiveElementScript,
 	needsCentringScript,
 	pageDimensionsScript,
 	probeActiveElementScript,
+	removeTabObserverScript,
 	scrollToCenterScript,
+	TABBABLE_SELECTOR,
+	tabPreventedScript,
 } from "./browser-scripts";
 export { FOCUS_STYLE_PROPERTIES } from "./focus-style";
 export type { TabSessionOptions } from "./orchestrator";
@@ -35,6 +41,7 @@ export type {
 	ContextChangeDrain,
 	ContextChangeSignals,
 	ObscuredMeasurement,
+	SessionEndDetail,
 	SessionEndReason,
 	StyleSnapshot,
 	TabConsumer,

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>roving-carousel</title></head><body>
+<a id="before" href="#a">Before</a>
+<div id="slides" role="group" aria-label="Slides">
+	<button id="s1" tabindex="0">Slide 1</button>
+	<button id="s2" tabindex="-1">Slide 2</button>
+	<button id="s3" tabindex="-1">Slide 3</button>
+</div>
+<a id="after" href="#b">After</a>
+<script>
+	const slides = [...document.querySelectorAll("#slides button")];
+	document.getElementById("slides").addEventListener("keydown", (event) => {
+		if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+		const index = slides.indexOf(document.activeElement);
+		const next = slides[(index + (event.key === "ArrowRight" ? 1 : -1) + slides.length) % slides.length];
+		for (const slide of slides) slide.tabIndex = slide === next ? 0 : -1;
+		next.focus();
+	});
+</script>
+</body></html>

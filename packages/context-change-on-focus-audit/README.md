@@ -136,7 +136,7 @@ type ContextChangeOnFocusResult = {
      * Why the tab session ended, or `null` when this consumer disconnected
      * itself (element limit, failed-element limit, or timeout).
      */
-    sessionEnd: "completed" | "lostFocus" | "navigation" | "failed" | null;
+    sessionEnd: "completed" | "lostFocus" | "navigation" | "failed" | "stuck" | null;
   };
 };
 ```
@@ -169,6 +169,7 @@ Use [`@a11y-pulse/browser-adaptor`'s `src/adaptors/puppeteer.ts`](../browser-ada
 
 - **Tab order only.** The audit tabs through elements in native tab order. It does not yet exercise arrow-key composite widgets (menus, comboboxes, toolbars, etc.) where focus moves via `aria-activedescendant` or roving `tabindex` instead of native Tab.
 - **Navigation ends the session.** Once a full navigation is detected, the whole shared tab session ends (there is no more original page to tab through), so this audit (and any others sharing the same orchestrator) stops after that stop.
+- **URL changes inside iframes and native controls are missed.** A soft URL change made while focus is inside an iframe, or moving between the parts of a media player or date input, is not reported.
 - **Best-effort interception.** `window.open` and form submission are intercepted so the audit does not actually leave the page or open real popups, but unusual navigation mechanisms (e.g. a service worker or extension-driven redirect) may not be caught.
 
 ## Known false positives

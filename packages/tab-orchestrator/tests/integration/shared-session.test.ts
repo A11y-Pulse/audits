@@ -41,6 +41,7 @@ describeEachEngine<BrowserAdaptor>(
 				disposeRef: inner.disposeRef.bind(inner),
 				pressTab: inner.pressTab.bind(inner),
 				pressEnter: inner.pressEnter.bind(inner),
+				pressKey: inner.pressKey.bind(inner),
 				screenshotClip: async (clip, scale) => {
 					clips++;
 

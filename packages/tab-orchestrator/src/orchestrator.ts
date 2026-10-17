@@ -12,11 +12,16 @@ import {
 	type DrainContextObserverResult,
 	drainContextObserverScript,
 	hasFocusScript,
+	heldFocusScript,
 	installContextObserverScript,
+	installTabObserverScript,
 	locationHrefScript,
+	markActiveElementScript,
 	measureObscuringScript,
 	obscurerHandleScript,
 	probeActiveElementScript,
+	removeTabObserverScript,
+	TABBABLE_SELECTOR,
 } from "./browser-scripts";
 import { captureScreenshot } from "./capture-screenshot";
 import { FOCUS_STYLE_PROPERTIES } from "./focus-style";
@@ -69,6 +74,13 @@ export const DEFAULT_MARKER_LIMIT = 1024;
 export const MARKER_ATTR = "data-a11y-focus-idx";
 export const OBSCURER_ATTR = "data-a11y-obscurer";
 export const OBSCURING_RECHECK_DELAY_MS = 250;
+
+// Consecutive Tab presses one element may absorb before it counts as stuck.
+const MAX_INTERNAL_STOPS = 10;
+
+// Consecutive Tab presses focus may spend inside iframes, whose own elements the loop cannot tell
+// apart, before it counts as stuck there.
+const MAX_IFRAME_STOPS = 256;
 
 export type TabSessionOptions = {
 	screenshotSettleDelay?: number;
@@ -191,9 +203,9 @@ export function createTabOrchestrator(
 				},
 			});
 
-			const end = (reason: SessionEndReason): void => {
+			const end = (reason: SessionEndReason, revisitedIndex: number | null = null): void => {
 				for (const consumer of attached) {
-					consumer.onSessionEnd?.(reason);
+					consumer.onSessionEnd?.(reason, { revisitedIndex });
 				}
 
 				attached.clear();
@@ -283,6 +295,7 @@ export function createTabOrchestrator(
 					MARKER_ATTR,
 					markerLimit,
 				);
+				await adaptor.evaluate(installTabObserverScript);
 				const interned = new Map<number, StyleSnapshot>();
 
 				for (const entry of payload.entries) {
@@ -304,6 +317,12 @@ export function createTabOrchestrator(
 
 				const visited = new Set<number>();
 				let tabIndex = 0;
+				// Elements the baseline did not mark (media players, summaries, content added later) are
+				// marked when first focused, numbered from the limit no baseline index can reach.
+				let nextMarker = markerLimit;
+				let previousIndex: number | null = null;
+				let internalStops = 0;
+				let iframeStops = 0;
 
 				while (attached.size > 0) {
 					pairByStop.current = null;
@@ -482,17 +501,53 @@ export function createTabOrchestrator(
 					}
 
 					if (base.isIframe) {
+						previousIndex = null;
+
+						if (++iframeStops > MAX_IFRAME_STOPS) {
+							end("stuck");
+							break;
+						}
+
 						continue;
 					}
 
-					if (base.index !== null) {
-						if (visited.has(base.index)) {
+					iframeStops = 0;
+
+					if (base.index === null) {
+						base.index = await adaptor.evaluate(markActiveElementScript, MARKER_ATTR, nextMarker);
+						nextMarker = Math.max(nextMarker, base.index + 1);
+					}
+
+					if (base.index === previousIndex) {
+						const held = await adaptor.evaluate(heldFocusScript, TABBABLE_SELECTOR);
+
+						// Focus going nowhere with nothing after it is the end of the tab order in
+						// browsers that keep focus on the last element rather than leaving the page.
+						if (!held.prevented && !held.followed) {
 							end("completed");
 							break;
 						}
 
-						visited.add(base.index);
+						// The page holding on to focus is a cycle of one. Otherwise focus is moving between
+						// a control's own parts (media player buttons, the fields of a date input), unless
+						// it never comes out.
+						if (held.prevented || ++internalStops > MAX_INTERNAL_STOPS) {
+							end("completed", base.index);
+							break;
+						}
+
+						continue;
 					}
+
+					previousIndex = base.index;
+					internalStops = 0;
+
+					if (visited.has(base.index)) {
+						end("completed", base.index);
+						break;
+					}
+
+					visited.add(base.index);
 
 					const ref = await adaptor.evaluateHandle(activeElementHandleScript);
 					activeHandle = ref;
@@ -639,11 +694,15 @@ export function createTabOrchestrator(
 			} catch (error) {
 				failure = error;
 			} finally {
+				// Each teardown step is isolated so one throwing cannot skip the other or replace the
+				// loop error.
 				try {
 					await adaptor.evaluate(clearMarkersScript, MARKER_ATTR);
-				} catch {
-					// Isolate teardown so a marker-clear throw cannot replace the loop error.
-				}
+				} catch {}
+
+				try {
+					await adaptor.evaluate(removeTabObserverScript);
+				} catch {}
 			}
 
 			if (failure !== undefined) {

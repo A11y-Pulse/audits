@@ -116,6 +116,7 @@ The return value is in the shape of [axe-core's results object](https://github.c
 | Focus appearance (WCAG 2.4.7) | `focus-appearance` |
 | Focus not obscured (WCAG 2.4.11) | `focus-not-obscured` |
 | Context change on focus (WCAG 3.2.1) | `context-change-on-focus` |
+| Keyboard trap (WCAG 2.1.2) | `keyboard-trap` |
 | Skip link activation (WCAG 2.4.1) | `skip-link-activation` |
 | Reflow (WCAG 1.4.10) | `reflow` |
 | Text spacing (WCAG 1.4.12) | `text-spacing` |
@@ -127,6 +128,7 @@ Each audit documents the cases where it reports a problem that is not one, and w
 - [Focus appearance](../focus-appearance-audit#known-false-positives)
 - [Focus not obscured](../focus-not-obscured-audit#known-false-positives)
 - [Context change on focus](../context-change-on-focus-audit#known-false-positives)
+- [Keyboard trap](../keyboard-trap-audit#known-false-positives)
 - [Skip link activation](../skip-link-audit#known-false-positives)
 - [Reflow](../reflow-audit#known-false-positives)
 - [Text spacing](../text-spacing-audit#known-false-positives)

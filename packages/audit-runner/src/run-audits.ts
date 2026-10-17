@@ -11,6 +11,7 @@ import {
 	createFocusNotObscuredAudit,
 	type FocusNotObscuredOptions,
 } from "@a11y-pulse/focus-not-obscured-audit";
+import { createKeyboardTrapAudit, type KeyboardTrapOptions } from "@a11y-pulse/keyboard-trap-audit";
 import {
 	type ReflowAuditAdaptor,
 	type ReflowOptions,
@@ -34,6 +35,7 @@ import { type AuditOutput, mergeOutputs } from "./to-axe/audit-output";
 import { contextChangeOnFocusToAxe } from "./to-axe/context-change-on-focus";
 import { focusAppearanceToAxe } from "./to-axe/focus-appearance";
 import { focusNotObscuredToAxe } from "./to-axe/focus-not-obscured";
+import { keyboardTrapToAxe } from "./to-axe/keyboard-trap";
 import { reflowToAxe } from "./to-axe/reflow";
 import { skipLinkToAxe } from "./to-axe/skip-link";
 import { textSpacingToAxe } from "./to-axe/text-spacing";
@@ -56,6 +58,7 @@ export type AuditRunnerOptions = {
 	focusAppearance?: FocusAppearanceOptions;
 	focusNotObscured?: FocusNotObscuredOptions;
 	contextChangeOnFocus?: ContextChangeOnFocusOptions;
+	keyboardTrap?: KeyboardTrapOptions;
 	skipLink?: SkipLinkOptions;
 	textSpacing?: TextSpacingOptions;
 	reflow?: ReflowOptions;
@@ -78,37 +81,49 @@ function widestSessionOptions(options: AuditRunnerOptions): TabSessionOptions {
 			appearanceElementLimit,
 			options.focusNotObscured?.elementLimit ?? DEFAULT_ELEMENT_LIMIT,
 			options.contextChangeOnFocus?.elementLimit ?? DEFAULT_ELEMENT_LIMIT,
+			options.keyboardTrap?.elementLimit ?? DEFAULT_ELEMENT_LIMIT,
 		),
 		baselineElementLimit: appearance.baselineElementLimit ?? appearanceElementLimit * 2,
 		screenshotSettleDelay: Math.max(
 			appearance.screenshotSettleDelay ?? DEFAULT_SCREENSHOT_SETTLE_DELAY,
 			options.focusNotObscured?.screenshotSettleDelay ?? DEFAULT_SCREENSHOT_SETTLE_DELAY,
 			options.contextChangeOnFocus?.screenshotSettleDelay ?? DEFAULT_SCREENSHOT_SETTLE_DELAY,
+			options.keyboardTrap?.screenshotSettleDelay ?? DEFAULT_SCREENSHOT_SETTLE_DELAY,
 		),
 		screenshotClipBuffer: appearance.screenshotClipBuffer,
 	};
 }
 
+type TabAuditOutputs = {
+	outputs: AuditOutput[];
+	verifyKeyboardTrap: () => Promise<AuditOutput>;
+};
+
 async function runTabAuditsInSharedSession(
-	adaptor: BrowserAdaptor,
+	adaptors: AuditAdaptors,
 	options: AuditRunnerOptions,
-): Promise<AuditOutput[]> {
+): Promise<TabAuditOutputs> {
 	const focusAppearance = createFocusAppearanceAudit(options.focusAppearance);
 	const focusNotObscured = createFocusNotObscuredAudit(options.focusNotObscured);
 	const contextChangeOnFocus = createContextChangeOnFocusAudit(options.contextChangeOnFocus);
+	const keyboardTrap = createKeyboardTrapAudit(options.keyboardTrap);
 
-	const orchestrator = createTabOrchestrator(adaptor, widestSessionOptions(options));
+	const orchestrator = createTabOrchestrator(adaptors.browser, widestSessionOptions(options));
 	orchestrator.attach(focusAppearance);
 	orchestrator.attach(focusNotObscured);
 	orchestrator.attach(contextChangeOnFocus);
+	orchestrator.attach(keyboardTrap);
 
 	await orchestrator.run();
 
-	return [
-		focusAppearanceToAxe(focusAppearance.result),
-		focusNotObscuredToAxe(focusNotObscured.result),
-		contextChangeOnFocusToAxe(contextChangeOnFocus.result),
-	];
+	return {
+		outputs: [
+			focusAppearanceToAxe(focusAppearance.result),
+			focusNotObscuredToAxe(focusNotObscured.result),
+			contextChangeOnFocusToAxe(contextChangeOnFocus.result),
+		],
+		verifyKeyboardTrap: async () => keyboardTrapToAxe(await keyboardTrap.verify(adaptors.browser)),
+	};
 }
 
 function blurAndScrollToTopScript(): void {
@@ -131,7 +146,10 @@ export async function runAllAudits(
 	const axeResults = await runAxeCore(browser, options.axe);
 
 	onProgress("Tabbing through focusable elements");
-	const tabAudits = await runTabAuditsInSharedSession(browser, options);
+	const { outputs: tabAudits, verifyKeyboardTrap } = await runTabAuditsInSharedSession(
+		adaptors,
+		options,
+	);
 
 	onProgress("Running skip link audit");
 	await browser.evaluate(blurAndScrollToTopScript);
@@ -144,9 +162,15 @@ export async function runAllAudits(
 	onProgress("Running reflow audit");
 	const reflow = await runReflowAudit(adaptors.reflow, options.reflow);
 
+	// The escape attempts can dismiss an overlay or load another document, so every audit that
+	// measures the page as loaded runs before them.
+	onProgress("Trying keyboard exits from a focus cycle");
+	const keyboardTrap = await verifyKeyboardTrap();
+
 	const merged = mergeOutputs([
 		axeResults,
 		...tabAudits,
+		keyboardTrap,
 		skipLinkToAxe(skipLink),
 		textSpacingToAxe(textSpacing),
 		reflowToAxe(reflow),

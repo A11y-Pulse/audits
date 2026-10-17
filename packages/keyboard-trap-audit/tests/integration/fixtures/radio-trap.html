@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>radio-trap</title></head><body>
+<a id="before" href="#a">Before</a>
+<fieldset id="sizes">
+	<legend>Size</legend>
+	<label><input id="small" type="radio" name="size" value="s" checked> Small</label>
+	<label><input id="large" type="radio" name="size" value="l"> Large</label>
+	<button id="apply">Apply</button>
+</fieldset>
+<a id="after" href="#b">After</a>
+<script>
+	const stops = [document.querySelector("#sizes input:checked") ?? document.getElementById("small"), document.getElementById("apply")];
+	document.getElementById("sizes").addEventListener("keydown", (event) => {
+		if (event.key !== "Tab") return;
+		event.preventDefault();
+		const current = document.activeElement.type === "radio" ? 0 : 1;
+		(current === 0 ? document.getElementById("apply") : document.querySelector("#sizes input:checked")).focus();
+	});
+</script>
+</body></html>

@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>focusin-trap-both-ways</title></head><body>
+<a id="before" href="#b">Before the chat</a>
+<div id="chat" role="region" aria-label="Chat">
+	<input id="message" aria-label="Message">
+	<button id="send">Send</button>
+</div>
+<a id="after" href="#a">After the chat</a>
+<script>
+	// Pulls focus back whenever it lands outside, the way many focus-lock libraries work, and has
+	// no Escape handling.
+	const chat = document.getElementById("chat");
+	document.addEventListener("focusin", (event) => {
+		if (!chat.contains(event.target)) document.getElementById("message").focus();
+	});
+</script>
+</body></html>
