@@ -1,6 +1,6 @@
 {
 	"name": "@a11y-pulse/keyboard-trap-audit",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "WCAG 2.1.2 No Keyboard Trap audit that tabs through a page, detects focus cycling within part of it, and tries the standard keyboard exits before reporting a trap.",
 	"type": "module",
 	"license": "SEE LICENSE IN LICENSE.md",

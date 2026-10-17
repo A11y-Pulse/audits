@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.0
+
+### Minor Changes
+
+- [#86](https://github.com/A11y-Pulse/audits/pull/86) [`663f71f`](https://github.com/A11y-Pulse/audits/commit/663f71faaf33f1a872e7f3e1b06c4691dbcb232e) Thanks [@wildlyinaccurate](https://github.com/wildlyinaccurate)! - `BrowserAdaptor` gains `pressKey(key)`, which presses Tab, Shift+Tab, Enter, Escape or an arrow key, so audits that press keys other than Tab and Enter share one primitive instead of extending the adaptor themselves. Both bundled adaptors implement it; a custom adaptor must add it.
+
 ## 0.5.0
 
 ### Minor Changes
