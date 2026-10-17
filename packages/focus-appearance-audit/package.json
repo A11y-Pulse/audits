@@ -54,7 +54,7 @@
 	"dependencies": {
 		"@a11y-pulse/browser-adaptor": "*",
 		"@a11y-pulse/tab-orchestrator": "*",
-		"pixelmatch": "^7.2.0",
+		"pixelmatch": "^8.0.0",
 		"pngjs": "^7.0.0"
 	},
 	"devDependencies": {
