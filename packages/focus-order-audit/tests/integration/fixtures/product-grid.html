@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>product-grid</title>
+<style>
+	body { margin: 0; font: 16px/1.5 sans-serif; }
+	.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px 400px; padding: 16px; }
+	.card { height: 360px; border: 1px solid #ccc; }
+	.card a { display: block; padding: 8px; }
+	#help { position: absolute; top: 8px; right: 8px; }
+</style></head><body>
+<h1>Tents</h1>
+<div class="grid">
+	<div class="card"><a href="#1">Ridgeline 2</a></div>
+	<div class="card"><a href="#2">Summit 3</a></div>
+	<div class="card"><a href="#3">Meadow 4</a></div>
+	<div class="card"><a href="#4">Alpine 1</a></div>
+	<div class="card"><a href="#5">Basecamp 6</a></div>
+	<div class="card"><a href="#6">Ridgeline 3</a></div>
+	<div class="card"><a href="#7">Summit 2</a></div>
+	<div class="card"><a href="#8">Meadow 2</a></div>
+</div>
+<!-- Last in the source but drawn at the top of the page: one long jump back up. -->
+<a id="help" href="#help">Help</a>
+</body></html>

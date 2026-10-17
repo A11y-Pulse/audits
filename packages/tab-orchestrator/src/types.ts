@@ -14,6 +14,13 @@ export type ActiveElementInfo = {
 	html: string;
 	styles: StyleSnapshot;
 	rect: Rect;
+	/**
+	 * The element sits on a fixed or sticky ancestor (or is one), so its page position depends on
+	 * scrolling rather than on where it is in the page.
+	 */
+	pinned?: boolean;
+	/** The element is inside an open dialog, where focus management may legitimately leave the page order. */
+	inDialog?: boolean;
 };
 
 export type Capability =

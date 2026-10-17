@@ -59,6 +59,7 @@
 		"@a11y-pulse/context-change-on-focus-audit": "*",
 		"@a11y-pulse/focus-appearance-audit": "*",
 		"@a11y-pulse/focus-not-obscured-audit": "*",
+		"@a11y-pulse/focus-order-audit": "*",
 		"@a11y-pulse/keyboard-trap-audit": "*",
 		"@a11y-pulse/reflow-audit": "*",
 		"@a11y-pulse/skip-link-audit": "*",

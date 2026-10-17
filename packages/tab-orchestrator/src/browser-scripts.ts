@@ -331,6 +331,13 @@ export type ActiveElementBase = {
 	html: string;
 	styles: StyleSnapshot;
 	rect: Rect;
+	/**
+	 * The element sits on a fixed or sticky ancestor (or is one), so its page position depends on
+	 * scrolling rather than on where it is in the page.
+	 */
+	pinned?: boolean;
+	/** The element is inside an open dialog, where focus management may legitimately leave the page order. */
+	inDialog?: boolean;
 };
 
 /**
@@ -391,6 +398,15 @@ export function probeActiveElementScript(props: string[], markerAttr: string): A
 	const idxAttr = el.getAttribute(markerAttr);
 	const rect = el.getBoundingClientRect();
 
+	// Walks out through shadow roots, so content inside a fixed host (a chat launcher) counts too.
+	let pinned = false;
+
+	for (let node: Element | null = el; node && !pinned; ) {
+		const { position } = getComputedStyle(node);
+		pinned = position === "fixed" || position === "sticky";
+		node = node.parentElement ?? (node.getRootNode() as ShadowRoot).host ?? null;
+	}
+
 	// Shallow clone so only the opening tag is serialised, not the whole subtree; drop the internal
 	// marker attribute so it never leaks into the snippet.
 	const openingTag = el.cloneNode(false) as Element;
@@ -412,6 +428,8 @@ export function probeActiveElementScript(props: string[], markerAttr: string): A
 			width: rect.width,
 			height: rect.height,
 		},
+		pinned,
+		inDialog: el.closest("dialog[open], [role='dialog'], [role='alertdialog']") !== null,
 	};
 }
 

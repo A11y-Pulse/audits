@@ -11,6 +11,7 @@ import {
 	createFocusNotObscuredAudit,
 	type FocusNotObscuredOptions,
 } from "@a11y-pulse/focus-not-obscured-audit";
+import { createFocusOrderAudit, type FocusOrderOptions } from "@a11y-pulse/focus-order-audit";
 import { createKeyboardTrapAudit, type KeyboardTrapOptions } from "@a11y-pulse/keyboard-trap-audit";
 import {
 	type ReflowAuditAdaptor,
@@ -35,6 +36,7 @@ import { type AuditOutput, mergeOutputs } from "./to-axe/audit-output";
 import { contextChangeOnFocusToAxe } from "./to-axe/context-change-on-focus";
 import { focusAppearanceToAxe } from "./to-axe/focus-appearance";
 import { focusNotObscuredToAxe } from "./to-axe/focus-not-obscured";
+import { focusOrderToAxe } from "./to-axe/focus-order";
 import { keyboardTrapToAxe } from "./to-axe/keyboard-trap";
 import { reflowToAxe } from "./to-axe/reflow";
 import { skipLinkToAxe } from "./to-axe/skip-link";
@@ -58,6 +60,7 @@ export type AuditRunnerOptions = {
 	focusAppearance?: FocusAppearanceOptions;
 	focusNotObscured?: FocusNotObscuredOptions;
 	contextChangeOnFocus?: ContextChangeOnFocusOptions;
+	focusOrder?: FocusOrderOptions;
 	keyboardTrap?: KeyboardTrapOptions;
 	skipLink?: SkipLinkOptions;
 	textSpacing?: TextSpacingOptions;
@@ -82,6 +85,7 @@ function widestSessionOptions(options: AuditRunnerOptions): TabSessionOptions {
 			options.focusNotObscured?.elementLimit ?? DEFAULT_ELEMENT_LIMIT,
 			options.contextChangeOnFocus?.elementLimit ?? DEFAULT_ELEMENT_LIMIT,
 			options.keyboardTrap?.elementLimit ?? DEFAULT_ELEMENT_LIMIT,
+			options.focusOrder?.elementLimit ?? DEFAULT_ELEMENT_LIMIT,
 		),
 		baselineElementLimit: appearance.baselineElementLimit ?? appearanceElementLimit * 2,
 		screenshotSettleDelay: Math.max(
@@ -89,6 +93,7 @@ function widestSessionOptions(options: AuditRunnerOptions): TabSessionOptions {
 			options.focusNotObscured?.screenshotSettleDelay ?? DEFAULT_SCREENSHOT_SETTLE_DELAY,
 			options.contextChangeOnFocus?.screenshotSettleDelay ?? DEFAULT_SCREENSHOT_SETTLE_DELAY,
 			options.keyboardTrap?.screenshotSettleDelay ?? DEFAULT_SCREENSHOT_SETTLE_DELAY,
+			options.focusOrder?.screenshotSettleDelay ?? DEFAULT_SCREENSHOT_SETTLE_DELAY,
 		),
 		screenshotClipBuffer: appearance.screenshotClipBuffer,
 	};
@@ -107,20 +112,26 @@ async function runTabAuditsInSharedSession(
 	const focusNotObscured = createFocusNotObscuredAudit(options.focusNotObscured);
 	const contextChangeOnFocus = createContextChangeOnFocusAudit(options.contextChangeOnFocus);
 	const keyboardTrap = createKeyboardTrapAudit(options.keyboardTrap);
+	const focusOrder = createFocusOrderAudit(options.focusOrder);
 
 	const orchestrator = createTabOrchestrator(adaptors.browser, widestSessionOptions(options));
 	orchestrator.attach(focusAppearance);
 	orchestrator.attach(focusNotObscured);
 	orchestrator.attach(contextChangeOnFocus);
 	orchestrator.attach(keyboardTrap);
+	orchestrator.attach(focusOrder);
 
+	const startHref = await adaptors.browser.evaluate(() => location.href);
 	await orchestrator.run();
+
+	const focusOrderResult = await focusOrder.analyse(adaptors.browser, startHref);
 
 	return {
 		outputs: [
 			focusAppearanceToAxe(focusAppearance.result),
 			focusNotObscuredToAxe(focusNotObscured.result),
 			contextChangeOnFocusToAxe(contextChangeOnFocus.result),
+			focusOrderToAxe(focusOrderResult),
 		],
 		verifyKeyboardTrap: async () => keyboardTrapToAxe(await keyboardTrap.verify(adaptors.browser)),
 	};
