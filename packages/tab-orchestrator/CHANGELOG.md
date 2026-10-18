@@ -1,5 +1,11 @@
 # @a11y-pulse/tab-orchestrator
 
+## 0.8.0
+
+### Minor Changes
+
+- [#88](https://github.com/A11y-Pulse/audits/pull/88) [`1460dca`](https://github.com/A11y-Pulse/audits/commit/1460dca8c6328b292606a8b3925737708cdef7d9) Thanks [@wildlyinaccurate](https://github.com/wildlyinaccurate)! - `run()` now resolves to `TabSessionStats`: the tab stops delivered, unfocused pairs and screenshots captured, time spent capturing them, total duration, and how the session ended. Use it to monitor what the shared tab session costs.
+
 ## 0.7.0
 
 ### Minor Changes
