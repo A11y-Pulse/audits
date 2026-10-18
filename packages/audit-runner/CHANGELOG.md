@@ -1,5 +1,17 @@
 # @a11y-pulse/audit-runner
 
+## 0.7.0
+
+### Minor Changes
+
+- [#90](https://github.com/A11y-Pulse/audits/pull/90) [`37f1354`](https://github.com/A11y-Pulse/audits/commit/37f135426322697d3bb11b7e52147a0f9d6b7bfc) Thanks [@wildlyinaccurate](https://github.com/wildlyinaccurate)! - Flag focus indicators that rely on a change of text colour alone. When the text colour is the only painted change on focus, `@a11y-pulse/focus-appearance-audit` adds a `colorOnly` entry with both colours and the contrast ratio between them. The audit runner reports these as `focus-color-only` for WCAG 1.4.1 Use of Color, tagged `experimental`: under 3:1 in `violations`, unmeasurable colours in `incomplete`.
+
+### Patch Changes
+
+- Updated dependencies [[`37f1354`](https://github.com/A11y-Pulse/audits/commit/37f135426322697d3bb11b7e52147a0f9d6b7bfc), [`37f1354`](https://github.com/A11y-Pulse/audits/commit/37f135426322697d3bb11b7e52147a0f9d6b7bfc)]:
+  - @a11y-pulse/browser-adaptor@0.7.0
+  - @a11y-pulse/focus-appearance-audit@0.5.0
+
 ## 0.6.0
 
 ### Minor Changes

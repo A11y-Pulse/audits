@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.0
+
+### Minor Changes
+
+- [#90](https://github.com/A11y-Pulse/audits/pull/90) [`37f1354`](https://github.com/A11y-Pulse/audits/commit/37f135426322697d3bb11b7e52147a0f9d6b7bfc) Thanks [@wildlyinaccurate](https://github.com/wildlyinaccurate)! - Add `parseOpaqueRgb`, `relativeLuminance` and `contrastRatio` for measuring WCAG contrast between computed colours.
+
 ## 0.6.0
 
 ### Minor Changes
