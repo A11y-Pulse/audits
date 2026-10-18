@@ -28,21 +28,21 @@ A collection of audits that are designed to complement static analysis tools lik
 
 | Success criterion | A11y-Pulse/audits | axe-core | pa11y (HTML_CodeSniffer) |
 | --- | --- | --- | --- |
-| [2.4.7 Focus Visible](https://www.w3.org/WAI/WCAG22/Understanding/focus-visible) (AA) | ✅ | ❌ | 🟡<sup>1</sup> |
+| [2.4.7 Focus Visible](https://www.w3.org/WAI/WCAG22/Understanding/focus-visible) (AA) | ✅ | ❌ | ➖<sup>1</sup> |
 | [2.4.11 Focus Not Obscured](https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum) (AA) | ✅ | ❌ | ❌ |
-| [3.2.1 On Focus](https://www.w3.org/WAI/WCAG22/Understanding/on-focus) (A) | ✅ | ❌ | 🟡<sup>1</sup> |
-| [2.1.2 No Keyboard Trap](https://www.w3.org/WAI/WCAG22/Understanding/no-keyboard-trap) (A) | 🟡<sup>4</sup> | ❌ | 🟡<sup>1</sup> |
-| [1.4.10 Reflow](https://www.w3.org/WAI/WCAG22/Understanding/reflow) (AA) | ✅ | ❌ | 🟡<sup>1</sup> |
-| [1.4.12 Text Spacing](https://www.w3.org/WAI/WCAG22/Understanding/text-spacing) (AA) | ✅ | 🟡<sup>2</sup> | 🟡<sup>1</sup> |
-| [2.4.1 Bypass Blocks](https://www.w3.org/WAI/WCAG22/Understanding/bypass-blocks) (A) | ✅ | 🟡<sup>3</sup> | 🟡<sup>1</sup> |
-| [1.4.1 Use of Color](https://www.w3.org/WAI/WCAG22/Understanding/use-of-color) (A) | 🟡<sup>5</sup> | 🟡<sup>6</sup> | 🟡<sup>1</sup> |
+| [3.2.1 On Focus](https://www.w3.org/WAI/WCAG22/Understanding/on-focus) (A) | ✅ | ❌ | ➖<sup>1</sup> |
+| [2.1.2 No Keyboard Trap](https://www.w3.org/WAI/WCAG22/Understanding/no-keyboard-trap) (A) | 🟡<sup>4</sup> | ❌ | ➖<sup>1</sup> |
+| [1.4.10 Reflow](https://www.w3.org/WAI/WCAG22/Understanding/reflow) (AA) | ✅ | ❌ | ➖<sup>1</sup> |
+| [1.4.12 Text Spacing](https://www.w3.org/WAI/WCAG22/Understanding/text-spacing) (AA) | ✅ | 🟡<sup>2</sup> | ➖<sup>1</sup> |
+| [2.4.1 Bypass Blocks](https://www.w3.org/WAI/WCAG22/Understanding/bypass-blocks) (A) | ✅ | 🟡<sup>3</sup> | ➖<sup>1</sup> |
+| [1.4.1 Use of Color](https://www.w3.org/WAI/WCAG22/Understanding/use-of-color) (A) | 🟡<sup>5</sup> | 🟡<sup>6</sup> | ➖<sup>1</sup> |
 
 <sup>
 1. Manual review only: emits a note asking a human to check the criterion.<br />
 2. The `avoid-inline-spacing` audit only flags inline `!important` spacing declarations.<br />
 3. The `bypass` audit only checks that a bypass mechanism exists, not that it works.<br />
-4. Detects focus confined to part of the page and tries the standard keyboard exits, but reports a trap for human review, since WCAG allows an exit users are told about.<br />
-5. Only focus indicators: flags focus shown by a change of text colour alone, between colours under 3:1 apart in lightness.<br />
+4. Detects focus confined to part of the page and tries the standard keyboard exits, but reports a trap for human review.<br />
+5. Flags focus shown by a change of text colour alone.<br />
 6. The `link-in-text-block` audit only checks that links are distinguishable from the surrounding text.<br />
 </sup>
 
