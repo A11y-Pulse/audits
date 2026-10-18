@@ -33,7 +33,7 @@ export {
 	tabPreventedScript,
 } from "./browser-scripts";
 export { FOCUS_STYLE_PROPERTIES } from "./focus-style";
-export type { TabSessionOptions } from "./orchestrator";
+export type { TabOrchestrator, TabSessionOptions } from "./orchestrator";
 export { createTabOrchestrator } from "./orchestrator";
 export type {
 	ActiveElementInfo,
@@ -46,6 +46,7 @@ export type {
 	StyleSnapshot,
 	TabConsumer,
 	TabSessionHandle,
+	TabSessionStats,
 	TabStopSnapshot,
 	UnfocusedPair,
 } from "./types";
