@@ -1,7 +1,8 @@
-import type { Rect } from "@a11y-pulse/browser-adaptor";
+import { contrastRatio, parseOpaqueRgb, type Rect } from "@a11y-pulse/browser-adaptor";
 import type { StyleSnapshot } from "@a11y-pulse/tab-orchestrator";
 import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
+import type { ColorOnlyChange } from "./result";
 
 export { bufferedClip } from "@a11y-pulse/browser-adaptor";
 export type { Rect, StyleSnapshot };
@@ -135,6 +136,72 @@ export function stylesIndicateFocus(baseline: StyleSnapshot, focused: StyleSnaps
 	}
 
 	return false;
+}
+
+// Every function value in a computed `text-decoration` is its colour.
+const DECORATION_COLOR_PATTERN = /[a-z-]+\([^)]*\)/gi;
+
+function changedRenderedProperties(
+	baseline: Record<string, string>,
+	focused: Record<string, string>,
+): string[] {
+	const base = renderedStyles(baseline);
+	const next = renderedStyles(focused);
+	const props = new Set([...Object.keys(base), ...Object.keys(next)]);
+
+	return [...props].filter((prop) => {
+		if (prop === "text-decoration") {
+			// An unstyled underline is drawn in the text colour, so it changes along with it.
+			return (
+				base[prop]?.replace(DECORATION_COLOR_PATTERN, "") !==
+				next[prop]?.replace(DECORATION_COLOR_PATTERN, "")
+			);
+		}
+
+		return base[prop] !== next[prop];
+	});
+}
+
+/**
+ * Report the element's text colour change when it is the only painted difference between the
+ * baseline and focused styles, or null otherwise.
+ */
+export function colorOnlyChange(
+	baseline: StyleSnapshot,
+	focused: StyleSnapshot,
+): ColorOnlyChange | null {
+	const elementChanges = changedRenderedProperties(baseline.element, focused.element);
+
+	if (elementChanges.length !== 1 || elementChanges[0] !== "color") {
+		return null;
+	}
+
+	for (const layer of ["before", "after"] as const) {
+		const generatesContent =
+			!isIdleComputedValue("content", baseline[layer].content ?? "none") ||
+			!isIdleComputedValue("content", focused[layer].content ?? "none");
+
+		if (!generatesContent) {
+			continue;
+		}
+
+		const layerChanges = changedRenderedProperties(baseline[layer], focused[layer]);
+
+		if (layerChanges.some((prop) => prop !== "color")) {
+			return null;
+		}
+	}
+
+	const unfocusedColor = baseline.element.color!;
+	const focusedColor = focused.element.color!;
+	const unfocusedRgb = parseOpaqueRgb(unfocusedColor);
+	const focusedRgb = parseOpaqueRgb(focusedColor);
+
+	return {
+		unfocusedColor,
+		focusedColor,
+		contrastRatio: unfocusedRgb && focusedRgb ? contrastRatio(unfocusedRgb, focusedRgb) : null,
+	};
 }
 
 /** A point identifying where the element sits within a screenshot clip. */

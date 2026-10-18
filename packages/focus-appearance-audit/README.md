@@ -4,7 +4,7 @@
 [![CI](https://github.com/A11y-Pulse/audits/actions/workflows/ci.yml/badge.svg)](https://github.com/A11y-Pulse/audits/actions/workflows/ci.yml)
 [![License: PolyForm Shield 1.0.0](https://img.shields.io/badge/license-PolyForm%20Shield%201.0.0-blue)](./LICENSE.md)
 
-An accessibility audit that aims to verify compliance with [**WCAG 2.0: 2.4.7 Focus Visible**](https://www.w3.org/WAI/WCAG20/Understanding/focus-visible). It tabs through a page's focusable elements and detects whether each one shows a visible focus indicator. It is built to be framework-agnostic and can be used in any environment that allows you to programmatically focus elements and read their computed styles, such as Puppeteer, Playwright, or Selenium.
+An accessibility audit that aims to verify compliance with [**WCAG 2.0: 2.4.7 Focus Visible**](https://www.w3.org/WAI/WCAG20/Understanding/focus-visible). It tabs through a page's focusable elements and detects whether each one shows a visible focus indicator, and flags indicators that rely on a change of text colour alone ([WCAG 2.0: 1.4.1 Use of Color](#colour-only-focus-indicators)). It is built to be framework-agnostic and can be used in any environment that allows you to programmatically focus elements and read their computed styles, such as Puppeteer, Playwright, or Selenium.
 
 This audit was developed by [A11y Pulse](https://www.a11ypulse.com/) for its accessibility monitoring service. It is released as source-available under the [PolyForm Shield License 1.0.0](#license).
 
@@ -117,6 +117,13 @@ type FocusAppearanceResult = {
     tabIndex: number;
     passed: boolean;
     detectionMethod: "style" | "pixel-diff" | null;
+    /** Present when the only painted change on focus is the text colour. */
+    colorOnly?: {
+      unfocusedColor: string;
+      focusedColor: string;
+      /** Null when either colour is translucent or not in `rgb()` notation. */
+      contrastRatio: number | null;
+    };
   }>;
   summary: {
     checked: number;
@@ -152,6 +159,16 @@ Once an element is focused, its computed styles are captured again and compared 
 
 Since focus appearance can be achieved without modifying style properties (a `filter`, an animated background), a more expensive pixel-diff fallback is used. In this stage, a clipped screenshot is taken of the element in both its focused and unfocused states. The two images are compared pixel by pixel, and if they differ beyond a certain threshold, the element passes with `detectionMethod: "pixel-diff"`.
 
+## Colour-only focus indicators
+
+When the computed-style comparison finds that the text colour is the only painted change on focus, the element passes 2.4.7 but also gets a `colorOnly` entry with both colours and the contrast ratio between them. [WCAG 1.4.1 Use of Color](https://www.w3.org/WAI/WCAG22/Understanding/use-of-color) treats colours whose relative luminance differs by at least 3:1 as distinguishable by lightness, so only a change under 3:1 relies on colour alone.
+
+- An underline drawn in the text colour changes with it and still counts as colour only. An underline, outline or any other indicator that appears on focus does not.
+- `::before` and `::after` content may change colour with the text. Any other change to it does not count as colour only.
+- `contrastRatio` is `null` when either colour is translucent (its appearance depends on the background) or authored in a colour space other than sRGB.
+
+[`@a11y-pulse/audit-runner`](../audit-runner) reports these as `focus-color-only`: under 3:1 in `violations`, `null` in `incomplete`, and 3:1 or more in `passes`.
+
 ## Accuracy
 
 This audit is a heuristic and can be wrong in both directions. See [docs/accuracy.md](./docs/accuracy.md) for the known false positives, false negatives, and intentional failures.
@@ -186,6 +203,7 @@ Cases where the audit reports a problem that is not one. Each says which bucket 
 
 - **Indicators drawn outside the element** (`violations`). The style comparison only watches the focused element, and the pixel diff only captures its box plus a small buffer, so an indicator drawn elsewhere (the highlighted option of an `aria-activedescendant` listbox, a remote "you are here" marker) is not seen.
 - **Elements that disappear when they lose focus** (`violations`, or a pass, arbitrarily). Links inside a menu that opens on focus are hidden again when the audit blurs them to take the unfocused screenshot, so that screenshot is of an empty box at the top-left of the page. The comparison is then against unrelated content and the result does not reflect the element's indicator.
+- **Colour changes paired with an indicator outside the watched properties** (`violations` under `focus-color-only`). A focus style that changes the text colour and also adds a `filter`, `transform` or similar is still treated as colour only, because only the [focus-relevant properties](../tab-orchestrator/src/focus-style.ts) are compared.
 - **Indicators that only move the element** (`violations`, by design). The pixel diff lines the two screenshots up on the element's position, so a focus style that only shifts it (a `translate` or `margin`) shows no difference and is not counted as an indicator.
 
 ## Releasing

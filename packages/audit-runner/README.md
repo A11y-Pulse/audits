@@ -114,6 +114,7 @@ The return value is in the shape of [axe-core's results object](https://github.c
 | Audit | `id` |
 | --- | --- |
 | Focus appearance (WCAG 2.4.7) | `focus-appearance` |
+| Focus shown by colour alone (WCAG 1.4.1, experimental) | `focus-color-only` |
 | Focus not obscured (WCAG 2.4.11) | `focus-not-obscured` |
 | Context change on focus (WCAG 3.2.1) | `context-change-on-focus` |
 | Keyboard trap (WCAG 2.1.2) | `keyboard-trap` |

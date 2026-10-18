@@ -35,6 +35,7 @@ import { runAxeCore } from "./axe-core";
 import { type AuditOutput, mergeOutputs } from "./to-axe/audit-output";
 import { contextChangeOnFocusToAxe } from "./to-axe/context-change-on-focus";
 import { focusAppearanceToAxe } from "./to-axe/focus-appearance";
+import { focusColorOnlyToAxe } from "./to-axe/focus-color-only";
 import { focusNotObscuredToAxe } from "./to-axe/focus-not-obscured";
 import { focusOrderToAxe } from "./to-axe/focus-order";
 import { keyboardTrapToAxe } from "./to-axe/keyboard-trap";
@@ -129,6 +130,7 @@ async function runTabAuditsInSharedSession(
 	return {
 		outputs: [
 			focusAppearanceToAxe(focusAppearance.result),
+			focusColorOnlyToAxe(focusAppearance.result),
 			focusNotObscuredToAxe(focusNotObscured.result),
 			contextChangeOnFocusToAxe(contextChangeOnFocus.result),
 			focusOrderToAxe(focusOrderResult),

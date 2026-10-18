@@ -234,6 +234,37 @@ describe("createFocusAppearanceAudit", () => {
 		expect(audit.result.summary.sessionEnd).toBe("completed");
 	});
 
+	it("records a colour-only change on an element that passes via style", async () => {
+		const unfocused = { ...EMPTY_STYLES, element: { color: "rgb(51, 51, 51)" } };
+		const focused = { ...EMPTY_STYLES, element: { color: "rgb(46, 93, 46)" } };
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			active: [info(0, { styles: focused })],
+			baseline: { styles: [unfocused], entries: [{ index: 0, styleIndex: 0, rect: RECT }] },
+		});
+
+		const audit = await runWithOrchestrator(adaptor);
+
+		expect(audit.result.elements[0]?.passed).toBe(true);
+		expect(audit.result.elements[0]?.colorOnly).toMatchObject({
+			unfocusedColor: "rgb(51, 51, 51)",
+			focusedColor: "rgb(46, 93, 46)",
+		});
+		expect(adaptor.clipCalls).toBe(0);
+	});
+
+	it("records no colour-only change when another indicator appears", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			active: [stylePassActive(0)],
+			baseline: stylePassBaseline([0]),
+		});
+
+		const audit = await runWithOrchestrator(adaptor);
+
+		expect(audit.result.elements[0]).not.toHaveProperty("colorOnly");
+	});
+
 	it("calls ensureUnfocusedPair on a style miss and passes via pixel-diff", async () => {
 		const adaptor = loopAdaptor({
 			hasFocus: [true, true],

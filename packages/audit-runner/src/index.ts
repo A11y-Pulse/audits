@@ -34,6 +34,7 @@ export {
 	FOCUS_APPEARANCE_EVIDENCE_CHECK_ID,
 	focusAppearanceToAxe,
 } from "./to-axe/focus-appearance";
+export { FOCUS_COLOR_ONLY_AUDIT_ID, focusColorOnlyToAxe } from "./to-axe/focus-color-only";
 export {
 	FOCUS_NOT_OBSCURED_AUDIT_ID,
 	FOCUS_NOT_OBSCURED_EVIDENCE_CHECK_ID,
