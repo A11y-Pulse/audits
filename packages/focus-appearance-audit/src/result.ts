@@ -31,6 +31,13 @@ export type FocusFailureEvidence = {
 	 */
 	unfocusedStyles: StyleSnapshot;
 };
+export type ColorOnlyChange = {
+	unfocusedColor: string;
+	focusedColor: string;
+	/** Null when either colour is translucent or not in `rgb()` notation, so cannot be measured. */
+	contrastRatio: number | null;
+};
+
 export type FocusElementResult = {
 	/** Selector for the focused element (see getSelector). */
 	selector: string;
@@ -49,6 +56,9 @@ export type FocusElementResult = {
 
 	/** Present only when `passed` is false. */
 	failureEvidence?: FocusFailureEvidence;
+
+	/** Present when the only painted change on focus is the text colour. */
+	colorOnly?: ColorOnlyChange;
 };
 
 export type FocusAppearanceResult = {

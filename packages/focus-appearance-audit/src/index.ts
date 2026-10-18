@@ -4,6 +4,7 @@ export { createFocusAppearanceAudit, runFocusAppearanceAudit } from "./audit";
 export type { StyleSnapshot } from "./detection";
 export { omitIdleStyleSnapshot } from "./detection";
 export type {
+	ColorOnlyChange,
 	DetectionMethod,
 	FocusAppearanceResult,
 	FocusElementResult,

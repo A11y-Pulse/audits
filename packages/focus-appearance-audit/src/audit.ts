@@ -9,8 +9,13 @@ import {
 	DEFAULT_TIMEOUT,
 	type TabConsumer,
 } from "@a11y-pulse/tab-orchestrator";
-import { alignedRegionsDiffer, omitIdleStyleSnapshot, stylesIndicateFocus } from "./detection";
-import type { FocusAppearanceResult, FocusElementResult } from "./result";
+import {
+	alignedRegionsDiffer,
+	colorOnlyChange,
+	omitIdleStyleSnapshot,
+	stylesIndicateFocus,
+} from "./detection";
+import type { ColorOnlyChange, FocusAppearanceResult, FocusElementResult } from "./result";
 
 export const DEFAULT_SCREENSHOT_CLIP_BUFFER = 10;
 export const DEFAULT_SCREENSHOT_DIFF_THRESHOLD = 4;
@@ -112,6 +117,7 @@ export function createFocusAppearanceAudit(
 			const focused = snapshot.activeElement.styles;
 			let detection: FocusElementResult["detectionMethod"] = null;
 			let failureEvidence: FocusElementResult["failureEvidence"];
+			let colorOnly: ColorOnlyChange | null = null;
 
 			if (
 				!resolved.skipStyleCheck &&
@@ -119,6 +125,7 @@ export function createFocusAppearanceAudit(
 				stylesIndicateFocus(snapshot.baselineStyles, focused)
 			) {
 				detection = "style";
+				colorOnly = colorOnlyChange(snapshot.baselineStyles, focused);
 			} else {
 				const pair = await session.ensureUnfocusedPair();
 				const differs = alignedRegionsDiffer(
@@ -154,6 +161,7 @@ export function createFocusAppearanceAudit(
 				passed: detection !== null,
 				detectionMethod: detection,
 				...(failureEvidence !== undefined ? { failureEvidence } : {}),
+				...(colorOnly !== null ? { colorOnly } : {}),
 			});
 
 			if (detection === null) {

@@ -60,4 +60,11 @@ h1, h2, h3 { line-height: 1.2; }
 #help-faint:focus-visible { outline-color: #d4edda; }
 #help-colour-only { color: #333; }
 #help-colour-only:focus-visible { outline: none; color: #2e5d2e; }
+#help-colour-lightness, #help-colour-outline { color: #333; }
+#help-colour-lightness:focus-visible { outline: none; color: #8bc34a; }
+#help-colour-outline:focus-visible { color: #2e5d2e; }
+#help-colour-underline { color: #333; text-decoration: none; }
+#help-colour-underline:focus-visible { outline: none; color: #2e5d2e; text-decoration: underline; }
+#help-colour-translucent { color: rgba(0, 0, 0, 0.87); }
+#help-colour-translucent:focus-visible { outline: none; color: rgba(46, 93, 46, 0.87); }
 #no-indicator:focus-visible { outline: none; }

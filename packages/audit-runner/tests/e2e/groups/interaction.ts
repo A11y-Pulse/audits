@@ -184,6 +184,30 @@ export const interaction: PageGroup = {
 			outcome: "violations",
 		},
 		{
+			scenario: "colour change that differs enough in lightness",
+			audit: "focus-color-only",
+			target: "#help-colour-lightness",
+			outcome: "passes",
+		},
+		{
+			scenario: "colour change alongside an outline",
+			audit: "focus-color-only",
+			target: "#help-colour-outline",
+			outcome: "clean",
+		},
+		{
+			scenario: "colour change alongside an underline that appears on focus",
+			audit: "focus-color-only",
+			target: "#help-colour-underline",
+			outcome: "clean",
+		},
+		{
+			scenario: "colour change between translucent colours",
+			audit: "focus-color-only",
+			target: "#help-colour-translucent",
+			outcome: "incomplete",
+		},
+		{
 			scenario: "search suggestions stay open over the menu after Tab",
 			audit: "popup-dismissal",
 			target: "#search-input",

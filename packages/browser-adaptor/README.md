@@ -20,7 +20,7 @@ npm install @a11y-pulse/browser-adaptor
 
 | Entry | Contents |
 | --- | --- |
-| `@a11y-pulse/browser-adaptor` | `BrowserAdaptor`, `ElementRef`, `Rect` |
+| `@a11y-pulse/browser-adaptor` | `BrowserAdaptor`, `ElementRef`, `Rect`, `bufferedClip`, `contrastRatio`, `parseOpaqueRgb`, `relativeLuminance` |
 | `@a11y-pulse/browser-adaptor/puppeteer` | `PuppeteerAdaptor` |
 | `@a11y-pulse/browser-adaptor/playwright` | `PlaywrightAdaptor` |
 | `@a11y-pulse/browser-adaptor/dom` | `getSelector`, `truncateHtml` |

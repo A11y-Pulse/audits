@@ -3,6 +3,7 @@ import { PNG } from "pngjs";
 import { describe, expect, it } from "vitest";
 import {
 	alignedRegionsDiffer,
+	colorOnlyChange,
 	omitIdleStyleSnapshot,
 	type StyleSnapshot,
 	stylesIndicateFocus,
@@ -125,6 +126,94 @@ describe("stylesIndicateFocus", () => {
 			"border-top-color": "rgb(37, 99, 235)",
 		});
 		expect(stylesIndicateFocus(baseline, focused)).toBe(true);
+	});
+});
+
+describe("colorOnlyChange", () => {
+	const GREY = "rgb(51, 51, 51)";
+	const DARK_GREEN = "rgb(46, 93, 46)";
+
+	it("reports a text colour change with the contrast between the two colours", () => {
+		const change = colorOnlyChange(snapshot({ color: GREY }), snapshot({ color: DARK_GREEN }));
+
+		expect(change).toMatchObject({ unfocusedColor: GREY, focusedColor: DARK_GREEN });
+		expect(change?.contrastRatio).toBeCloseTo(1.64, 2);
+	});
+
+	it("is null when nothing changes", () => {
+		expect(colorOnlyChange(snapshot(), snapshot())).toBeNull();
+	});
+
+	it("is null when another indicator appears with the colour change", () => {
+		expect(
+			colorOnlyChange(
+				snapshot({ color: GREY }),
+				snapshot({ color: DARK_GREEN, "outline-style": "solid" }),
+			),
+		).toBeNull();
+	});
+
+	it("treats an underline that follows the text colour as part of the text", () => {
+		const change = colorOnlyChange(
+			snapshot({ color: GREY, "text-decoration": `underline solid ${GREY}` }),
+			snapshot({ color: DARK_GREEN, "text-decoration": `underline solid ${DARK_GREEN}` }),
+		);
+
+		expect(change?.focusedColor).toBe(DARK_GREEN);
+	});
+
+	it("is null when an underline appears with the colour change", () => {
+		expect(
+			colorOnlyChange(
+				snapshot({ color: GREY, "text-decoration": `none solid ${GREY}` }),
+				snapshot({ color: DARK_GREEN, "text-decoration": `underline solid ${DARK_GREEN}` }),
+			),
+		).toBeNull();
+	});
+
+	it("allows generated pseudo content to change colour with the text", () => {
+		const baseline = snapshot({ color: GREY });
+		const focused = snapshot({ color: DARK_GREEN });
+		baseline.after = { content: '"→"', color: GREY };
+		focused.after = { content: '"→"', color: DARK_GREEN };
+
+		expect(colorOnlyChange(baseline, focused)).not.toBeNull();
+	});
+
+	it("is null when generated pseudo content paints something other than colour", () => {
+		const baseline = snapshot({ color: GREY });
+		const focused = snapshot({ color: DARK_GREEN });
+		baseline.after = { content: '""', "background-color": "rgba(0, 0, 0, 0)" };
+		focused.after = { content: '""', "background-color": DARK_GREEN };
+
+		expect(colorOnlyChange(baseline, focused)).toBeNull();
+	});
+
+	it("ignores pseudo layers that generate no content", () => {
+		const baseline = snapshot({ color: GREY });
+		const focused = snapshot({ color: DARK_GREEN });
+		baseline.before = { content: "none", "box-shadow": "none" };
+		focused.before = { content: "none", "box-shadow": "rgb(0, 0, 0) 0px 0px 4px 0px" };
+
+		expect(colorOnlyChange(baseline, focused)).not.toBeNull();
+	});
+
+	it("is null when only a pseudo-element changes colour", () => {
+		const baseline = snapshot();
+		const focused = snapshot();
+		baseline.before = { content: '"•"', color: GREY };
+		focused.before = { content: '"•"', color: DARK_GREEN };
+
+		expect(colorOnlyChange(baseline, focused)).toBeNull();
+	});
+
+	it("has no contrast ratio when either colour is translucent", () => {
+		const change = colorOnlyChange(
+			snapshot({ color: GREY }),
+			snapshot({ color: "rgba(46, 93, 46, 0.6)" }),
+		);
+
+		expect(change?.contrastRatio).toBeNull();
 	});
 });
 
