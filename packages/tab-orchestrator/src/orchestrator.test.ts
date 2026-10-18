@@ -75,6 +75,8 @@ describe("createTabOrchestrator lifecycle", () => {
 
 const EMPTY_STYLES = { element: {}, before: {}, after: {} };
 
+const CAPTURE_DELAY_MS = 20;
+
 function info(index: number, extra: Partial<ActiveElementInfo> = {}): ActiveElementInfo {
 	return {
 		index,
@@ -504,6 +506,68 @@ describe("tab loop", () => {
 		expect(b.sessionEnds).toEqual(["completed"]);
 	});
 
+	it("reports the stops delivered and how the session ended", async () => {
+		const orchestrator = createTabOrchestrator(
+			loopAdaptor({
+				hasFocus: [true, true, true],
+				active: [info(0), info(1)],
+			}),
+			{ screenshotSettleDelay: 0 },
+		);
+		orchestrator.attach(recordingConsumer());
+
+		const stats = await orchestrator.run();
+
+		expect(stats).toMatchObject({
+			tabStops: 2,
+			unfocusedPairs: 0,
+			screenshots: 0,
+			captureMs: 0,
+			endReason: "completed",
+		});
+		expect(stats.durationMs).toBeGreaterThan(0);
+	});
+
+	it("reports no end reason when every consumer disconnects itself", async () => {
+		const orchestrator = createTabOrchestrator(
+			loopAdaptor({
+				hasFocus: [true, true, true],
+				active: [info(0), info(1)],
+			}),
+			{ screenshotSettleDelay: 0 },
+		);
+		orchestrator.attach(recordingConsumer([], (_snapshot, disconnect) => disconnect()));
+
+		const stats = await orchestrator.run();
+
+		expect(stats).toMatchObject({ tabStops: 1, endReason: null });
+	});
+
+	it("times screenshot captures", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			active: [info(0)],
+		});
+		adaptor.screenshotClip = async () => {
+			await new Promise((resolve) => setTimeout(resolve, CAPTURE_DELAY_MS));
+
+			return new Uint8Array([1]);
+		};
+		const orchestrator = createTabOrchestrator(adaptor, { screenshotSettleDelay: 0 });
+		orchestrator.attach({
+			capabilities: new Set(["screenshot"]),
+			async onTabStop(_snapshot, session) {
+				await session.screenshotClip();
+			},
+		});
+
+		const stats = await orchestrator.run();
+
+		// setTimeout may fire a millisecond early.
+		expect(stats.captureMs).toBeGreaterThanOrEqual(CAPTURE_DELAY_MS - 1);
+		expect(stats.durationMs).toBeGreaterThanOrEqual(stats.captureMs);
+	});
+
 	it("does not execute unfocusedPair when nobody calls ensureUnfocusedPair", async () => {
 		const screenshots: number[] = [];
 		const adaptor = loopAdaptor({
@@ -598,8 +662,9 @@ describe("tab loop", () => {
 			screenshotClipBuffer: 10,
 		});
 		orchestrator.attach(a);
-		await orchestrator.run();
+		const stats = await orchestrator.run();
 		expect(clips).toHaveLength(2);
+		expect(stats).toMatchObject({ tabStops: 1, unfocusedPairs: 1, screenshots: 0 });
 	});
 
 	it("does not capture a screenshot when nobody calls session.screenshotClip", async () => {
@@ -685,8 +750,9 @@ describe("tab loop", () => {
 			screenshotClipBuffer: 10,
 		});
 		orchestrator.attach(a);
-		await orchestrator.run();
+		const stats = await orchestrator.run();
 		expect(clips).toHaveLength(1);
+		expect(stats).toMatchObject({ tabStops: 1, unfocusedPairs: 0, screenshots: 1 });
 	});
 
 	it("scrolls to center before capture when the element needs centring", async () => {
@@ -1472,7 +1538,7 @@ describe("tab loop", () => {
 			orchestrator.attach(pairConsumer);
 			orchestrator.attach(ctx);
 
-			await expect(orchestrator.run()).resolves.toBeUndefined();
+			await expect(orchestrator.run()).resolves.toMatchObject({ endReason: "completed" });
 
 			expect(ctx.sessionEnds).toEqual(["completed"]);
 			expect(ctx.stops).toHaveLength(1);
@@ -1493,7 +1559,7 @@ describe("tab loop", () => {
 			orchestrator.attach(ctx);
 			orchestrator.attach(pairConsumer);
 
-			await expect(orchestrator.run()).resolves.toBeUndefined();
+			await expect(orchestrator.run()).resolves.toMatchObject({ endReason: "completed" });
 
 			expect(ctx.sessionEnds).toEqual(["completed"]);
 			expect(ctx.stops).toHaveLength(1);

@@ -93,6 +93,19 @@ export type TabSessionHandle = {
 	screenshotClip(): Promise<Uint8Array>;
 };
 
+/** What a session did, for monitoring its cost. */
+export type TabSessionStats = {
+	/** Tab stops delivered to consumers. */
+	tabStops: number;
+	unfocusedPairs: number;
+	screenshots: number;
+	/** Time spent capturing pairs and screenshots, including centring scrolls and blur/refocus. */
+	captureMs: number;
+	durationMs: number;
+	/** Null when every consumer disconnected itself before the session ended. */
+	endReason: SessionEndReason | null;
+};
+
 export type TabConsumer = {
 	readonly capabilities: ReadonlySet<Capability>;
 	onSessionStart?(session: TabSessionHandle): void | Promise<void>;

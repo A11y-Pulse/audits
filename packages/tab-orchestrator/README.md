@@ -33,7 +33,7 @@ await orchestrator.run();
 
 - `createTabOrchestrator(adaptor: BrowserAdaptor, options?: TabSessionOptions)` builds a session against a single page, driven through the given [`BrowserAdaptor`](#browseradaptor). `TabSessionOptions` covers shared cost controls (`screenshotSettleDelay`, `screenshotClipBuffer`, `markerLimit`, `baselineElementLimit`), not any particular audit's policy.
 - `.attach(consumer)` registers a `TabConsumer`. Attaching after `run()` has started throws.
-- `.run()` presses Tab repeatedly, dispatching each `TabStopSnapshot` to every still-attached consumer, until either a full tab cycle completes, focus is lost, navigation happens, or every consumer has disconnected. Calling it twice throws; calling it with zero attached consumers returns immediately without tabbing.
+- `.run()` presses Tab repeatedly, dispatching each `TabStopSnapshot` to every still-attached consumer, until either a full tab cycle completes, focus is lost, navigation happens, or every consumer has disconnected. Calling it twice throws; calling it with zero attached consumers returns immediately without tabbing. It resolves to `TabSessionStats` for monitoring the session's cost: tab stops delivered, unfocused pairs and screenshots captured, time spent capturing them (`captureMs`), total `durationMs`, and the `endReason` (`null` when every consumer disconnected itself).
 
 Each consumer declares the `capabilities` it needs (e.g. `baselineStyles`, `unfocusedPair`) and can disconnect independently once it has what it needs (say, after hitting its own element limit). The orchestrator keeps driving the remaining consumers. Per-stop work like unfocused-pair screenshots is only captured if a still-attached consumer actually asks for it that stop.
 

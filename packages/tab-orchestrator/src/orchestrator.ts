@@ -33,6 +33,7 @@ import type {
 	StyleSnapshot,
 	TabConsumer,
 	TabSessionHandle,
+	TabSessionStats,
 	TabStopSnapshot,
 	UnfocusedPair,
 } from "./types";
@@ -91,7 +92,7 @@ export type TabSessionOptions = {
 
 export type TabOrchestrator = {
 	attach(consumer: TabConsumer): void;
-	run(): Promise<void>;
+	run(): Promise<TabSessionStats>;
 };
 
 export function createTabOrchestrator(
@@ -118,9 +119,29 @@ export function createTabOrchestrator(
 			ran = true;
 			started = true;
 
+			const startedAt = performance.now();
+			const stats: TabSessionStats = {
+				tabStops: 0,
+				unfocusedPairs: 0,
+				screenshots: 0,
+				captureMs: 0,
+				durationMs: 0,
+				endReason: null,
+			};
+
 			if (consumers.length === 0) {
-				return;
+				return stats;
 			}
+
+			const timedCapture = async <T>(capture: () => Promise<T>): Promise<T> => {
+				const captureStartedAt = performance.now();
+
+				try {
+					return await capture();
+				} finally {
+					stats.captureMs += performance.now() - captureStartedAt;
+				}
+			};
 
 			const attached = new Set(consumers);
 			const screenshotSettleDelay =
@@ -180,7 +201,13 @@ export function createTabOrchestrator(
 						throw new Error("unfocusedPair capture not implemented");
 					}
 
-					pairByStop.current ??= captureUnfocusedPair(adaptor, resolved, activeHandle);
+					if (pairByStop.current === null) {
+						const handle = activeHandle;
+						stats.unfocusedPairs++;
+						pairByStop.current = timedCapture(() =>
+							captureUnfocusedPair(adaptor, resolved, handle),
+						);
+					}
 
 					return pairByStop.current;
 				},
@@ -197,13 +224,21 @@ export function createTabOrchestrator(
 						throw new Error("screenshot capture not implemented");
 					}
 
-					screenshotByStop.current ??= captureScreenshot(adaptor, resolved, activeHandle);
+					if (screenshotByStop.current === null) {
+						const handle = activeHandle;
+						stats.screenshots++;
+						screenshotByStop.current = timedCapture(() =>
+							captureScreenshot(adaptor, resolved, handle),
+						);
+					}
 
 					return screenshotByStop.current;
 				},
 			});
 
 			const end = (reason: SessionEndReason, revisitedIndex: number | null = null): void => {
+				stats.endReason = reason;
+
 				for (const consumer of attached) {
 					consumer.onSessionEnd?.(reason, { revisitedIndex });
 				}
@@ -316,7 +351,6 @@ export function createTabOrchestrator(
 				}
 
 				const visited = new Set<number>();
-				let tabIndex = 0;
 				// Elements the baseline did not mark (media players, summaries, content added later) are
 				// marked when first focused, numbered from the limit no baseline index can reach.
 				let nextMarker = markerLimit;
@@ -452,7 +486,7 @@ export function createTabOrchestrator(
 								};
 
 								const snapshot: TabStopSnapshot = {
-									tabIndex: ++tabIndex,
+									tabIndex: ++stats.tabStops,
 									activeElement,
 									contextSignals: {
 										signals: {
@@ -562,7 +596,7 @@ export function createTabOrchestrator(
 						};
 
 						const snapshot: TabStopSnapshot = {
-							tabIndex: ++tabIndex,
+							tabIndex: ++stats.tabStops,
 							activeElement,
 						};
 
@@ -709,6 +743,10 @@ export function createTabOrchestrator(
 				end("failed");
 				throw failure;
 			}
+
+			stats.durationMs = performance.now() - startedAt;
+
+			return stats;
 		},
 	};
 }
