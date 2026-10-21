@@ -1,5 +1,13 @@
 # @a11y-pulse/focus-order-audit
 
+## 0.1.1
+
+### Patch Changes
+
+- [#92](https://github.com/A11y-Pulse/audits/pull/92) [`28daa31`](https://github.com/A11y-Pulse/audits/commit/28daa3169795e628f37ae9cdadd2cc5578edb319) Thanks [@wildlyinaccurate](https://github.com/wildlyinaccurate)! - `focus-order` and `focus-color-only` results now carry only their WCAG and category tags.
+- Updated dependencies [[`28daa31`](https://github.com/A11y-Pulse/audits/commit/28daa3169795e628f37ae9cdadd2cc5578edb319)]:
+  - @a11y-pulse/browser-adaptor@0.8.0
+
 ## 0.1.0
 
 ### Minor Changes
