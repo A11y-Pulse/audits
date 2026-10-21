@@ -20,7 +20,7 @@ npm install @a11y-pulse/browser-adaptor
 
 | Entry | Contents |
 | --- | --- |
-| `@a11y-pulse/browser-adaptor` | `BrowserAdaptor`, `ElementRef`, `Rect`, `bufferedClip`, `contrastRatio`, `parseOpaqueRgb`, `relativeLuminance` |
+| `@a11y-pulse/browser-adaptor` | `BrowserAdaptor`, `ElementRef`, `Rect`, `bufferedClip`, `contrastRatio`, `parseOpaqueRgb`, `relativeLuminance`, `stashedElementSelectors`, `releaseStashedElements` |
 | `@a11y-pulse/browser-adaptor/puppeteer` | `PuppeteerAdaptor` |
 | `@a11y-pulse/browser-adaptor/playwright` | `PlaywrightAdaptor` |
 | `@a11y-pulse/browser-adaptor/dom` | `getSelector`, `truncateHtml` |
@@ -107,6 +107,20 @@ import { getSelector, truncateHtml } from "@a11y-pulse/browser-adaptor/dom";
 ```
 
 `getSelector` builds a compact selector for an element (intended to run in page context). `truncateHtml` shortens an element's opening tag for display in results.
+
+A page script that collects many elements in one evaluate can leave them on `window` under a key of its own, then fetch selectors for only the ones it reports:
+
+```js
+import { releaseStashedElements, stashedElementSelectors } from "@a11y-pulse/browser-adaptor";
+
+const records = await adaptor.evaluate(collectScript, "__myAuditElements");
+
+try {
+	const selectors = await stashedElementSelectors(adaptor, "__myAuditElements", [0, 4]);
+} finally {
+	await releaseStashedElements(adaptor, "__myAuditElements");
+}
+```
 
 ## License
 

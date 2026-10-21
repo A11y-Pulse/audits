@@ -33,13 +33,12 @@ function result(overrides: Partial<FocusOrderResult> = {}): FocusOrderResult {
 }
 
 describe("focusOrderToAxe", () => {
-	it("reports disorder for review, tagged experimental, against each jump's origin", () => {
+	it("reports disorder for review against each jump's origin", () => {
 		const output = focusOrderToAxe(result());
 		const entry = output.incomplete[0];
 
 		expect(output.violations).toEqual([]);
 		expect(entry?.id).toBe(FOCUS_ORDER_AUDIT_ID);
-		expect(entry?.tags).toContain("experimental");
 		expect(entry?.nodes.map((node) => node.target)).toEqual([["#s1"], ["#s2"], ["#s3"]]);
 		expect(entry?.nodes[0]?.failureSummary).toContain("to `#s2` (tab stops 1 → 2)");
 		expect(entry?.nodes[0]?.failureSummary).toContain("one of 3 such moves");

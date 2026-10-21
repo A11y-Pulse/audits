@@ -4,8 +4,6 @@
 [![CI](https://github.com/A11y-Pulse/audits/actions/workflows/ci.yml/badge.svg)](https://github.com/A11y-Pulse/audits/actions/workflows/ci.yml)
 [![License: PolyForm Shield 1.0.0](https://img.shields.io/badge/license-PolyForm%20Shield%201.0.0-blue)](./LICENSE.md)
 
-> **Experimental.** The thresholds below are starting points that have not yet been calibrated against real-world scans. Results carry the `experimental` tag so you can filter them out.
-
 An accessibility audit that flags tab sequences worth a human review under [**WCAG 2.2: 2.4.3 Focus Order**](https://www.w3.org/WAI/WCAG22/Understanding/focus-order). It tabs through a page, records where each focused element sits, and reports a page whose focus repeatedly jumps a long way against the reading order. It is built to be framework-agnostic and can be used in any environment that allows you to programmatically focus elements and observe the page, such as Puppeteer, Playwright, or Selenium.
 
 2.4.3 asks whether the focus order preserves meaning and operability, not whether it matches the layout, and the Understanding document gives conforming examples where it does not. Geometry cannot judge meaning, so this audit never reports a pass or a violation: a disordered page is a prompt to check it with the Tab key. Positive `tabindex` values are left to axe-core's `tabindex` rule, though the audit mentions them as a likely cause.

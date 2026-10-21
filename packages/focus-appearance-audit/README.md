@@ -179,7 +179,7 @@ Both success criteria concern the keyboard focus indicator, but they set very di
 
 [2.4.13 Focus Appearance](https://www.w3.org/WAI/WCAG22/Understanding/focus-appearance) is a Level AAA criterion added in WCAG 2.2 that closes that gap. On top of requiring an indicator, it sets a minimum size (at least the area of a 2 CSS pixel thick perimeter of the component) and a minimum contrast (a ratio of at least 3:1 between the focused and unfocused states of the same pixels).
 
-At the time of writing this audit only checks for 2.4.7. Experimental support for 2.4.13 will be added in a future release.
+At the time of writing this audit only checks for 2.4.7. Support for 2.4.13 will be added in a future release.
 
 ## Adaptors
 

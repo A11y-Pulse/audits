@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>an unwired widget beside a wired one</title></head>
+<body>
+	<div role="tablist" aria-label="Policies">
+		<button id="policy-shipping" role="tab" aria-selected="true">Shipping</button>
+		<button id="policy-returns" role="tab" aria-selected="false">Returns</button>
+	</div>
+	<div role="tablist" aria-label="Questions">
+		<button id="faq-orders" role="tab" aria-selected="true" aria-controls="faq-panel-orders">Orders</button>
+		<button id="faq-refunds" role="tab" aria-selected="false" aria-controls="faq-panel-refunds">Refunds</button>
+	</div>
+	<div id="faq-panel-orders" role="tabpanel" aria-labelledby="faq-orders">Orders</div>
+	<div id="faq-panel-refunds" role="tabpanel" aria-labelledby="faq-refunds" hidden>Refunds</div>
+</body>
+</html>
