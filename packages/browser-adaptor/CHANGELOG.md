@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0
+
+### Minor Changes
+
+- [#92](https://github.com/A11y-Pulse/audits/pull/92) [`28daa31`](https://github.com/A11y-Pulse/audits/commit/28daa3169795e628f37ae9cdadd2cc5578edb319) Thanks [@wildlyinaccurate](https://github.com/wildlyinaccurate)! - Add `stashedElementSelectors` and `releaseStashedElements`, for audits that collect many elements in one evaluate and only need selectors for the ones they report.
+
 ## 0.7.0
 
 ### Minor Changes
