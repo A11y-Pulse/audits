@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>wired tab widget</title></head>
+<body>
+	<div role="tablist" aria-label="Sizes">
+		<button id="tab-small" role="tab" aria-selected="true" aria-controls="panel-small">Small</button>
+		<button id="tab-large" role="tab" aria-selected="false" aria-controls="panel-large" tabindex="-1">Large</button>
+	</div>
+	<div id="panel-small" role="tabpanel" aria-labelledby="tab-small">Small sizes</div>
+	<div id="panel-large" role="tabpanel" aria-labelledby="tab-large" hidden>Large sizes</div>
+</body>
+</html>

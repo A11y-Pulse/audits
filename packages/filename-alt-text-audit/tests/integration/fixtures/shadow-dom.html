@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>image in a shadow root</title></head>
+<body>
+	<div id="host"></div>
+	<script>
+		document.getElementById("host").attachShadow({ mode: "open" }).innerHTML =
+			'<img id="shadow-image" src="images/IMG_4032.svg" alt="IMG_4032.svg">';
+	</script>
+</body>
+</html>

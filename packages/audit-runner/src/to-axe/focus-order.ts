@@ -19,7 +19,7 @@ const METADATA: AuditMetadata = {
 		"Flags pages where keyboard focus repeatedly jumps a long way against the reading order, a sign that the focus order may not preserve meaning and operability (WCAG 2.4.3 Focus Order).",
 	helpUrl: "https://github.com/A11y-Pulse/audits/tree/main/packages/focus-order-audit#readme",
 	impact: "moderate",
-	tags: ["wcag2a", "wcag243", "cat.keyboard", "experimental"],
+	tags: ["wcag2a", "wcag243", "cat.keyboard"],
 };
 
 function failureSummary(

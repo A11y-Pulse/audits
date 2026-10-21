@@ -57,10 +57,12 @@
 	"dependencies": {
 		"@a11y-pulse/browser-adaptor": "*",
 		"@a11y-pulse/context-change-on-focus-audit": "*",
+		"@a11y-pulse/filename-alt-text-audit": "*",
 		"@a11y-pulse/focus-appearance-audit": "*",
 		"@a11y-pulse/focus-not-obscured-audit": "*",
 		"@a11y-pulse/focus-order-audit": "*",
 		"@a11y-pulse/keyboard-trap-audit": "*",
+		"@a11y-pulse/orphaned-tab-roles-audit": "*",
 		"@a11y-pulse/reflow-audit": "*",
 		"@a11y-pulse/skip-link-audit": "*",
 		"@a11y-pulse/tab-orchestrator": "*",

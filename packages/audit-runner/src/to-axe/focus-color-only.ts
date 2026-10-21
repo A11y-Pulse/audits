@@ -25,7 +25,7 @@ const METADATA: AuditMetadata = {
 	helpUrl:
 		"https://github.com/A11y-Pulse/audits/tree/main/packages/focus-appearance-audit#colour-only-focus-indicators",
 	impact: "serious",
-	tags: ["wcag2a", "wcag141", "cat.color", "experimental"],
+	tags: ["wcag2a", "wcag141", "cat.color"],
 };
 
 type ColorOnlyElement = FocusElementResult & { colorOnly: ColorOnlyChange };

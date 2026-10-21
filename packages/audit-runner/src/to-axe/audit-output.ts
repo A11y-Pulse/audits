@@ -55,6 +55,38 @@ export function toResult(metadata: AuditMetadata, nodes: readonly AuditNode[]): 
 	return { ...metadata, nodes: nodes.map(toNode) };
 }
 
+/** An audit result whose items the audit has already sorted into buckets. */
+export type SortedResult<T> = {
+	failed: readonly T[];
+	needsReview: readonly T[];
+	passed: readonly T[];
+	summary: { checked: number };
+};
+
+/**
+ * Convert a sorted result into axe-core's buckets: `failed` to violations, `needsReview` to
+ * incomplete and `passed` to passes, or inapplicable when nothing was checked.
+ */
+export function sortedResultToAxe<T>(
+	metadata: AuditMetadata,
+	result: SortedResult<T>,
+	toAuditNode: (item: T) => AuditNode,
+): AuditOutput {
+	if (result.summary.checked === 0) {
+		return { ...emptyOutput(), inapplicable: [toResult(metadata, [])] };
+	}
+
+	const bucket = (items: readonly T[]): Result[] =>
+		items.length > 0 ? [toResult(metadata, items.map(toAuditNode))] : [];
+
+	return {
+		...emptyOutput(),
+		violations: bucket(result.failed),
+		incomplete: bucket(result.needsReview),
+		passes: bucket(result.passed),
+	};
+}
+
 /**
  * Concatenate every audit's buckets into one axe-core result set, preserving the order the audits
  * were run in.

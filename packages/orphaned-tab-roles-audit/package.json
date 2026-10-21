@@ -1,0 +1,61 @@
+{
+	"name": "@a11y-pulse/orphaned-tab-roles-audit",
+	"version": "0.0.0",
+	"description": "WCAG 1.3.1 and 4.1.2 audit that flags ARIA tabs with no tab panel and tab panels with no tab, including navigation links dressed up as tabs.",
+	"type": "module",
+	"license": "SEE LICENSE IN LICENSE.md",
+	"author": "A11y Pulse",
+	"homepage": "https://github.com/A11y-Pulse/audits/tree/main/packages/orphaned-tab-roles-audit#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/A11y-Pulse/audits.git",
+		"directory": "packages/orphaned-tab-roles-audit"
+	},
+	"bugs": {
+		"url": "https://github.com/A11y-Pulse/audits/issues"
+	},
+	"keywords": [
+		"accessibility",
+		"a11y",
+		"wcag",
+		"aria",
+		"tabs",
+		"audit"
+	],
+	"engines": {
+		"node": ">=22"
+	},
+	"exports": {
+		".": {
+			"source": "./src/index.ts",
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
+	},
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE.md"
+	],
+	"scripts": {
+		"build": "tsup && tsc -p tsconfig.build.json",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check",
+		"lint:fix": "biome check --fix",
+		"test:unit": "vitest run",
+		"test:integration": "vitest run --config vitest.integration.config.ts",
+		"test": "npm run typecheck && npm run test:unit",
+		"prepublishOnly": "npm run build"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"dependencies": {
+		"@a11y-pulse/browser-adaptor": "*"
+	},
+	"devDependencies": {
+		"happy-dom": "^21.0.1",
+		"playwright-core": "^1.64.1",
+		"puppeteer": "^25.14.0"
+	}
+}

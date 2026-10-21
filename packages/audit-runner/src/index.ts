@@ -1,8 +1,10 @@
 export type { ContextChangeOnFocusResult } from "@a11y-pulse/context-change-on-focus-audit";
+export type { FilenameAltTextResult } from "@a11y-pulse/filename-alt-text-audit";
 export type { FocusAppearanceResult } from "@a11y-pulse/focus-appearance-audit";
 export type { FocusNotObscuredResult } from "@a11y-pulse/focus-not-obscured-audit";
 export type { FocusOrderResult } from "@a11y-pulse/focus-order-audit";
 export type { KeyboardTrapResult } from "@a11y-pulse/keyboard-trap-audit";
+export type { OrphanedTabRolesResult } from "@a11y-pulse/orphaned-tab-roles-audit";
 export type { ReflowResult } from "@a11y-pulse/reflow-audit";
 export type { SkipLinkResult } from "@a11y-pulse/skip-link-audit";
 export type { TextSpacingResult } from "@a11y-pulse/text-spacing-audit";
@@ -29,6 +31,7 @@ export {
 	CONTEXT_CHANGE_ON_FOCUS_AUDIT_ID,
 	contextChangeOnFocusToAxe,
 } from "./to-axe/context-change-on-focus";
+export { FILENAME_ALT_TEXT_AUDIT_ID, filenameAltTextToAxe } from "./to-axe/filename-alt-text";
 export {
 	FOCUS_APPEARANCE_AUDIT_ID,
 	FOCUS_APPEARANCE_EVIDENCE_CHECK_ID,
@@ -42,6 +45,10 @@ export {
 } from "./to-axe/focus-not-obscured";
 export { FOCUS_ORDER_AUDIT_ID, focusOrderToAxe } from "./to-axe/focus-order";
 export { KEYBOARD_TRAP_AUDIT_ID, keyboardTrapToAxe } from "./to-axe/keyboard-trap";
+export {
+	ORPHANED_TAB_ROLES_AUDIT_ID,
+	orphanedTabRolesToAxe,
+} from "./to-axe/orphaned-tab-roles";
 export { REFLOW_AUDIT_ID, REFLOW_EVIDENCE_CHECK_ID, reflowToAxe } from "./to-axe/reflow";
 export { SKIP_LINK_AUDIT_ID, skipLinkToAxe } from "./to-axe/skip-link";
 export {

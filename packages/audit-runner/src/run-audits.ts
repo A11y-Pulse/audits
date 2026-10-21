@@ -4,6 +4,10 @@ import {
 	createContextChangeOnFocusAudit,
 } from "@a11y-pulse/context-change-on-focus-audit";
 import {
+	type FilenameAltTextOptions,
+	runFilenameAltTextAudit,
+} from "@a11y-pulse/filename-alt-text-audit";
+import {
 	createFocusAppearanceAudit,
 	type FocusAppearanceOptions,
 } from "@a11y-pulse/focus-appearance-audit";
@@ -13,6 +17,10 @@ import {
 } from "@a11y-pulse/focus-not-obscured-audit";
 import { createFocusOrderAudit, type FocusOrderOptions } from "@a11y-pulse/focus-order-audit";
 import { createKeyboardTrapAudit, type KeyboardTrapOptions } from "@a11y-pulse/keyboard-trap-audit";
+import {
+	type OrphanedTabRolesOptions,
+	runOrphanedTabRolesAudit,
+} from "@a11y-pulse/orphaned-tab-roles-audit";
 import {
 	type ReflowAuditAdaptor,
 	type ReflowOptions,
@@ -34,11 +42,13 @@ import type { AxeResults, RunOptions as AxeRunOptions } from "axe-core";
 import { runAxeCore } from "./axe-core";
 import { type AuditOutput, mergeOutputs } from "./to-axe/audit-output";
 import { contextChangeOnFocusToAxe } from "./to-axe/context-change-on-focus";
+import { filenameAltTextToAxe } from "./to-axe/filename-alt-text";
 import { focusAppearanceToAxe } from "./to-axe/focus-appearance";
 import { focusColorOnlyToAxe } from "./to-axe/focus-color-only";
 import { focusNotObscuredToAxe } from "./to-axe/focus-not-obscured";
 import { focusOrderToAxe } from "./to-axe/focus-order";
 import { keyboardTrapToAxe } from "./to-axe/keyboard-trap";
+import { orphanedTabRolesToAxe } from "./to-axe/orphaned-tab-roles";
 import { reflowToAxe } from "./to-axe/reflow";
 import { skipLinkToAxe } from "./to-axe/skip-link";
 import { textSpacingToAxe } from "./to-axe/text-spacing";
@@ -58,6 +68,8 @@ export type ProgressCallback = (step: string) => void;
 
 export type AuditRunnerOptions = {
 	axe?: AxeRunOptions;
+	filenameAltText?: FilenameAltTextOptions;
+	orphanedTabRoles?: OrphanedTabRolesOptions;
 	focusAppearance?: FocusAppearanceOptions;
 	focusNotObscured?: FocusNotObscuredOptions;
 	contextChangeOnFocus?: ContextChangeOnFocusOptions;
@@ -158,6 +170,12 @@ export async function runAllAudits(
 	onProgress("Running axe-core");
 	const axeResults = await runAxeCore(browser, options.axe);
 
+	onProgress("Checking image alt text");
+	const filenameAltText = await runFilenameAltTextAudit(browser, options.filenameAltText);
+
+	onProgress("Checking tabs and tab panels");
+	const orphanedTabRoles = await runOrphanedTabRolesAudit(browser, options.orphanedTabRoles);
+
 	onProgress("Tabbing through focusable elements");
 	const { outputs: tabAudits, verifyKeyboardTrap } = await runTabAuditsInSharedSession(
 		adaptors,
@@ -182,6 +200,8 @@ export async function runAllAudits(
 
 	const merged = mergeOutputs([
 		axeResults,
+		filenameAltTextToAxe(filenameAltText),
+		orphanedTabRolesToAxe(orphanedTabRoles),
 		...tabAudits,
 		keyboardTrap,
 		skipLinkToAxe(skipLink),

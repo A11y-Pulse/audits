@@ -64,7 +64,7 @@ describe("focusColorOnlyToAxe", () => {
 		expect(output.violations[0]).toMatchObject({
 			id: FOCUS_COLOR_ONLY_AUDIT_ID,
 			impact: "serious",
-			tags: ["wcag2a", "wcag141", "cat.color", "experimental"],
+			tags: ["wcag2a", "wcag141", "cat.color"],
 		});
 	});
 
