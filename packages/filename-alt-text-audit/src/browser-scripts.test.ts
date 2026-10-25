@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it } from "vitest";
-import { collectImagesScript } from "./browser-scripts";
+import { awaitImageScript, collectImagesScript } from "./browser-scripts";
 
 const STASH_KEY = "__testStash";
 
@@ -105,5 +105,31 @@ describe("collectImagesScript", () => {
 		const stash = (window as unknown as Record<string, Element[]>)[STASH_KEY];
 
 		expect(stash?.map((element) => element.id)).toEqual(["a", "b"]);
+	});
+});
+
+describe("awaitImageScript", () => {
+	it("returns at once for an element that is not an image", async () => {
+		await expect(awaitImageScript(document.createElement("div"), 10_000)).resolves.toBeUndefined();
+	});
+
+	it("loads a lazy image eagerly, waits for it, then restores its loading attribute", async () => {
+		const img = document.createElement("img");
+		img.loading = "lazy";
+		Object.defineProperty(img, "complete", { value: false });
+		const waiting = awaitImageScript(img, 10_000);
+		const loadingWhileWaiting = img.loading;
+		img.dispatchEvent(new Event("load"));
+		await waiting;
+
+		expect(loadingWhileWaiting).toBe("eager");
+		expect(img.loading).toBe("lazy");
+	});
+
+	it("gives up after the timeout", async () => {
+		const img = document.createElement("img");
+		Object.defineProperty(img, "complete", { value: false });
+
+		await expect(awaitImageScript(img, 1)).resolves.toBeUndefined();
 	});
 });

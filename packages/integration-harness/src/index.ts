@@ -76,6 +76,15 @@ type Keyboard = {
 	press: (key: any, options?: any) => Promise<void>;
 };
 
+const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+
+/**
+ * Whether `bytes` start with the PNG file signature.
+ */
+export function isPng(bytes: Uint8Array | undefined): boolean {
+	return bytes !== undefined && PNG_SIGNATURE.every((byte, i) => bytes[i] === byte);
+}
+
 export const WEBKIT_NO_LINK_FOCUS = "WebKit does not move focus to links when Tab is pressed";
 
 export const WEBKIT_PARTIAL_TAB_LOOP = `${WEBKIT_NO_LINK_FOCUS}, so the audit only reaches a subset of the page`;

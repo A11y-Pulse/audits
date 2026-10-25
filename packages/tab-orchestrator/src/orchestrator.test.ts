@@ -1528,6 +1528,46 @@ describe("tab loop", () => {
 			return adaptor;
 		}
 
+		it("screenshots the attributed element for a screenshot declarer, then disposes it", async () => {
+			const adaptor = f55Adaptor();
+			const rectTargets: unknown[] = [];
+			const disposed: unknown[] = [];
+			const withRect = adaptor.evaluate.bind(adaptor);
+			adaptor.evaluate = (async (fn, ...args) => {
+				if (fn === pageDimensionsScript) {
+					return { width: 2000, height: 4000 };
+				}
+
+				if (fn === elementRectScript) {
+					rectTargets.push(args[0]);
+
+					return { x: 10, y: 20, width: 30, height: 40 };
+				}
+
+				return withRect(fn, ...args);
+			}) as BrowserAdaptor["evaluate"];
+			adaptor.disposeRef = async (ref) => {
+				disposed.push(ref);
+			};
+
+			let screenshot: Uint8Array | undefined;
+			const consumer: TabConsumer = {
+				capabilities: new Set(["contextSignals", "screenshot"]),
+				async onTabStop(_snapshot, session) {
+					screenshot = await session.screenshotClip();
+				},
+			};
+
+			const orchestrator = createTabOrchestrator(adaptor, { screenshotSettleDelay: 0 });
+			orchestrator.attach(consumer);
+			const stats = await orchestrator.run();
+
+			expect(screenshot).toEqual(new Uint8Array([1]));
+			expect(rectTargets).toEqual([{ kind: "attributed" }]);
+			expect(disposed).toContainEqual({ kind: "attributed" });
+			expect(stats).toMatchObject({ tabStops: 1, screenshots: 1, endReason: "completed" });
+		});
+
 		it("does not crash a combined session when an unfocusedPair-declaring consumer (like focus-appearance-audit) is attached alongside contextSignals, and still rescues the contextSignals consumer (unfocusedPair-consumer attached first)", async () => {
 			const adaptor = f55Adaptor();
 			const pairConsumer = unfocusedPairConsumer();

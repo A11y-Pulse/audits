@@ -467,55 +467,54 @@ export function createTabOrchestrator(
 
 							if (raw.hasAttributed) {
 								const attributedRef = await adaptor.evaluateHandle(attributedHandleScript);
-								let selector: string;
 
 								try {
-									selector = await adaptor.evaluate(getSelector, attributedRef);
-								} finally {
-									await adaptor.disposeRef(attributedRef);
-								}
+									const selector = await adaptor.evaluate(getSelector, attributedRef);
 
-								const activeElement: ActiveElementInfo = {
-									index: null,
-									isBody: false,
-									isIframe: false,
-									selector,
-									html: truncateHtml(raw.attributedHtml ?? ""),
-									styles: { element: {}, before: {}, after: {} },
-									rect: { x: 0, y: 0, width: 0, height: 0 },
-								};
+									const activeElement: ActiveElementInfo = {
+										index: null,
+										isBody: false,
+										isIframe: false,
+										selector,
+										html: truncateHtml(raw.attributedHtml ?? ""),
+										styles: { element: {}, before: {}, after: {} },
+										rect: { x: 0, y: 0, width: 0, height: 0 },
+									};
 
-								const snapshot: TabStopSnapshot = {
-									tabIndex: ++stats.tabStops,
-									activeElement,
-									contextSignals: {
-										signals: {
-											openedWindow: raw.openedWindow,
-											submittedForm: raw.submittedForm,
-											focusRemoved: raw.focusRemoved,
-											redirect: raw.redirect,
-											softUrlChange: raw.softUrlChange,
-											navigation: raw.navigation,
+									const snapshot: TabStopSnapshot = {
+										tabIndex: ++stats.tabStops,
+										activeElement,
+										contextSignals: {
+											signals: {
+												openedWindow: raw.openedWindow,
+												submittedForm: raw.submittedForm,
+												focusRemoved: raw.focusRemoved,
+												redirect: raw.redirect,
+												softUrlChange: raw.softUrlChange,
+												navigation: raw.navigation,
+											},
 										},
-									},
-								};
+									};
 
-								// This synthetic stop has no live focused element (it
-								// already blurred itself before this notification is
-								// built, by definition of F55), so capabilities that
-								// need one (`unfocusedPair`, `baselineStyles`,
-								// `obscuring`) have nothing to meaningfully act on.
-								// Only consumers that declared `contextSignals` (the
-								// capability this whole synthetic-stop mechanism exists
-								// to serve) are notified; unlike every other stop in
-								// this file, uniform notification is wrong here because
-								// there is no element for the other capabilities to
-								// read from.
-								const recipients = [...attached].filter((consumer) =>
-									consumer.capabilities.has("contextSignals"),
-								);
+									// This synthetic stop has no live focused element (it
+									// already blurred itself before this notification is
+									// built, by definition of F55), so capabilities that
+									// need one (`unfocusedPair`, `baselineStyles`,
+									// `obscuring`) have nothing to meaningfully act on.
+									// Only consumers that declared `contextSignals` (the
+									// capability this whole synthetic-stop mechanism exists
+									// to serve) are notified; unlike every other stop in
+									// this file, uniform notification is wrong here because
+									// there is no element for the other capabilities to
+									// read from.
+									const recipients = [...attached].filter((consumer) =>
+										consumer.capabilities.has("contextSignals"),
+									);
 
-								try {
+									// The blurred element is still in the page, so a
+									// `screenshot` declarer can capture it.
+									activeHandle = attributedRef;
+
 									for (const consumer of recipients) {
 										await consumer.onTabStop(snapshot, handleFor(consumer));
 									}
@@ -525,7 +524,9 @@ export function createTabOrchestrator(
 									// past this stop (mirrors how `disposeRef` is
 									// guaranteed via `finally` in the main per-stop loop
 									// below).
+									activeHandle = undefined;
 									await adaptor.evaluate(clearAttributedScript);
+									await adaptor.disposeRef(attributedRef);
 								}
 							}
 						}

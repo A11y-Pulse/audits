@@ -4,6 +4,7 @@ import {
 	type AdaptorFactories,
 	describeEachEngine,
 	type FixtureServer,
+	isPng,
 	startFixtureServer,
 	WEBKIT_NO_LINK_FOCUS,
 } from "@a11y-pulse/integration-harness";
@@ -57,6 +58,7 @@ describeEachEngine<SkipLinkAuditAdaptor>(
 				passed: true,
 				failureReason: null,
 			});
+			expect(result.skipLinks[0]?.screenshot).toBeUndefined();
 		});
 
 		it("flags a skip link whose fragment target is missing", async () => {
@@ -67,6 +69,7 @@ describeEachEngine<SkipLinkAuditAdaptor>(
 				passed: false,
 				failureReason: "target-missing",
 			});
+			expect(isPng(result.skipLinks[0]?.screenshot)).toBe(true);
 			expect(result.summary.failed).toBe(1);
 		});
 
@@ -84,6 +87,7 @@ describeEachEngine<SkipLinkAuditAdaptor>(
 				passed: false,
 				failureReason: "activation-no-effect",
 			});
+			expect(isPng(result.skipLinks[0]?.screenshot)).toBe(true);
 		});
 
 		it("finds a skip link at the 2nd tab stop", async () => {

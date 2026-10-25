@@ -1,6 +1,10 @@
 import type { FocusAppearanceResult, FocusElementResult } from "@a11y-pulse/focus-appearance-audit";
 import { describe, expect, it } from "vitest";
-import { FOCUS_COLOR_ONLY_AUDIT_ID, focusColorOnlyToAxe } from "./focus-color-only";
+import {
+	FOCUS_COLOR_ONLY_AUDIT_ID,
+	FOCUS_COLOR_ONLY_EVIDENCE_CHECK_ID,
+	focusColorOnlyToAxe,
+} from "./focus-color-only";
 
 const SUMMARY: FocusAppearanceResult["summary"] = {
 	checked: 1,
@@ -82,5 +86,21 @@ describe("focusColorOnlyToAxe", () => {
 
 		expect(output.incomplete[0]?.nodes[0]?.failureSummary).toContain("could not be measured");
 		expect(output.passes[0]?.nodes[0]).not.toHaveProperty("failureSummary");
+	});
+
+	it("attaches the focused and unfocused screenshots when the audit captured them", () => {
+		const evidence = {
+			focusedScreenshot: new Uint8Array([1]),
+			unfocusedScreenshot: new Uint8Array([2]),
+		};
+		const low = element("#low", 1.6);
+		low.colorOnly = { ...low.colorOnly!, evidence };
+
+		const output = convert(low);
+
+		expect(output.violations[0]?.nodes[0]?.any[0]).toMatchObject({
+			id: FOCUS_COLOR_ONLY_EVIDENCE_CHECK_ID,
+			data: evidence,
+		});
 	});
 });

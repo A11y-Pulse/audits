@@ -43,6 +43,7 @@ describe("runFilenameAltTextAudit", () => {
 				altText: "IMG_4032.jpg",
 				signal: "filename-match",
 				matchedSource: `${BASE_URL}IMG_4032.jpg`,
+				screenshot: new Uint8Array([1]),
 			},
 		]);
 		expect(result.needsReview).toMatchObject([
@@ -104,5 +105,37 @@ describe("runFilenameAltTextAudit", () => {
 		await runFilenameAltTextAudit(page.adaptor);
 
 		expect(page.released()).toBe(true);
+	});
+
+	it("screenshots failed and needs-review images but not passed ones", async () => {
+		const page = fakePage(
+			collection([
+				image("IMG_4032.jpg", "IMG_4032.jpg"),
+				image("DSC_0192", "a91f3c.jpg"),
+				image("Packed tent beside a returns slip", "tent.jpg"),
+			]),
+		);
+
+		const result = await runFilenameAltTextAudit(page.adaptor);
+
+		expect(result.needsReview[0]?.screenshot).toEqual(new Uint8Array([1]));
+		expect(result.passed[0]).not.toHaveProperty("screenshot");
+		expect(page.screenshotted()).toEqual([0, 1]);
+	});
+
+	it("spends the screenshot limit on failed images first", async () => {
+		const page = fakePage(
+			collection([
+				image("DSC_0192", "a91f3c.jpg"),
+				image("IMG_1.jpg", "IMG_1.jpg"),
+				image("IMG_2.jpg", "IMG_2.jpg"),
+			]),
+		);
+
+		const result = await runFilenameAltTextAudit(page.adaptor, { screenshotLimit: 2 });
+
+		expect(result.failed.every((entry) => entry.screenshot)).toBe(true);
+		expect(result.needsReview[0]).not.toHaveProperty("screenshot");
+		expect(page.screenshotted()).toEqual([1, 2]);
 	});
 });

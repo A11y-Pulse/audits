@@ -250,6 +250,28 @@ describe("createFocusAppearanceAudit", () => {
 			unfocusedColor: "rgb(51, 51, 51)",
 			focusedColor: "rgb(46, 93, 46)",
 		});
+		expect(audit.result.elements[0]?.colorOnly?.evidence?.focusedScreenshot).toBeInstanceOf(
+			Uint8Array,
+		);
+		expect(audit.result.elements[0]?.colorOnly?.evidence?.unfocusedScreenshot).toBeInstanceOf(
+			Uint8Array,
+		);
+		expect(adaptor.clipCalls).toBe(2);
+	});
+
+	it("captures no evidence for a colour-only change of at least 3:1", async () => {
+		const unfocused = { ...EMPTY_STYLES, element: { color: "rgb(255, 255, 255)" } };
+		const focused = { ...EMPTY_STYLES, element: { color: "rgb(0, 0, 0)" } };
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			active: [info(0, { styles: focused })],
+			baseline: { styles: [unfocused], entries: [{ index: 0, styleIndex: 0, rect: RECT }] },
+		});
+
+		const audit = await runWithOrchestrator(adaptor);
+
+		expect(audit.result.elements[0]?.colorOnly?.contrastRatio).toBeGreaterThanOrEqual(3);
+		expect(audit.result.elements[0]?.colorOnly).not.toHaveProperty("evidence");
 		expect(adaptor.clipCalls).toBe(0);
 	});
 

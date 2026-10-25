@@ -81,6 +81,7 @@ The placeholder words applied are English plus the language in the page's `<html
 | --- | --- | --- | --- |
 | `imageLimit` | `number` | `2000` | Max images to check. Images past the limit are counted in `summary.unchecked`. |
 | `reportLimit` | `number` | `10` | Max images to list in each of `failed`, `needsReview` and `passed`. The summary still counts every image. |
+| `screenshotLimit` | `number` | `10` | Max listed `failed` and `needsReview` images to screenshot, `failed` first. |
 
 ## Result shape
 
@@ -99,6 +100,11 @@ type FilenameAltTextImage = {
     | null;
   /** The source URL whose filename the alt text matches, for the filename signals. */
   matchedSource: string | null;
+  /**
+   * PNG bytes of the image, clipped and padded. Only captured for `failed` and
+   * `needsReview` images, and omitted past `screenshotLimit`.
+   */
+  screenshot?: Uint8Array;
 };
 
 type FilenameAltTextResult = {
@@ -114,6 +120,8 @@ type FilenameAltTextResult = {
   };
 };
 ```
+
+To take a screenshot, the audit scrolls each image into view and waits up to 2 seconds for one that has not loaded, loading a lazy image straight away. The page is scrolled back to where it was afterwards. The audit does not wait for a script to swap in the image's real source when it comes into view.
 
 `classifyAltText(alt, sources, placeholders)`, the pure classifier behind the audit, is exported with `placeholderWordsFor(lang)`, `parseSrcset` and `filenameOf`, for checking alt text recorded elsewhere.
 

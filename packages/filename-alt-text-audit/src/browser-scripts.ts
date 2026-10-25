@@ -111,3 +111,37 @@ export function collectImagesScript(
 		total,
 	};
 }
+
+export function scrollPositionScript(): { x: number; y: number } {
+	return { x: window.scrollX, y: window.scrollY };
+}
+
+export function restoreScrollScript(position: { x: number; y: number }): void {
+	window.scrollTo({ left: position.x, top: position.y, behavior: "instant" });
+}
+
+/**
+ * Wait up to `timeoutMs` for an image that has not finished loading, loading a lazy one eagerly so
+ * it does not wait to be scrolled near.
+ */
+export async function awaitImageScript(el: Element | null, timeoutMs: number): Promise<void> {
+	if (!(el instanceof HTMLImageElement) || el.complete) {
+		return;
+	}
+
+	const loading = el.loading;
+	el.loading = "eager";
+
+	await new Promise<void>((resolve) => {
+		const timer = setTimeout(resolve, timeoutMs);
+		const done = (): void => {
+			clearTimeout(timer);
+			resolve();
+		};
+
+		el.addEventListener("load", done, { once: true });
+		el.addEventListener("error", done, { once: true });
+	});
+
+	el.loading = loading;
+}

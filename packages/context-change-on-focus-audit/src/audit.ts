@@ -12,7 +12,15 @@ import {
 import { classifyContextSignals } from "./classify";
 import type { ContextChangeOnFocusResult } from "./result";
 
-export type ContextChangeOnFocusOptions = BaseAuditOptions;
+export const DEFAULT_SCREENSHOT_LIMIT = 10;
+
+export type ContextChangeOnFocusOptions = BaseAuditOptions & {
+	/**
+	 * Max elements with findings to screenshot (each is a real page.screenshot() call). Defaults
+	 * to 10.
+	 */
+	screenshotLimit?: number;
+};
 
 type ResolvedOptions = Required<ContextChangeOnFocusOptions>;
 
@@ -22,6 +30,7 @@ function resolveOptions(options: ContextChangeOnFocusOptions): ResolvedOptions {
 		screenshotSettleDelay: options.screenshotSettleDelay ?? DEFAULT_SCREENSHOT_SETTLE_DELAY,
 		failedElementLimit: options.failedElementLimit ?? DEFAULT_FAILED_ELEMENT_LIMIT,
 		timeout: options.timeout ?? DEFAULT_TIMEOUT,
+		screenshotLimit: options.screenshotLimit ?? DEFAULT_SCREENSHOT_LIMIT,
 	};
 }
 
@@ -60,17 +69,18 @@ export function createContextChangeOnFocusAudit(
 	const result = emptyResult();
 	let checked = 0;
 	let failures = 0;
+	let screenshotsTaken = 0;
 	const selfDisconnect = createAuditSelfDisconnect();
 
 	return {
 		result,
-		capabilities: new Set(["contextSignals"] as const),
+		capabilities: new Set(["contextSignals", "screenshot"] as const),
 		onSessionStart(session) {
 			selfDisconnect.armTimeout(resolved.timeout, session, () => {
 				result.summary.timedOut = true;
 			});
 		},
-		onTabStop(snapshot, session) {
+		async onTabStop(snapshot, session) {
 			checked++;
 
 			const drain = snapshot.contextSignals;
@@ -84,12 +94,25 @@ export function createContextChangeOnFocusAudit(
 			const findings = classifyContextSignals(drain.signals);
 			const failed = findings.some((finding) => finding.bucket === "violation");
 
+			// A navigation leaves nothing of the original page to capture.
+			const screenshot =
+				findings.length > 0 &&
+				!drain.signals.navigation &&
+				screenshotsTaken < resolved.screenshotLimit
+					? await session.screenshotClip()
+					: undefined;
+
+			if (screenshot) {
+				screenshotsTaken++;
+			}
+
 			result.elements.push({
 				selector: snapshot.activeElement.selector,
 				html: snapshot.activeElement.html,
 				tabIndex: snapshot.tabIndex,
 				findings,
 				failed,
+				screenshot,
 			});
 
 			if (failed) {

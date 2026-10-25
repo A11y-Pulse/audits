@@ -173,13 +173,14 @@ function contextAdaptor(
 }
 
 describe("createContextChangeOnFocusAudit", () => {
-	it("declares only the contextSignals capability", () => {
+	it("declares the contextSignals and screenshot capabilities", () => {
 		const audit = createContextChangeOnFocusAudit();
 		expect(audit.capabilities.has("contextSignals")).toBe(true);
+		expect(audit.capabilities.has("screenshot")).toBe(true);
 		expect(audit.capabilities.has("obscuring")).toBe(false);
 		expect(audit.capabilities.has("unfocusedPair")).toBe(false);
 		expect(audit.capabilities.has("baselineStyles")).toBe(false);
-		expect(audit.capabilities.size).toBe(1);
+		expect(audit.capabilities.size).toBe(2);
 	});
 
 	it("records a violation for a new window and disconnects at elementLimit", async () => {
@@ -338,6 +339,53 @@ describe("createContextChangeOnFocusAudit", () => {
 	});
 });
 
+describe("createContextChangeOnFocusAudit screenshots", () => {
+	it("captures a screenshot for an element with findings but not for a clean one", async () => {
+		const audit = createContextChangeOnFocusAudit();
+		const orchestrator = createTabOrchestrator(
+			contextAdaptor([
+				drainWith({ openedWindow: true }),
+				drainWith({ softUrlChange: true }),
+				emptyDrain(),
+			]),
+			{ screenshotSettleDelay: 0 },
+		);
+		orchestrator.attach(audit);
+		await orchestrator.run();
+		expect(audit.result.elements[0]?.screenshot).toEqual(new Uint8Array([1]));
+		expect(audit.result.elements[1]?.screenshot).toEqual(new Uint8Array([1]));
+		expect(audit.result.elements[2]?.screenshot).toBeUndefined();
+	});
+
+	it("does not capture a screenshot after a navigation", async () => {
+		const audit = createContextChangeOnFocusAudit();
+		const orchestrator = createTabOrchestrator(contextAdaptor([drainWith({ navigation: true })]), {
+			screenshotSettleDelay: 0,
+		});
+		orchestrator.attach(audit);
+		await orchestrator.run();
+		expect(audit.result.elements[0]?.failed).toBe(true);
+		expect(audit.result.elements[0]?.screenshot).toBeUndefined();
+	});
+
+	it("omits screenshots past screenshotLimit but keeps every element", async () => {
+		const audit = createContextChangeOnFocusAudit({ screenshotLimit: 2 });
+		const orchestrator = createTabOrchestrator(
+			contextAdaptor([
+				drainWith({ openedWindow: true }),
+				drainWith({ openedWindow: true }),
+				drainWith({ openedWindow: true }),
+			]),
+			{ screenshotSettleDelay: 0 },
+		);
+		orchestrator.attach(audit);
+		await orchestrator.run();
+		expect(audit.result.elements).toHaveLength(3);
+		expect(audit.result.elements.slice(0, 2).every((e) => e.screenshot)).toBe(true);
+		expect(audit.result.elements[2]?.screenshot).toBeUndefined();
+	});
+});
+
 function drainWith(partial: Partial<DrainContextObserverResult>): DrainContextObserverResult {
 	return { ...emptyDrain(), ...partial };
 }
@@ -349,6 +397,7 @@ describe("createContextChangeOnFocusAudit options type", () => {
 			failedElementLimit: 1,
 			timeout: 100,
 			screenshotSettleDelay: 10,
+			screenshotLimit: 3,
 		};
 		expect(createContextChangeOnFocusAudit(options).capabilities.has("contextSignals")).toBe(true);
 	});

@@ -1,6 +1,6 @@
 import type { SkipLinkElementResult } from "@a11y-pulse/skip-link-audit";
 import { describe, expect, it } from "vitest";
-import { SKIP_LINK_AUDIT_ID, skipLinkToAxe } from "./skip-link";
+import { SKIP_LINK_AUDIT_ID, SKIP_LINK_EVIDENCE_CHECK_ID, skipLinkToAxe } from "./skip-link";
 
 function element(overrides: Partial<SkipLinkElementResult> = {}): SkipLinkElementResult {
 	return {
@@ -51,5 +51,17 @@ describe("skipLinkToAxe", () => {
 		expect(output.inapplicable[0]?.nodes).toEqual([]);
 		expect(output.violations).toEqual([]);
 		expect(output.passes).toEqual([]);
+	});
+
+	it("attaches a screenshot when the audit captured one", () => {
+		const screenshot = new Uint8Array([1]);
+		const output = skipLinkToAxe(
+			result([element({ passed: false, failureReason: "target-missing", screenshot })]),
+		);
+
+		expect(output.violations[0]?.nodes[0]?.any[0]).toMatchObject({
+			id: SKIP_LINK_EVIDENCE_CHECK_ID,
+			data: { screenshot },
+		});
 	});
 });

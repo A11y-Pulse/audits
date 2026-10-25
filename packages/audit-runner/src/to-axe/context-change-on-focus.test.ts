@@ -3,7 +3,10 @@ import type {
 	ContextChangeOnFocusResult,
 } from "@a11y-pulse/context-change-on-focus-audit";
 import { describe, expect, it } from "vitest";
-import { contextChangeOnFocusToAxe } from "./context-change-on-focus";
+import {
+	CONTEXT_CHANGE_ON_FOCUS_EVIDENCE_CHECK_ID,
+	contextChangeOnFocusToAxe,
+} from "./context-change-on-focus";
 
 const SUMMARY: ContextChangeOnFocusResult["summary"] = {
 	checked: 3,
@@ -62,5 +65,25 @@ describe("contextChangeOnFocusToAxe", () => {
 
 		expect(output.passes[0]?.nodes[0]?.target).toEqual(["#a"]);
 		expect(output.passes[0]?.nodes[0]).not.toHaveProperty("failureSummary");
+	});
+
+	it("attaches a screenshot when the audit captured one", () => {
+		const screenshot = new Uint8Array([1]);
+		const output = contextChangeOnFocusToAxe({
+			elements: [
+				element({
+					failed: true,
+					findings: [{ kind: "focus-removed", bucket: "violation" }],
+					screenshot,
+				}),
+			],
+			summary: SUMMARY,
+		});
+
+		expect(output.violations[0]?.nodes[0]?.any[0]).toMatchObject({
+			id: CONTEXT_CHANGE_ON_FOCUS_EVIDENCE_CHECK_ID,
+			message: "Focusing the element triggered removal of focus",
+			data: { screenshot },
+		});
 	});
 });

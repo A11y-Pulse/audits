@@ -20,7 +20,7 @@ npm install @a11y-pulse/browser-adaptor
 
 | Entry | Contents |
 | --- | --- |
-| `@a11y-pulse/browser-adaptor` | `BrowserAdaptor`, `ElementRef`, `Rect`, `bufferedClip`, `contrastRatio`, `parseOpaqueRgb`, `relativeLuminance`, `stashedElementSelectors`, `releaseStashedElements` |
+| `@a11y-pulse/browser-adaptor` | `BrowserAdaptor`, `ElementRef`, `Rect`, `bufferedClip`, `captureElementScreenshot`, `contrastRatio`, `parseOpaqueRgb`, `relativeLuminance`, `stashedElementHandle`, `stashedElementSelectors`, `releaseStashedElements`, and the page scripts `captureElementScreenshot` is built on |
 | `@a11y-pulse/browser-adaptor/puppeteer` | `PuppeteerAdaptor` |
 | `@a11y-pulse/browser-adaptor/playwright` | `PlaywrightAdaptor` |
 | `@a11y-pulse/browser-adaptor/dom` | `getSelector`, `truncateHtml` |
@@ -108,7 +108,7 @@ import { getSelector, truncateHtml } from "@a11y-pulse/browser-adaptor/dom";
 
 `getSelector` builds a compact selector for an element (intended to run in page context). `truncateHtml` shortens an element's opening tag for display in results.
 
-A page script that collects many elements in one evaluate can leave them on `window` under a key of its own, then fetch selectors for only the ones it reports:
+A page script that collects many elements in one evaluate can leave them on `window` under a key of its own, then fetch selectors (or, with `stashedElementHandle`, a handle) for only the ones it reports:
 
 ```js
 import { releaseStashedElements, stashedElementSelectors } from "@a11y-pulse/browser-adaptor";
@@ -121,6 +121,10 @@ try {
 	await releaseStashedElements(adaptor, "__myAuditElements");
 }
 ```
+
+## Element screenshots
+
+`captureElementScreenshot(adaptor, handle, { clipBuffer, settleDelay })` screenshots an element clipped to its box plus `clipBuffer` padding. It first centres the element in the viewport if the clip would not fit there or something covers the element's centre, then waits `settleDelay` ms. The caller owns `handle`, and restores the scroll position if that matters.
 
 ## License
 

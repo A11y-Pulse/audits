@@ -29,15 +29,24 @@ export type {
 export { emptyOutput, mergeOutputs, toNode, toResult } from "./to-axe/audit-output";
 export {
 	CONTEXT_CHANGE_ON_FOCUS_AUDIT_ID,
+	CONTEXT_CHANGE_ON_FOCUS_EVIDENCE_CHECK_ID,
 	contextChangeOnFocusToAxe,
 } from "./to-axe/context-change-on-focus";
-export { FILENAME_ALT_TEXT_AUDIT_ID, filenameAltTextToAxe } from "./to-axe/filename-alt-text";
+export {
+	FILENAME_ALT_TEXT_AUDIT_ID,
+	FILENAME_ALT_TEXT_EVIDENCE_CHECK_ID,
+	filenameAltTextToAxe,
+} from "./to-axe/filename-alt-text";
 export {
 	FOCUS_APPEARANCE_AUDIT_ID,
 	FOCUS_APPEARANCE_EVIDENCE_CHECK_ID,
 	focusAppearanceToAxe,
 } from "./to-axe/focus-appearance";
-export { FOCUS_COLOR_ONLY_AUDIT_ID, focusColorOnlyToAxe } from "./to-axe/focus-color-only";
+export {
+	FOCUS_COLOR_ONLY_AUDIT_ID,
+	FOCUS_COLOR_ONLY_EVIDENCE_CHECK_ID,
+	focusColorOnlyToAxe,
+} from "./to-axe/focus-color-only";
 export {
 	FOCUS_NOT_OBSCURED_AUDIT_ID,
 	FOCUS_NOT_OBSCURED_EVIDENCE_CHECK_ID,
@@ -50,7 +59,7 @@ export {
 	orphanedTabRolesToAxe,
 } from "./to-axe/orphaned-tab-roles";
 export { REFLOW_AUDIT_ID, REFLOW_EVIDENCE_CHECK_ID, reflowToAxe } from "./to-axe/reflow";
-export { SKIP_LINK_AUDIT_ID, skipLinkToAxe } from "./to-axe/skip-link";
+export { SKIP_LINK_AUDIT_ID, SKIP_LINK_EVIDENCE_CHECK_ID, skipLinkToAxe } from "./to-axe/skip-link";
 export {
 	TEXT_SPACING_AUDIT_ID,
 	TEXT_SPACING_EVIDENCE_CHECK_ID,

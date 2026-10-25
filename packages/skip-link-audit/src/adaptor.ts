@@ -1,3 +1,5 @@
+import type { Rect } from "@a11y-pulse/browser-adaptor";
+
 /**
  * An element handle in the page. This type is adaptor-specific and is opaque to the audit.
  */
@@ -36,6 +38,15 @@ export interface SkipLinkAuditAdaptor {
 	 * Activate the focused element via a real Enter keypress.
 	 */
 	pressEnter(): Promise<void>;
+
+	/**
+	 * Screenshot a clipped region of the page defined by `clip`, in document coordinates, at `scale`
+	 * bitmap pixels per CSS pixel. This function must return PNG bytes.
+	 */
+	screenshotClip(clip: Rect, scale?: number): Promise<Uint8Array>;
+
+	/** Device scale factor for evidence screenshots. Defaults to 1. */
+	readonly screenshotClipScale?: number;
 
 	/**
 	 * Ensure the page reports focus for its lifetime. In particular, `document.hasFocus()` must

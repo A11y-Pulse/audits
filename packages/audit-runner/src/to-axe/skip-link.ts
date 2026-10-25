@@ -13,6 +13,8 @@ import {
 
 export const SKIP_LINK_AUDIT_ID = "skip-link-activation";
 
+export const SKIP_LINK_EVIDENCE_CHECK_ID = "skip-link-activation-evidence";
+
 const METADATA: AuditMetadata = {
 	id: SKIP_LINK_AUDIT_ID,
 	help: "Skip links must move keyboard focus to their target",
@@ -36,6 +38,15 @@ function toAuditNode(element: SkipLinkElementResult): AuditNode {
 
 	if (element.failureReason) {
 		node.failureSummary = failureSummary(element, element.failureReason);
+	}
+
+	if (element.screenshot) {
+		node.evidence = {
+			id: SKIP_LINK_EVIDENCE_CHECK_ID,
+			impact: "moderate",
+			message: "Skip link while focused",
+			data: { screenshot: element.screenshot },
+		};
 	}
 
 	return node;

@@ -69,7 +69,7 @@ await orchestrator.run();
 console.log(contextChange.result);
 ```
 
-`contextChange.result` is only complete once `contextChange` has disconnected (by hitting one of its own limits) or the session has ended. Reading it before then is undefined. See [`@a11y-pulse/tab-orchestrator`](../tab-orchestrator) for the full session lifecycle and capability model. This audit declares only the `"contextSignals"` capability: it does not need `obscuring`, `unfocusedPair`, or `baselineStyles`, so it can run alongside the other audits on the same orchestrator without paying for their measurements.
+`contextChange.result` is only complete once `contextChange` has disconnected (by hitting one of its own limits) or the session has ended. Reading it before then is undefined. See [`@a11y-pulse/tab-orchestrator`](../tab-orchestrator) for the full session lifecycle and capability model. This audit declares the `"contextSignals"` and `"screenshot"` capabilities: it does not need `obscuring`, `unfocusedPair`, or `baselineStyles`, so it can run alongside the other audits on the same orchestrator without paying for their measurements.
 
 Because a genuine navigation ends the whole shared session (`summary.sessionEnd === "navigation"`), any other consumers attached to the same orchestrator also stop receiving tab stops once one occurs. This is a property of the shared session, not something this audit can opt out of.
 
@@ -94,6 +94,7 @@ The following options can be passed to `runContextChangeOnFocusAudit` as `Contex
 | `screenshotSettleDelay`   | `number` | `33`             | How long to wait (in ms) after each Tab for the page to settle before observing context signals.                                                    |
 | `failedElementLimit`      | `number` | `0` (never)      | Finish the audit early once this many elements have failed, leaving the rest unchecked. Useful as a fail-fast signal when you only need to know a page has focus problems, not their full extent. |
 | `timeout`                 | `number` | `0` (no timeout) | Limit how long (in ms) the audit runs before returning the results it has gathered so far.                                                          |
+| `screenshotLimit`         | `number` | `10`             | Max elements with findings to screenshot. Each is a real page screenshot, so this bounds the cost on a page with many findings.                     |
 
 ## Result shape
 
@@ -120,6 +121,12 @@ type ContextChangeOnFocusResult = {
         | "navigation";
       bucket: "violation" | "incomplete";
     }>;
+    /**
+     * PNG bytes of the element, clipped and padded. Only captured for an
+     * element with findings, never after a navigation, and omitted past
+     * `screenshotLimit`.
+     */
+    screenshot?: Uint8Array;
   }>;
   summary: {
     checked: number;

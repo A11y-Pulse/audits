@@ -5,12 +5,24 @@ import {
 	type AdaptorFactories,
 	describeEachEngine,
 	type FixtureServer,
+	isPng,
 	startFixtureServer,
 } from "@a11y-pulse/integration-harness";
+import { PNG } from "pngjs";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { type FilenameAltTextResult, runFilenameAltTextAudit } from "../../src/index";
 
 let server: FixtureServer;
+
+// The fill of the fixture images.
+const IMAGE_FILL = [0x8a, 0x9a, 0x5b];
+
+function centrePixel(png: Uint8Array): number[] {
+	const { width, height, data } = PNG.sync.read(Buffer.from(png));
+	const offset = (Math.floor(height / 2) * width + Math.floor(width / 2)) * 4;
+
+	return Array.from(data.subarray(offset, offset + 3));
+}
 
 beforeAll(async () => {
 	server = await startFixtureServer(new URL("fixtures", import.meta.url));
@@ -55,7 +67,26 @@ describeEachEngine<BrowserAdaptor>(
 			expect(result.needsReview).toMatchObject([
 				{ selector: "#stem", signal: "filename-near-match" },
 			]);
+			expect(isPng(result.failed[0]?.screenshot)).toBe(true);
+			expect(isPng(result.needsReview[0]?.screenshot)).toBe(true);
 		});
+
+		it.each(["lazy-below-fold.html", "quirks-below-fold.html"])(
+			"screenshots the image below the fold in %s, then restores the scroll",
+			async (fixture) => {
+				const page = await engine.newPage();
+
+				try {
+					await page.goto(`${server.url}/${fixture}`);
+					const result = await runFilenameAltTextAudit(page.adaptor);
+
+					expect(centrePixel(result.failed[0]!.screenshot!)).toEqual(IMAGE_FILL);
+					expect(await page.adaptor.evaluate(() => window.scrollY)).toBe(0);
+				} finally {
+					await page.close();
+				}
+			},
+		);
 
 		it("matches filenames from srcset and picture sources", async () => {
 			const result = await runFixture("srcset-match.html");
@@ -93,6 +124,7 @@ describeEachEngine<BrowserAdaptor>(
 				passed: 5,
 				unchecked: 0,
 			});
+			expect(result.passed.every((image) => !image.screenshot)).toBe(true);
 		});
 
 		it("checks nothing on a page whose images have no exposed alt text", async () => {

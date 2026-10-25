@@ -15,6 +15,11 @@ export type FilenameAltTextImage = {
 
 	/** The source URL whose filename the alt text matches, for the filename signals. */
 	matchedSource: string | null;
+	/**
+	 * PNG bytes of the image, clipped and padded. Only captured for failed and needs-review images,
+	 * and omitted past `screenshotLimit`.
+	 */
+	screenshot?: Uint8Array;
 };
 
 export type FilenameAltTextResult = {

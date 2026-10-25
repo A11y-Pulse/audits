@@ -17,6 +17,12 @@ export type ContextChangeOnFocusElementResult = {
 
 	/** True if any of `findings` has `bucket === "violation"`. */
 	failed: boolean;
+
+	/**
+	 * PNG bytes of this element, clipped and padded. Only captured for an element with findings,
+	 * never after a navigation, and omitted past `screenshotLimit`.
+	 */
+	screenshot?: Uint8Array;
 };
 
 export type ContextChangeOnFocusResult = {
