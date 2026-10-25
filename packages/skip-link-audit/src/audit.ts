@@ -1,3 +1,4 @@
+import { captureElementScreenshot } from "@a11y-pulse/browser-adaptor";
 import { getSelector, truncateHtml } from "@a11y-pulse/browser-adaptor/dom";
 import type { ElementRef, SkipLinkAuditAdaptor } from "./adaptor";
 import {
@@ -10,6 +11,9 @@ import type { SkipLinkElementResult, SkipLinkResult } from "./result";
 
 export const DEFAULT_CANDIDATE_LIMIT = 3;
 export const DEFAULT_ACTIVATION_POLL_MS = 250;
+
+const SCREENSHOT_CLIP_BUFFER = 10;
+const SCREENSHOT_SETTLE_MS = 33; // ~2 frames at 60fps
 
 export type SkipLinkOptions = {
 	/** Max tab stops to scan for skip-link candidates. Defaults to 3. */
@@ -43,6 +47,8 @@ export type SkipLinkProbe = {
 	probeTabStop(): Promise<TabStopProbe>;
 	focusHandle(ref: ElementRef): Promise<void>;
 	isFocusInsideTarget(fragment: string): Promise<boolean>;
+	/** Focus the element and screenshot it, so a link that only appears on focus is visible. */
+	screenshotFocused(ref: ElementRef): Promise<Uint8Array>;
 	disposeRef(ref: ElementRef): Promise<void>;
 };
 
@@ -103,6 +109,7 @@ export async function runSkipLinkLoop(
 					tabIndex: found.tabIndex,
 					passed: false,
 					failureReason: "target-missing",
+					screenshot: await probe.screenshotFocused(found.handle),
 				});
 				continue;
 			}
@@ -124,6 +131,7 @@ export async function runSkipLinkLoop(
 				tabIndex: found.tabIndex,
 				passed,
 				failureReason: passed ? null : "activation-no-effect",
+				screenshot: passed ? undefined : await probe.screenshotFocused(found.handle),
 			});
 		} finally {
 			await probe.disposeRef(found.handle);
@@ -214,6 +222,16 @@ function createAdaptorProbe(adaptor: SkipLinkAuditAdaptor): SkipLinkProbe {
 
 		isFocusInsideTarget(fragment) {
 			return adaptor.evaluate(isFocusInsideTargetScript, fragment);
+		},
+
+		async screenshotFocused(ref) {
+			await adaptor.evaluate(focusScript, ref);
+			await new Promise((resolve) => setTimeout(resolve, SCREENSHOT_SETTLE_MS));
+
+			return captureElementScreenshot(adaptor, ref, {
+				clipBuffer: SCREENSHOT_CLIP_BUFFER,
+				settleDelay: SCREENSHOT_SETTLE_MS,
+			});
 		},
 
 		disposeRef(ref) {

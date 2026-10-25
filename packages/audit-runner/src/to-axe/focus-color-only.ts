@@ -1,7 +1,8 @@
-import type {
-	ColorOnlyChange,
-	FocusAppearanceResult,
-	FocusElementResult,
+import {
+	type ColorOnlyChange,
+	type FocusAppearanceResult,
+	type FocusElementResult,
+	MIN_LIGHTNESS_CONTRAST,
 } from "@a11y-pulse/focus-appearance-audit";
 import {
 	type AuditMetadata,
@@ -13,9 +14,7 @@ import {
 
 export const FOCUS_COLOR_ONLY_AUDIT_ID = "focus-color-only";
 
-// WCAG 1.4.1 Understanding: colours whose luminance differs by 3:1 are distinguishable by lightness,
-// not by colour alone.
-const MIN_LIGHTNESS_CONTRAST = 3;
+export const FOCUS_COLOR_ONLY_EVIDENCE_CHECK_ID = "focus-color-only-evidence";
 
 const METADATA: AuditMetadata = {
 	id: FOCUS_COLOR_ONLY_AUDIT_ID,
@@ -49,6 +48,15 @@ function toAuditNode(element: ColorOnlyElement, failed: boolean): AuditNode {
 
 	if (failed) {
 		node.failureSummary = failureSummary(element);
+	}
+
+	if (element.colorOnly.evidence) {
+		node.evidence = {
+			id: FOCUS_COLOR_ONLY_EVIDENCE_CHECK_ID,
+			impact: "serious",
+			message: "Focus is shown only by a change of text color",
+			data: element.colorOnly.evidence,
+		};
 	}
 
 	return node;

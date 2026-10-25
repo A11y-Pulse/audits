@@ -6,6 +6,7 @@ import {
 	describeEachEngine,
 	type EnginePage,
 	type FixtureServer,
+	isPng,
 	startFixtureServer,
 	WEBKIT_PARTIAL_TAB_LOOP,
 } from "@a11y-pulse/integration-harness";
@@ -28,6 +29,17 @@ afterAll(async () => {
 
 function findings(result: ContextChangeOnFocusResult) {
 	return result.elements.flatMap((element) => element.findings);
+}
+
+function expectScreenshotsOnlyWithFindings(result: ContextChangeOnFocusResult) {
+	for (const element of result.elements) {
+		if (element.findings.length === 0) {
+			expect(element.screenshot).toBeUndefined();
+			continue;
+		}
+
+		expect(isPng(element.screenshot)).toBe(true);
+	}
 }
 
 const adaptors: AdaptorFactories<BrowserAdaptor> = {
@@ -73,6 +85,7 @@ describeEachEngine<BrowserAdaptor>(
 						(finding) => finding.kind === "new-window" && finding.bucket === "violation",
 					),
 				).toBe(true);
+				expectScreenshotsOnlyWithFindings(result);
 
 				// Race the popup event against a short timeout: the orchestrator's window.open interception
 				// (installContextObserverScript) should prevent a real popup from ever firing.
@@ -94,6 +107,7 @@ describeEachEngine<BrowserAdaptor>(
 						(finding) => finding.kind === "auto-submit" && finding.bucket === "violation",
 					),
 				).toBe(true);
+				expectScreenshotsOnlyWithFindings(result);
 
 				// The orchestrator's capture-phase submit listener prevents the form from actually
 				// submitting/navigating away.
@@ -116,6 +130,7 @@ describeEachEngine<BrowserAdaptor>(
 						(finding) => finding.kind === "focus-removed" && finding.bucket === "violation",
 					),
 				).toBe(true);
+				expectScreenshotsOnlyWithFindings(result);
 			} finally {
 				await page.close();
 			}
@@ -131,6 +146,7 @@ describeEachEngine<BrowserAdaptor>(
 							finding.kind === "focus-redirected-outside" && finding.bucket === "violation",
 					),
 				).toBe(true);
+				expectScreenshotsOnlyWithFindings(result);
 			} finally {
 				await page.close();
 			}

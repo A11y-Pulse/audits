@@ -12,6 +12,8 @@ import {
 
 export const FILENAME_ALT_TEXT_AUDIT_ID = "filename-alt-text";
 
+export const FILENAME_ALT_TEXT_EVIDENCE_CHECK_ID = "filename-alt-text-evidence";
+
 const METADATA: AuditMetadata = {
 	id: FILENAME_ALT_TEXT_AUDIT_ID,
 	help: "Alt text must not be a filename or placeholder text",
@@ -47,6 +49,15 @@ function toAuditNode(image: FilenameAltTextImage): AuditNode {
 
 	if (image.signal) {
 		node.failureSummary = failureSummary(image, image.signal);
+	}
+
+	if (image.screenshot) {
+		node.evidence = {
+			id: FILENAME_ALT_TEXT_EVIDENCE_CHECK_ID,
+			impact: "serious",
+			message: `Image with the alt text "${image.altText}"`,
+			data: { screenshot: image.screenshot },
+		};
 	}
 
 	return node;

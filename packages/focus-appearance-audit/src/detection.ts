@@ -162,6 +162,10 @@ function changedRenderedProperties(
 	});
 }
 
+// WCAG 1.4.1 Understanding: colours whose luminance differs by 3:1 are distinguishable by lightness,
+// not by colour alone.
+export const MIN_LIGHTNESS_CONTRAST = 3;
+
 /**
  * Report the element's text colour change when it is the only painted difference between the
  * baseline and focused styles, or null otherwise.

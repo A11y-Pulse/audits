@@ -84,6 +84,8 @@ type SkipLinkResult = {
     tabIndex: number;
     passed: boolean;
     failureReason: "target-missing" | "activation-no-effect" | null;
+    /** PNG bytes of the focused skip link, clipped and padded. Only captured when it failed. */
+    screenshot?: Uint8Array;
   }>;
   summary: {
     found: number;
@@ -104,9 +106,11 @@ When no candidate is found, `skipLinks` is empty and the summary is zeros. Landm
 
 Activation uses a real Enter keypress rather than a synthetic click, so the keyboard path is the one being checked.
 
+A failed skip link is focused again and screenshotted, so a link that only appears on focus is visible in the evidence.
+
 ## Adaptors
 
-The audit itself is framework-agnostic: it drives a page through an **adaptor**, a small interface of primitives (evaluate JS in the page, press Tab, press Enter) that the audit calls without knowing which browser automation library is behind it.
+The audit itself is framework-agnostic: it drives a page through an **adaptor**, a small interface of primitives (evaluate JS in the page, press Tab, press Enter, take a screenshot) that the audit calls without knowing which browser automation library is behind it.
 
 [`@a11y-pulse/browser-adaptor`](../browser-adaptor) ships two implementations, `PuppeteerAdaptor` and `PlaywrightAdaptor`. Other environments (Selenium, WebDriver) can be supported by implementing the same interface, exported as `SkipLinkAuditAdaptor` (aliased as `BrowserAdaptor` from the package root).
 
@@ -119,6 +123,8 @@ The audit itself is framework-agnostic: it drives a page through an **adaptor**,
 | `disposeRef(ref)`        | Releases a handle previously returned by `evaluateHandle`.                                                                                           |
 | `pressTab()`             | Presses the Tab key, advancing focus to the next focusable element.                                                                                  |
 | `pressEnter()`           | Presses the Enter key, activating the focused element.                                                                                               |
+| `screenshotClip(clip, scale?)` | Screenshots the `clip` region of the page, in document coordinates, at `scale` bitmap pixels per CSS pixel, and returns PNG bytes. |
+| `screenshotClipScale`    | Optional. The scale for evidence screenshots. Defaults to 1.                                                                                         |
 | `ensureFocusReporting()` | Ensures the page reports focus for its lifetime, in particular that `document.hasFocus()` works and `:focus` styles apply even when the page is not the foreground tab/window. Must not throw. |
 
 ### Writing a new adaptor
@@ -130,7 +136,7 @@ import type { SkipLinkAuditAdaptor } from "@a11y-pulse/skip-link-audit";
 
 class MyFrameworkAdaptor implements SkipLinkAuditAdaptor {
   // ...implement evaluate, evaluateHandle, disposeRef, pressTab,
-  // pressEnter, and ensureFocusReporting for your framework
+  // pressEnter, screenshotClip, and ensureFocusReporting for your framework
 }
 ```
 

@@ -3,7 +3,11 @@ import type {
 	FilenameAltTextResult,
 } from "@a11y-pulse/filename-alt-text-audit";
 import { describe, expect, it } from "vitest";
-import { FILENAME_ALT_TEXT_AUDIT_ID, filenameAltTextToAxe } from "./filename-alt-text";
+import {
+	FILENAME_ALT_TEXT_AUDIT_ID,
+	FILENAME_ALT_TEXT_EVIDENCE_CHECK_ID,
+	filenameAltTextToAxe,
+} from "./filename-alt-text";
 
 function image(overrides: Partial<FilenameAltTextImage> = {}): FilenameAltTextImage {
 	return {
@@ -90,5 +94,18 @@ describe("filenameAltTextToAxe", () => {
 		expect(output.inapplicable[0]?.id).toBe(FILENAME_ALT_TEXT_AUDIT_ID);
 		expect(output.violations).toEqual([]);
 		expect(output.passes).toEqual([]);
+	});
+
+	it("attaches a screenshot when the audit captured one", () => {
+		const screenshot = new Uint8Array([1]);
+		const output = filenameAltTextToAxe(
+			result([], [image({ altText: "DSC_0192", signal: "camera-name", screenshot })], []),
+		);
+
+		expect(output.incomplete[0]?.nodes[0]?.any[0]).toMatchObject({
+			id: FILENAME_ALT_TEXT_EVIDENCE_CHECK_ID,
+			message: 'Image with the alt text "DSC_0192"',
+			data: { screenshot },
+		});
 	});
 });

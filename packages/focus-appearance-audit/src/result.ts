@@ -36,6 +36,11 @@ export type ColorOnlyChange = {
 	focusedColor: string;
 	/** Null when either colour is translucent or not in `rgb()` notation, so cannot be measured. */
 	contrastRatio: number | null;
+	/**
+	 * PNGs of the element while focused and after blur. Only captured when `contrastRatio` is under
+	 * `MIN_LIGHTNESS_CONTRAST` or null.
+	 */
+	evidence?: { focusedScreenshot: Uint8Array; unfocusedScreenshot: Uint8Array };
 };
 
 export type FocusElementResult = {

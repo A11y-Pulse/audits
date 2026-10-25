@@ -1,4 +1,4 @@
-import type { BrowserAdaptor } from "./adaptor";
+import type { BrowserAdaptor, ElementRef } from "./adaptor";
 import { getSelector } from "./get-selector";
 
 type PickWindow = Window & { __a11yPulsePickedElement?: Element | null };
@@ -21,6 +21,20 @@ function releaseStashScript(stashKey: string): void {
 }
 
 /**
+ * Return a handle to the element at `index` of the array a page script left on `window[stashKey]`.
+ * The caller owns the handle.
+ */
+export async function stashedElementHandle(
+	adaptor: BrowserAdaptor,
+	stashKey: string,
+	index: number,
+): Promise<ElementRef> {
+	await adaptor.evaluate(pickStashedScript, stashKey, index);
+
+	return adaptor.evaluateHandle(pickedElementScript);
+}
+
+/**
  * Return a selector (see getSelector) for each element at `indices` of the array a page script
  * left on `window[stashKey]`.
  */
@@ -32,8 +46,7 @@ export async function stashedElementSelectors(
 	const selectors: string[] = [];
 
 	for (const index of indices) {
-		await adaptor.evaluate(pickStashedScript, stashKey, index);
-		const handle = await adaptor.evaluateHandle(pickedElementScript);
+		const handle = await stashedElementHandle(adaptor, stashKey, index);
 
 		try {
 			selectors.push(await adaptor.evaluate(getSelector, handle));

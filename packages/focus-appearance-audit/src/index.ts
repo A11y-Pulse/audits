@@ -2,7 +2,7 @@ export type { BrowserAdaptor, ElementRef, Rect } from "@a11y-pulse/browser-adapt
 export type { FocusAppearanceOptions } from "./audit";
 export { createFocusAppearanceAudit, runFocusAppearanceAudit } from "./audit";
 export type { StyleSnapshot } from "./detection";
-export { omitIdleStyleSnapshot } from "./detection";
+export { MIN_LIGHTNESS_CONTRAST, omitIdleStyleSnapshot } from "./detection";
 export type {
 	ColorOnlyChange,
 	DetectionMethod,

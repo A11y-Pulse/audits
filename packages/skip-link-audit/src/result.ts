@@ -18,6 +18,9 @@ export type SkipLinkElementResult = {
 
 	/** Why the candidate failed, or null when it passed. */
 	failureReason: SkipLinkFailureReason | null;
+
+	/** PNG bytes of the focused skip link, clipped and padded. Only captured when it failed. */
+	screenshot?: Uint8Array;
 };
 
 export type SkipLinkResult = {

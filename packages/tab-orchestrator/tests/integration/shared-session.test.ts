@@ -78,9 +78,10 @@ describeEachEngine<BrowserAdaptor>(
 			);
 			expect(hiddenByFooter?.screenshot).toBeInstanceOf(Uint8Array);
 
-			// unfocusedPair (focused + unfocused, stop 1 only) plus one screenshotClip from
+			// unfocusedPair (focused + unfocused, stop 1 only), one screenshotClip from
+			// context-change-on-focus for the element that opens a window, and one from
 			// focus-not-obscured for the element hidden behind the sticky footer.
-			expect(clips).toBe(3);
+			expect(clips).toBe(4);
 			// The session ends naturally once Tab lands on <body> (or revisits an already-seen element)
 			// with nothing left to tab to; detecting that requires one more real Tab press than there are
 			// real elements to report. This is deliberate, pre-existing orchestrator behaviour, not

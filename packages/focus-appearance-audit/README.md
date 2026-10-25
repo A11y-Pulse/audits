@@ -123,6 +123,8 @@ type FocusAppearanceResult = {
       focusedColor: string;
       /** Null when either colour is translucent or not in `rgb()` notation. */
       contrastRatio: number | null;
+      /** PNGs of the element focused and unfocused, when under 3:1 or null. */
+      evidence?: { focusedScreenshot: Uint8Array; unfocusedScreenshot: Uint8Array };
     };
   }>;
   summary: {
@@ -166,8 +168,9 @@ When the computed-style comparison finds that the text colour is the only painte
 - An underline drawn in the text colour changes with it and still counts as colour only. An underline, outline or any other indicator that appears on focus does not.
 - `::before` and `::after` content may change colour with the text. Any other change to it does not count as colour only.
 - `contrastRatio` is `null` when either colour is translucent (its appearance depends on the background) or authored in a colour space other than sRGB.
+- When the ratio is under 3:1 or `null`, `evidence` holds screenshots of the element focused and unfocused, so a reviewer can compare the two colours. This costs the same blur and refocus as the pixel-diff fallback.
 
-[`@a11y-pulse/audit-runner`](../audit-runner) reports these as `focus-color-only`: under 3:1 in `violations`, `null` in `incomplete`, and 3:1 or more in `passes`.
+[`@a11y-pulse/audit-runner`](../audit-runner) reports these as `focus-color-only`: under 3:1 in `violations`, `null` in `incomplete`, and 3:1 or more in `passes`. The screenshots are attached as `focus-color-only-evidence`.
 
 ## Accuracy
 

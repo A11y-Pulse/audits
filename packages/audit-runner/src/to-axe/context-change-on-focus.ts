@@ -13,6 +13,8 @@ import {
 
 export const CONTEXT_CHANGE_ON_FOCUS_AUDIT_ID = "context-change-on-focus";
 
+export const CONTEXT_CHANGE_ON_FOCUS_EVIDENCE_CHECK_ID = "context-change-on-focus-evidence";
+
 const METADATA: AuditMetadata = {
 	id: CONTEXT_CHANGE_ON_FOCUS_AUDIT_ID,
 	help: "Focusing an element must not trigger an unexpected change of context",
@@ -43,11 +45,14 @@ function contextChangeKindLabel(kind: ContextChangeKind): string {
 	}
 }
 
-function failureSummary(element: ContextChangeOnFocusElementResult): string {
+function primaryLabel(element: ContextChangeOnFocusElementResult): string {
 	const primary = element.findings[0]?.kind;
-	const label = primary ? contextChangeKindLabel(primary) : "an unexpected change of context";
 
-	return `Focusing the element triggered ${label} (tab stop #${element.tabIndex}). Ensure focusing an element does not trigger a change of context; trigger changes on activation (click or Enter) instead.`;
+	return primary ? contextChangeKindLabel(primary) : "an unexpected change of context";
+}
+
+function failureSummary(element: ContextChangeOnFocusElementResult): string {
+	return `Focusing the element triggered ${primaryLabel(element)} (tab stop #${element.tabIndex}). Ensure focusing an element does not trigger a change of context; trigger changes on activation (click or Enter) instead.`;
 }
 
 function toAuditNode(element: ContextChangeOnFocusElementResult): AuditNode {
@@ -55,6 +60,15 @@ function toAuditNode(element: ContextChangeOnFocusElementResult): AuditNode {
 
 	if (element.findings.length > 0) {
 		node.failureSummary = failureSummary(element);
+	}
+
+	if (element.screenshot) {
+		node.evidence = {
+			id: CONTEXT_CHANGE_ON_FOCUS_EVIDENCE_CHECK_ID,
+			impact: "serious",
+			message: `Focusing the element triggered ${primaryLabel(element)}`,
+			data: { screenshot: element.screenshot },
+		};
 	}
 
 	return node;

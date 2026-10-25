@@ -36,6 +36,7 @@ function scriptedProbe(script: {
 	tabs: number;
 	enters: number;
 	focused: ElementRef[];
+	screenshotted: ElementRef[];
 	disposed: ElementRef[];
 } {
 	let stopCall = 0;
@@ -44,6 +45,7 @@ function scriptedProbe(script: {
 		tabs: 0,
 		enters: 0,
 		focused: [] as ElementRef[],
+		screenshotted: [] as ElementRef[],
 		disposed: [] as ElementRef[],
 	};
 
@@ -63,6 +65,12 @@ function scriptedProbe(script: {
 			probe.focused = record.focused;
 		},
 		isFocusInsideTarget: async () => script.focusInside?.[focusInsideCall++] ?? false,
+		screenshotFocused: async (ref) => {
+			record.screenshotted.push(ref);
+			probe.screenshotted = record.screenshotted;
+
+			return new Uint8Array([1]);
+		},
 		disposeRef: async (ref) => {
 			record.disposed.push(ref);
 			probe.disposed = record.disposed;
@@ -111,6 +119,7 @@ describe("runSkipLinkLoop", () => {
 			passed: true,
 			failureReason: null,
 		});
+		expect(result.skipLinks[0]?.screenshot).toBeUndefined();
 		expect(result.summary).toEqual({ found: 1, passed: 1, failed: 0 });
 	});
 
@@ -136,7 +145,9 @@ describe("runSkipLinkLoop", () => {
 			fragment: "#missing",
 			passed: false,
 			failureReason: "target-missing",
+			screenshot: new Uint8Array([1]),
 		});
+		expect(probe.screenshotted).toEqual([handle]);
 		expect(result.summary).toEqual({ found: 1, passed: 0, failed: 1 });
 		expect(probe.enters).toBe(0);
 		expect(probe.disposed).toEqual([handle]);
@@ -181,7 +192,9 @@ describe("runSkipLinkLoop", () => {
 		expect(result.skipLinks[0]).toMatchObject({
 			passed: false,
 			failureReason: "activation-no-effect",
+			screenshot: new Uint8Array([1]),
 		});
+		expect(probe.screenshotted).toEqual([handle]);
 		expect(result.summary.failed).toBe(1);
 		expect(probe.enters).toBe(1);
 		expect(probe.disposed).toEqual([handle]);

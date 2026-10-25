@@ -12,6 +12,7 @@ import {
 import {
 	alignedRegionsDiffer,
 	colorOnlyChange,
+	MIN_LIGHTNESS_CONTRAST,
 	omitIdleStyleSnapshot,
 	stylesIndicateFocus,
 } from "./detection";
@@ -126,6 +127,17 @@ export function createFocusAppearanceAudit(
 			) {
 				detection = "style";
 				colorOnly = colorOnlyChange(snapshot.baselineStyles, focused);
+
+				if (
+					colorOnly !== null &&
+					(colorOnly.contrastRatio === null || colorOnly.contrastRatio < MIN_LIGHTNESS_CONTRAST)
+				) {
+					const pair = await session.ensureUnfocusedPair();
+					colorOnly.evidence = {
+						focusedScreenshot: pair.focusedScreenshot,
+						unfocusedScreenshot: pair.unfocusedScreenshot,
+					};
+				}
 			} else {
 				const pair = await session.ensureUnfocusedPair();
 				const differs = alignedRegionsDiffer(
