@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.0
+
+### Minor Changes
+
+- [#97](https://github.com/A11y-Pulse/audits/pull/97) [`dc533e7`](https://github.com/A11y-Pulse/audits/commit/dc533e7e3914534a080a7420dd04d4bbfd1de9e5) Thanks [@wildlyinaccurate](https://github.com/wildlyinaccurate)! - Screenshot colour-only focus indicators. When the text colour change is under 3:1 or cannot be measured, `colorOnly.evidence` holds the element's focused and unfocused screenshots. `MIN_LIGHTNESS_CONTRAST` is now exported from `@a11y-pulse/focus-appearance-audit`. The audit runner attaches the screenshots to `focus-color-only` results as `focus-color-only-evidence`.
+
+### Patch Changes
+
+- Updated dependencies [[`dc533e7`](https://github.com/A11y-Pulse/audits/commit/dc533e7e3914534a080a7420dd04d4bbfd1de9e5), [`dc533e7`](https://github.com/A11y-Pulse/audits/commit/dc533e7e3914534a080a7420dd04d4bbfd1de9e5)]:
+  - @a11y-pulse/tab-orchestrator@0.9.0
+  - @a11y-pulse/browser-adaptor@0.9.0
+
 ## 0.5.0
 
 ### Minor Changes

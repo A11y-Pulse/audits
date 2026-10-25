@@ -1,5 +1,17 @@
 # @a11y-pulse/context-change-on-focus-audit
 
+## 0.4.0
+
+### Minor Changes
+
+- [#97](https://github.com/A11y-Pulse/audits/pull/97) [`dc533e7`](https://github.com/A11y-Pulse/audits/commit/dc533e7e3914534a080a7420dd04d4bbfd1de9e5) Thanks [@wildlyinaccurate](https://github.com/wildlyinaccurate)! - Screenshot elements with context-change-on-focus findings. Each element with a finding gets a `screenshot` (up to the new `screenshotLimit` option, default 10), except after a navigation, when the original page is gone. The tab orchestrator now lets a `screenshot` declarer capture the element behind a focus-removal stop. The audit runner attaches the screenshot as `context-change-on-focus-evidence`.
+
+### Patch Changes
+
+- Updated dependencies [[`dc533e7`](https://github.com/A11y-Pulse/audits/commit/dc533e7e3914534a080a7420dd04d4bbfd1de9e5), [`dc533e7`](https://github.com/A11y-Pulse/audits/commit/dc533e7e3914534a080a7420dd04d4bbfd1de9e5)]:
+  - @a11y-pulse/tab-orchestrator@0.9.0
+  - @a11y-pulse/browser-adaptor@0.9.0
+
 ## 0.3.0
 
 ### Minor Changes
