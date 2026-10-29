@@ -55,6 +55,6 @@
 	},
 	"devDependencies": {
 		"happy-dom": "^21.0.3",
-		"puppeteer": "^25.14.0"
+		"puppeteer": "^25.16.0"
 	}
 }
