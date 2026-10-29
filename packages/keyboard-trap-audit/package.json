@@ -58,6 +58,6 @@
 	},
 	"devDependencies": {
 		"playwright-core": "^1.64.1",
-		"puppeteer": "^25.14.0"
+		"puppeteer": "^25.16.0"
 	}
 }
