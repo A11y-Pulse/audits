@@ -77,7 +77,7 @@
 		}
 	},
 	"devDependencies": {
-		"happy-dom": "^21.0.3",
+		"happy-dom": "^21.0.4",
 		"playwright-core": "^1.64.1",
 		"puppeteer": "^25.14.0"
 	}
