@@ -7,6 +7,7 @@ export type { KeyboardTrapResult } from "@a11y-pulse/keyboard-trap-audit";
 export type { OrphanedTabRolesResult } from "@a11y-pulse/orphaned-tab-roles-audit";
 export type { ReflowResult } from "@a11y-pulse/reflow-audit";
 export type { SkipLinkResult } from "@a11y-pulse/skip-link-audit";
+export type { SuspiciousNameResult } from "@a11y-pulse/suspicious-accessible-name-audit";
 export type { TextSpacingResult } from "@a11y-pulse/text-spacing-audit";
 export { runAxeCore } from "./axe-core";
 export type { Browser, Engine, Format, ParsedArgs } from "./cli-args";
@@ -60,6 +61,10 @@ export {
 } from "./to-axe/orphaned-tab-roles";
 export { REFLOW_AUDIT_ID, REFLOW_EVIDENCE_CHECK_ID, reflowToAxe } from "./to-axe/reflow";
 export { SKIP_LINK_AUDIT_ID, SKIP_LINK_EVIDENCE_CHECK_ID, skipLinkToAxe } from "./to-axe/skip-link";
+export {
+	SUSPICIOUS_ACCESSIBLE_NAME_AUDIT_ID,
+	suspiciousAccessibleNameToAxe,
+} from "./to-axe/suspicious-accessible-name";
 export {
 	TEXT_SPACING_AUDIT_ID,
 	TEXT_SPACING_EVIDENCE_CHECK_ID,

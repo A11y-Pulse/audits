@@ -37,6 +37,7 @@ A collection of audits that are designed to complement static analysis tools lik
 | [2.4.1 Bypass Blocks](https://www.w3.org/WAI/WCAG22/Understanding/bypass-blocks) (A) | ✅ | 🟡<sup>3</sup> | ➖<sup>1</sup> |
 | [1.4.1 Use of Color](https://www.w3.org/WAI/WCAG22/Understanding/use-of-color) (A) | 🟡<sup>5</sup> | 🟡<sup>6</sup> | ➖<sup>1</sup> |
 | [1.1.1 Non-text Content](https://www.w3.org/WAI/WCAG22/Understanding/non-text-content) (A) | 🟡<sup>7</sup> | 🟡<sup>8</sup> | ➖<sup>1</sup> |
+| [2.4.6 Headings and Labels](https://www.w3.org/WAI/WCAG22/Understanding/headings-and-labels) (AA) | 🟡<sup>9</sup> | ❌ | ➖<sup>1</sup> |
 
 <sup>
 1. Manual review only: emits a note asking a human to check the criterion.<br />
@@ -45,8 +46,9 @@ A collection of audits that are designed to complement static analysis tools lik
 4. Detects focus confined to part of the page and tries the standard keyboard exits, but reports a trap for human review.<br />
 5. Flags focus shown by a change of text colour alone.<br />
 6. The `link-in-text-block` audit only checks that links are distinguishable from the surrounding text.<br />
-7. Flags image alt text that is a filename or placeholder text.<br />
+7. Flags image alt text that is a filename or placeholder text, and icon-only controls and iframes whose name is code or placeholder text.<br />
 8. The `image-alt` audit and its relatives only check that a text alternative exists.<br />
+9. Flags controls and landmarks whose accessible name is code, an unrendered template token or placeholder text. Whether a name describes the purpose needs human review.<br />
 </sup>
 
 ## Quick Start
@@ -70,6 +72,7 @@ It also serves as an implementation reference for integrating the audits in your
 | [@a11y-pulse/filename-alt-text-audit](./packages/filename-alt-text-audit) | [WCAG 1.1.1 Non-text Content](https://www.w3.org/WAI/WCAG22/Understanding/non-text-content): flags image alt text that is the image's own filename, a camera file name or placeholder text |
 | [@a11y-pulse/focus-order-audit](./packages/focus-order-audit) | [WCAG 2.4.3 Focus Order](https://www.w3.org/WAI/WCAG22/Understanding/focus-order): tabs through a page and flags focus that repeatedly jumps a long way against the reading order, for human review |
 | [@a11y-pulse/orphaned-tab-roles-audit](./packages/orphaned-tab-roles-audit) | [WCAG 1.3.1 Info and Relationships](https://www.w3.org/WAI/WCAG22/Understanding/info-and-relationships) and [4.1.2 Name, Role, Value](https://www.w3.org/WAI/WCAG22/Understanding/name-role-value): flags tabs with no tab panel, tab panels with no tab, and navigation links given the tab role |
+| [@a11y-pulse/suspicious-accessible-name-audit](./packages/suspicious-accessible-name-audit) | [WCAG 2.4.6 Headings and Labels](https://www.w3.org/WAI/WCAG22/Understanding/headings-and-labels), [2.4.4 Link Purpose](https://www.w3.org/WAI/WCAG22/Understanding/link-purpose-in-context) and [1.1.1 Non-text Content](https://www.w3.org/WAI/WCAG22/Understanding/non-text-content): flags accessible names that are code, an unrendered template token or placeholder text
 | [@a11y-pulse/reflow-audit](./packages/reflow-audit) | [WCAG 1.4.10 Reflow](https://www.w3.org/WAI/WCAG22/Understanding/reflow): narrows to 320px and checks for content that requires horizontal scrolling |
 | [@a11y-pulse/skip-link-audit](./packages/skip-link-audit) | [WCAG 2.4.1 Bypass Blocks](https://www.w3.org/WAI/WCAG22/Understanding/bypass-blocks.html): verifies that skip links are present and functional |
 | [@a11y-pulse/text-spacing-audit](./packages/text-spacing-audit) | [WCAG 1.4.12 Text Spacing](https://www.w3.org/WAI/WCAG22/Understanding/text-spacing): applies extra spacing and detects clipped or overlapping text |

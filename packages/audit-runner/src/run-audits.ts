@@ -28,6 +28,10 @@ import {
 } from "@a11y-pulse/reflow-audit";
 import { runSkipLinkAudit, type SkipLinkOptions } from "@a11y-pulse/skip-link-audit";
 import {
+	runSuspiciousNameAudit,
+	type SuspiciousNameOptions,
+} from "@a11y-pulse/suspicious-accessible-name-audit";
+import {
 	createTabOrchestrator,
 	DEFAULT_ELEMENT_LIMIT,
 	DEFAULT_SCREENSHOT_SETTLE_DELAY,
@@ -51,6 +55,7 @@ import { keyboardTrapToAxe } from "./to-axe/keyboard-trap";
 import { orphanedTabRolesToAxe } from "./to-axe/orphaned-tab-roles";
 import { reflowToAxe } from "./to-axe/reflow";
 import { skipLinkToAxe } from "./to-axe/skip-link";
+import { suspiciousAccessibleNameToAxe } from "./to-axe/suspicious-accessible-name";
 import { textSpacingToAxe } from "./to-axe/text-spacing";
 
 /**
@@ -70,6 +75,7 @@ export type AuditRunnerOptions = {
 	axe?: AxeRunOptions;
 	filenameAltText?: FilenameAltTextOptions;
 	orphanedTabRoles?: OrphanedTabRolesOptions;
+	suspiciousAccessibleName?: SuspiciousNameOptions;
 	focusAppearance?: FocusAppearanceOptions;
 	focusNotObscured?: FocusNotObscuredOptions;
 	contextChangeOnFocus?: ContextChangeOnFocusOptions;
@@ -176,6 +182,12 @@ export async function runAllAudits(
 	onProgress("Checking tabs and tab panels");
 	const orphanedTabRoles = await runOrphanedTabRolesAudit(browser, options.orphanedTabRoles);
 
+	onProgress("Checking accessible names");
+	const suspiciousAccessibleName = await runSuspiciousNameAudit(
+		browser,
+		options.suspiciousAccessibleName,
+	);
+
 	onProgress("Tabbing through focusable elements");
 	const { outputs: tabAudits, verifyKeyboardTrap } = await runTabAuditsInSharedSession(
 		adaptors,
@@ -202,6 +214,7 @@ export async function runAllAudits(
 		axeResults,
 		filenameAltTextToAxe(filenameAltText),
 		orphanedTabRolesToAxe(orphanedTabRoles),
+		suspiciousAccessibleNameToAxe(suspiciousAccessibleName),
 		...tabAudits,
 		keyboardTrap,
 		skipLinkToAxe(skipLink),

@@ -65,6 +65,7 @@
 		"@a11y-pulse/orphaned-tab-roles-audit": "*",
 		"@a11y-pulse/reflow-audit": "*",
 		"@a11y-pulse/skip-link-audit": "*",
+		"@a11y-pulse/suspicious-accessible-name-audit": "*",
 		"@a11y-pulse/tab-orchestrator": "*",
 		"@a11y-pulse/text-spacing-audit": "*",
 		"axe-core": "^4.14.0",
