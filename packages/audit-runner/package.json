@@ -68,7 +68,7 @@
 		"@a11y-pulse/tab-orchestrator": "*",
 		"@a11y-pulse/text-spacing-audit": "*",
 		"axe-core": "^4.14.0",
-		"puppeteer": "^25.14.0"
+		"puppeteer": "^25.16.0"
 	},
 	"peerDependencies": {
 		"playwright-core": ">=1.40"
