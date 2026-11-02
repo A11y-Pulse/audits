@@ -115,6 +115,7 @@ The return value is in the shape of [axe-core's results object](https://github.c
 | --- | --- |
 | Filename or placeholder alt text (WCAG 1.1.1) | `filename-alt-text` |
 | Orphaned tab roles (WCAG 1.3.1 and 4.1.2) | `orphaned-tab-roles` |
+| Code or placeholder accessible names (WCAG 1.1.1, 2.4.4 and 2.4.6) | `suspicious-accessible-name` |
 | Focus appearance (WCAG 2.4.7) | `focus-appearance` |
 | Focus shown by colour alone (WCAG 1.4.1) | `focus-color-only` |
 | Focus not obscured (WCAG 2.4.11) | `focus-not-obscured` |
@@ -131,6 +132,7 @@ Each audit documents the cases where it reports a problem that is not one, and w
 
 - [Filename or placeholder alt text](../filename-alt-text-audit#known-false-positives)
 - [Orphaned tab roles](../orphaned-tab-roles-audit#known-false-positives)
+- [Code or placeholder accessible names](../suspicious-accessible-name-audit#known-false-positives)
 - [Focus appearance](../focus-appearance-audit#known-false-positives)
 - [Focus not obscured](../focus-not-obscured-audit#known-false-positives)
 - [Context change on focus](../context-change-on-focus-audit#known-false-positives)

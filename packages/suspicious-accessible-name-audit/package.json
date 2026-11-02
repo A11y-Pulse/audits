@@ -1,0 +1,61 @@
+{
+	"name": "@a11y-pulse/suspicious-accessible-name-audit",
+	"version": "0.0.0",
+	"description": "Audit that flags controls, links, landmarks and iframes whose accessible name is code, an unrendered template token or a placeholder (WCAG 1.1.1, 2.4.4 and 2.4.6).",
+	"type": "module",
+	"license": "SEE LICENSE IN LICENSE.md",
+	"author": "A11y Pulse",
+	"homepage": "https://github.com/A11y-Pulse/audits/tree/main/packages/suspicious-accessible-name-audit#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/A11y-Pulse/audits.git",
+		"directory": "packages/suspicious-accessible-name-audit"
+	},
+	"bugs": {
+		"url": "https://github.com/A11y-Pulse/audits/issues"
+	},
+	"keywords": [
+		"accessibility",
+		"a11y",
+		"wcag",
+		"accessible-name",
+		"headings-and-labels",
+		"audit"
+	],
+	"engines": {
+		"node": ">=22"
+	},
+	"exports": {
+		".": {
+			"source": "./src/index.ts",
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
+	},
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE.md"
+	],
+	"scripts": {
+		"build": "tsup && tsc -p tsconfig.build.json",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check",
+		"lint:fix": "biome check --fix",
+		"test:unit": "vitest run",
+		"test:integration": "vitest run --config vitest.integration.config.ts",
+		"test": "npm run typecheck && npm run test:unit",
+		"prepublishOnly": "npm run build"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"dependencies": {
+		"@a11y-pulse/browser-adaptor": "*"
+	},
+	"devDependencies": {
+		"happy-dom": "^21.0.3",
+		"playwright-core": "^1.64.1",
+		"puppeteer": "^25.14.0"
+	}
+}
