@@ -28,23 +28,23 @@ A collection of audits that are designed to complement static analysis tools lik
 
 | Success criterion | A11y-Pulse/audits | axe-core | pa11y (HTML_CodeSniffer) |
 | --- | --- | --- | --- |
-| [2.4.7 Focus Visible](https://www.w3.org/WAI/WCAG22/Understanding/focus-visible) (AA) | ✅ | ❌ | ➖<sup>1</sup> |
+| [1.1.1 Non-text Content](https://www.w3.org/WAI/WCAG22/Understanding/non-text-content) (A) | ✅ | 🟡<sup>1</sup> | ➖<sup>2</sup> |
+| [1.4.1 Use of Color](https://www.w3.org/WAI/WCAG22/Understanding/use-of-color) (A) | ✅ | 🟡<sup>3</sup> | ➖<sup>2</sup> |
+| [1.4.10 Reflow](https://www.w3.org/WAI/WCAG22/Understanding/reflow) (AA) | ✅ | ❌ | ➖<sup>2</sup> |
+| [1.4.12 Text Spacing](https://www.w3.org/WAI/WCAG22/Understanding/text-spacing) (AA) | ✅ | 🟡<sup>4</sup> | ➖<sup>2</sup> |
+| [2.1.2 No Keyboard Trap](https://www.w3.org/WAI/WCAG22/Understanding/no-keyboard-trap) (A) | ✅ | ❌ | ➖<sup>2</sup> |
+| [2.4.1 Bypass Blocks](https://www.w3.org/WAI/WCAG22/Understanding/bypass-blocks) (A) | ✅ | 🟡<sup>5</sup> | ➖<sup>2</sup> |
+| [2.4.6 Headings and Labels](https://www.w3.org/WAI/WCAG22/Understanding/headings-and-labels) (AA) | ✅ | ❌ | ➖<sup>2</sup> |
+| [2.4.7 Focus Visible](https://www.w3.org/WAI/WCAG22/Understanding/focus-visible) (AA) | ✅ | ❌ | ➖<sup>2</sup> |
 | [2.4.11 Focus Not Obscured](https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum) (AA) | ✅ | ❌ | ❌ |
-| [3.2.1 On Focus](https://www.w3.org/WAI/WCAG22/Understanding/on-focus) (A) | ✅ | ❌ | ➖<sup>1</sup> |
-| [2.1.2 No Keyboard Trap](https://www.w3.org/WAI/WCAG22/Understanding/no-keyboard-trap) (A) | ✅ | ❌ | ➖<sup>1</sup> |
-| [1.4.10 Reflow](https://www.w3.org/WAI/WCAG22/Understanding/reflow) (AA) | ✅ | ❌ | ➖<sup>1</sup> |
-| [1.4.12 Text Spacing](https://www.w3.org/WAI/WCAG22/Understanding/text-spacing) (AA) | ✅ | 🟡<sup>2</sup> | ➖<sup>1</sup> |
-| [2.4.1 Bypass Blocks](https://www.w3.org/WAI/WCAG22/Understanding/bypass-blocks) (A) | ✅ | 🟡<sup>3</sup> | ➖<sup>1</sup> |
-| [1.4.1 Use of Color](https://www.w3.org/WAI/WCAG22/Understanding/use-of-color) (A) | ✅ | 🟡<sup>4</sup> | ➖<sup>1</sup> |
-| [1.1.1 Non-text Content](https://www.w3.org/WAI/WCAG22/Understanding/non-text-content) (A) | ✅ | 🟡<sup>5</sup> | ➖<sup>1</sup> |
-| [2.4.6 Headings and Labels](https://www.w3.org/WAI/WCAG22/Understanding/headings-and-labels) (AA) | ✅ | ❌ | ➖<sup>1</sup> |
+| [3.2.1 On Focus](https://www.w3.org/WAI/WCAG22/Understanding/on-focus) (A) | ✅ | ❌ | ➖<sup>2</sup> |
 
 <sup>
-1. Manual review only: emits a note asking a human to check the criterion.<br />
-2. The `avoid-inline-spacing` audit only flags inline `!important` spacing declarations.<br />
-3. The `bypass` audit only checks that a bypass mechanism exists, not that it works.<br />
-4. The `link-in-text-block` audit only checks that links are distinguishable from the surrounding text.<br />
-5. The `image-alt` audit and its relatives only check that a text alternative exists.<br />
+1. The `image-alt` audit and its relatives only check that a text alternative exists.<br />
+2. Manual review only: emits a note asking a human to check the criterion.<br />
+3. The `link-in-text-block` audit only checks that links are distinguishable from the surrounding text.<br />
+4. The `avoid-inline-spacing` audit only flags inline `!important` spacing declarations.<br />
+5. The `bypass` audit only checks that a bypass mechanism exists, not that it works.<br />
 </sup>
 
 ## Quick Start
