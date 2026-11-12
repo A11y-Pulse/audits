@@ -1,4 +1,4 @@
-import type { PageGroup } from "../expectations";
+import { LISTENER_INSPECTION_ENGINES, type PageGroup } from "../expectations";
 
 const SIGN_IN = "sign-in.html";
 
@@ -137,6 +137,29 @@ export const forms: PageGroup = {
 			target: "#country",
 			outcome: "clean",
 			variants: [CHECKOUT],
+		},
+		{
+			scenario: "styled radio lookalikes with click handlers and no tab stop",
+			audit: "keyboard-reachability",
+			target: "#wrap-paper",
+			outcome: "incomplete",
+			variants: [CHECKOUT],
+			engines: LISTENER_INSPECTION_ENGINES,
+		},
+		{
+			scenario: "form controls all have a role",
+			audit: "control-without-role",
+			outcome: "clean",
+		},
+		{
+			scenario: "form with no declared disclosures",
+			audit: "disclosure-operability",
+			outcome: "inapplicable",
+		},
+		{
+			scenario: "form text at 200% zoom",
+			audit: "resize-text",
+			outcome: "clean",
 		},
 	],
 };

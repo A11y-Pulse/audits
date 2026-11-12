@@ -157,5 +157,31 @@ export const dialogs: PageGroup = {
 			variants: [NATIVE],
 			todo: "states opened by activation are not explored",
 		},
+		{
+			scenario:
+				"button with aria-controls and no aria-expanded is not operated: nothing declares it a disclosure",
+			audit: "disclosure-operability",
+			target: "#faq-toggle",
+			outcome: "clean",
+			variants: [NATIVE],
+		},
+		{
+			scenario: "native details element is left to the browser",
+			audit: "disclosure-operability",
+			target: "summary",
+			outcome: "clean",
+			variants: [NATIVE],
+		},
+		{
+			scenario: "page with no declared disclosures",
+			audit: "disclosure-operability",
+			outcome: "inapplicable",
+			variants: [CUSTOM],
+		},
+		{
+			scenario: "dialog page with nothing that moves on its own",
+			audit: "moving-content",
+			outcome: "inapplicable",
+		},
 	],
 };

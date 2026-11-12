@@ -37,7 +37,6 @@ export const content: PageGroup = {
 			audit: "image-alt",
 			target: ["#returns-form-frame", "#frame-img"],
 			outcome: "violations",
-			todo: "same-origin iframes are not scanned",
 		},
 		{
 			scenario: "bold paragraph styled as a heading",
@@ -318,6 +317,26 @@ export const content: PageGroup = {
 			scenario: "page with no sign-in",
 			audit: "accessible-authentication",
 			outcome: "inapplicable",
+		},
+		{
+			scenario: "article with nothing that moves on its own",
+			audit: "moving-content",
+			outcome: "inapplicable",
+		},
+		{
+			scenario: "article with no declared disclosures",
+			audit: "disclosure-operability",
+			outcome: "inapplicable",
+		},
+		{
+			scenario: "article whose focusable controls all have a role",
+			audit: "control-without-role",
+			outcome: "clean",
+		},
+		{
+			scenario: "article text at 200% zoom",
+			audit: "resize-text",
+			outcome: "clean",
 		},
 	],
 };

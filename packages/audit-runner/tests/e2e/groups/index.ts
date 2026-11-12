@@ -4,6 +4,7 @@ import { dialogs } from "./dialogs";
 import { forms } from "./forms";
 import { interaction } from "./interaction";
 import { layout } from "./layout";
+import { motion } from "./motion";
 import { reordering } from "./reordering";
 import { site } from "./site";
 
@@ -15,4 +16,5 @@ export const GROUPS: readonly PageGroup[] = [
 	dialogs,
 	forms,
 	site,
+	motion,
 ];

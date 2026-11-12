@@ -153,5 +153,24 @@ export const layout: PageGroup = {
 			outcome: "passes",
 			variants: [RESPONSIVE],
 		},
+		{
+			scenario: "text an ellipsis already shortens is not reported at 200% zoom",
+			audit: "resize-text",
+			target: "#ellipsis-name",
+			outcome: "clean",
+			variants: [RESPONSIVE],
+		},
+		{
+			scenario: "fluid layout at 200% zoom",
+			audit: "resize-text",
+			outcome: "clean",
+			variants: [RESPONSIVE],
+		},
+		{
+			scenario: "fixed-width page keeps its text at 200% zoom",
+			audit: "resize-text",
+			outcome: "clean",
+			variants: [FIXED],
+		},
 	],
 };
