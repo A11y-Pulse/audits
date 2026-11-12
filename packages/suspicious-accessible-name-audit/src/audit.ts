@@ -5,7 +5,7 @@ import {
 } from "@a11y-pulse/browser-adaptor";
 import { truncateHtml } from "@a11y-pulse/browser-adaptor/dom";
 import { type CollectedElement, collectNamedElementsScript } from "./browser-scripts";
-import { classifyName, type NameMatch, type NameSignal } from "./classify";
+import { classifyName, type NameMatch } from "./classify";
 import { wcagCriterion } from "./criterion";
 import type { SuspiciousNameElement, SuspiciousNameResult } from "./result";
 import { resolveVocabulary, type VocabularyOverride } from "./vocabulary";
@@ -17,8 +17,6 @@ const STASH_KEY = "__a11yPulseSuspiciousAccessibleName";
 
 // Far longer than any identifier or placeholder, so a cut-short name is never one.
 const NAME_LIMIT = 300;
-
-const FAILED_SIGNALS: ReadonlySet<NameSignal> = new Set(["artefact", "attribute-match"]);
 
 export type SuspiciousNameOptions = {
 	/** Max named elements to check, so endless listings cannot balloon the scan. Defaults to 2000. */
@@ -41,16 +39,32 @@ async function toElements(
 		classified.map(({ index }) => index),
 	);
 
-	return classified.map(({ element, match }, i) => ({
-		selector: selectors[i]!,
-		html: truncateHtml(element.html),
-		name: element.name,
-		nameSource: element.source,
-		role: element.role,
-		signal: match?.signal ?? null,
-		evidence: match?.evidence ?? null,
-		criterion: wcagCriterion(element, match?.signal ?? null),
-	}));
+	// Only a flagged name needs its label pointed at.
+	const labelled = classified.filter(
+		({ element, match }) => match !== null && typeof element.labelIndex === "number",
+	);
+	const labelSelectors = await stashedElementSelectors(
+		adaptor,
+		STASH_KEY,
+		labelled.map(({ element }) => element.labelIndex as number),
+	);
+	const labelSelectorOf = new Map(labelled.map((entry, i) => [entry, labelSelectors[i]]));
+
+	return classified.map((entry, i) => {
+		const { element, match } = entry;
+
+		return {
+			selector: selectors[i]!,
+			html: truncateHtml(element.html),
+			name: element.name,
+			nameSource: element.source,
+			role: element.role,
+			signal: match?.signal ?? null,
+			evidence: match?.evidence ?? null,
+			labelSelector: labelSelectorOf.get(entry) ?? null,
+			criterion: wcagCriterion(element, match?.signal ?? null),
+		};
+	});
 }
 
 /**
@@ -81,10 +95,8 @@ export async function runSuspiciousNameAudit(
 				: classifyName(element, vocabulary.roleWords(element.lang), vocabulary),
 		}));
 
-		const failed = classified.filter(({ match }) => match && FAILED_SIGNALS.has(match.signal));
-		const needsReview = classified.filter(
-			({ match }) => match && !FAILED_SIGNALS.has(match.signal),
-		);
+		const failed = classified.filter(({ match }) => match?.verdict === "failed");
+		const needsReview = classified.filter(({ match }) => match?.verdict === "review");
 		const passed = classified.filter(({ match }) => match === null);
 
 		return {

@@ -74,13 +74,14 @@ describeEachEngine<BrowserAdaptor>(
 			expect(selectors(result.passed)).toEqual(["#visible-undefined"]);
 		});
 
-		it("reviews a numbered placeholder and fails a bare one", async () => {
+		it("reviews a numbered placeholder and a bare one", async () => {
 			const result = await runFixture("placeholder-suffix.html");
 
 			expect(result.needsReview).toMatchObject([
 				{ selector: "#numbered", signal: "placeholder-suffix" },
+				{ selector: "#bare", signal: "artefact" },
 			]);
-			expect(result.failed).toMatchObject([{ selector: "#bare", signal: "artefact" }]);
+			expect(result.failed).toEqual([]);
 			expect(selectors(result.passed)).toEqual(["#formula"]);
 		});
 
@@ -111,13 +112,119 @@ describeEachEngine<BrowserAdaptor>(
 			const result = await runFixture("same-id-same-name.html");
 
 			expect(result.summary).toMatchObject({ failed: 0, needsReview: 0 });
-			expect(selectors(result.passed)).toEqual(["#search", "#footer", "#home"]);
+			expect(selectors(result.passed)).toEqual([
+				"#search",
+				"#footer",
+				"#home",
+				"#name",
+				"#title",
+				"#nickname",
+				"#author",
+				"#clip",
+			]);
 		});
 
 		it("checks nothing on a page with no named controls", async () => {
 			const result = await runFixture("no-controls.html");
 
 			expect(result.summary.checked).toBe(0);
+		});
+
+		it("passes visible labels generated from the same data as the id, and reviews separated ones", async () => {
+			const page = await engine.newPage();
+
+			try {
+				await page.goto(`${server.url}/facet-filters.html`);
+
+				const result = await runSuspiciousNameAudit(page.adaptor, { reportLimit: 50 });
+
+				expect(result.failed).toMatchObject([
+					{
+						selector: "#add",
+						signal: "attribute-match",
+						evidence: "data-testid",
+						labelSelector: null,
+					},
+				]);
+				expect(result.needsReview).toMatchObject([
+					{
+						selector: "#wi-fi",
+						name: "Wi-Fi",
+						nameSource: "label",
+						signal: "attribute-match",
+						evidence: "id",
+						labelSelector: "#wifi-label",
+					},
+					{
+						selector: "#feature_5g",
+						nameSource: "aria-labelledby",
+						signal: "attribute-match",
+						evidence: "id",
+						labelSelector: "#fiveg-label",
+					},
+				]);
+				expect(result.passed.map(({ name }) => name)).toEqual([
+					"Main",
+					"Home",
+					"Phones",
+					"Basket, 2 items",
+					"Filter results",
+					"2023",
+					"2024",
+					"iPhone",
+					"Samsung",
+					"Coca-Cola",
+					"Email address",
+					"Apply filters",
+				]);
+			} finally {
+				await page.close();
+			}
+		});
+
+		it("fails unrendered templates on screen and reviews translation keys", async () => {
+			const result = await runFixture("visible-artefacts.html");
+
+			expect(result.failed).toMatchObject([
+				{ selector: "#token-link", nameSource: "content", evidence: "{{ item.title }}" },
+				{ selector: "#object-link", nameSource: "content", evidence: "[object Object]" },
+				{
+					selector: "#token-field",
+					nameSource: "label",
+					evidence: "{{ field.label }}",
+					labelSelector: "#token-label",
+				},
+			]);
+			expect(result.failed.every(({ signal }) => signal === "artefact")).toBe(true);
+			expect(result.needsReview).toMatchObject([
+				{ selector: "#docs-copy", signal: "artefact", evidence: "{{ name }}" },
+				{ selector: "#docs-link", signal: "artefact", evidence: "__init__" },
+				{ selector: "#key-title", signal: "identifier-pattern", name: "nav.homeTitle" },
+				{ selector: "#key-visible", signal: "identifier-pattern" },
+			]);
+			expect(result.needsReview).toHaveLength(4);
+			expect(selectors(result.passed)).toEqual([
+				"#host",
+				"#host-br",
+				"#host-own",
+				"#api-java",
+				"#api-python",
+				"#svg-title",
+				"#visible-null",
+			]);
+		});
+
+		it("reviews leftover words that are ordinary words, in any language", async () => {
+			const result = await runFixture("ordinary-words.html");
+
+			expect(result.failed).toMatchObject([{ selector: "#leftover", signal: "artefact" }]);
+			expect(result.failed).toHaveLength(1);
+			expect(selectors(result.needsReview)).toEqual([
+				"#quiz-true",
+				"#quiz-false",
+				"#run",
+				"#caption",
+			]);
 		});
 	},
 );

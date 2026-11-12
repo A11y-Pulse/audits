@@ -140,6 +140,45 @@ describeEachEngine<BrowserAdaptor>(
 			expect(result.failed[0]?.html).toContain('id="shadow-image"');
 		});
 
+		it("checks lazy-loaded, CMS-generated and non-img images on a gallery page", async () => {
+			const result = await runFixture("cms-gallery.html");
+			const summarise = (images: FilenameAltTextResult["failed"]) =>
+				images.map(({ selector, signal, altTextSource }) => ({ selector, signal, altTextSource }));
+
+			expect(summarise(result.failed)).toEqual([
+				{ selector: "#lazy-filename", signal: "filename-match", altTextSource: "alt" },
+				{ selector: "#wp-size", signal: "filename-match", altTextSource: "alt" },
+				{ selector: "#role-img", signal: "filename-match", altTextSource: "aria-label" },
+				{ selector: "#svg-title", signal: "artefact", altTextSource: "title" },
+				{ selector: "#template", signal: "artefact", altTextSource: "alt" },
+				{ selector: "#template-lines", signal: "artefact", altTextSource: "alt" },
+			]);
+			expect(result.failed[0]?.matchedSource).toBe(`${server.url}/images/IMG_4032.svg`);
+			expect(result.failed[1]?.matchedSource).toBe(
+				`${server.url}/uploads/2024/05/packed-tent-300x200.svg`,
+			);
+			expect(result.failed[2]?.matchedSource).toBe(`${server.url}/images/IMG_4032.svg`);
+
+			expect(summarise(result.needsReview)).toEqual([
+				{ selector: "#lazy-stem", signal: "filename-near-match", altTextSource: "alt" },
+				{ selector: "#wp-stem", signal: "filename-near-match", altTextSource: "alt" },
+				{ selector: "#area", signal: "filename-like", altTextSource: "alt" },
+			]);
+			expect(result.passed.map(({ selector }) => selector)).toEqual([
+				"#brand",
+				"#step",
+				"#person",
+				"#store-map",
+			]);
+
+			// The presentational image's alt is never announced, so it is not counted at all.
+			expect(result.summary.checked).toBe(13);
+			expect(result.failed.every(({ screenshot }) => isPng(screenshot))).toBe(true);
+			expect(result.needsReview.find(({ selector }) => selector === "#area")).not.toHaveProperty(
+				"screenshot",
+			);
+		});
+
 		it("leaves nothing behind in the page", async () => {
 			const page = await engine.newPage();
 

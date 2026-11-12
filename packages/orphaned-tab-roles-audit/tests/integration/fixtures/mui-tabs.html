@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>MUI style tabs</title></head>
+<body>
+	<!--
+		Hand-written approximation of the "basic tabs" example in the MUI docs, not captured from a
+		live page: the tabs get id and aria-controls from the a11yProps helper, every panel stays
+		mounted and the inactive ones are hidden and empty.
+	-->
+	<div class="MuiTabs-root">
+		<div class="MuiTabs-scroller">
+			<div id="mui-tablist" class="MuiTabs-flexContainer" role="tablist" aria-label="basic tabs example">
+				<button class="MuiTab-root Mui-selected" tabindex="0" type="button" role="tab" aria-selected="true" id="simple-tab-0" aria-controls="simple-tabpanel-0">Item One</button>
+				<button class="MuiTab-root" tabindex="-1" type="button" role="tab" aria-selected="false" id="simple-tab-1" aria-controls="simple-tabpanel-1">Item Two</button>
+				<button class="MuiTab-root" tabindex="-1" type="button" role="tab" aria-selected="false" id="simple-tab-2" aria-controls="simple-tabpanel-2">Item Three</button>
+			</div>
+			<span class="MuiTabs-indicator"></span>
+		</div>
+	</div>
+	<div role="tabpanel" id="simple-tabpanel-0" aria-labelledby="simple-tab-0"><div>Item One</div></div>
+	<div role="tabpanel" hidden id="simple-tabpanel-1" aria-labelledby="simple-tab-1"></div>
+	<div role="tabpanel" hidden id="simple-tabpanel-2" aria-labelledby="simple-tab-2"></div>
+</body>
+</html>

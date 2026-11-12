@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>disclosure and tab links are not skip links</title></head>
+<body>
+	<a href="#site-nav" aria-expanded="false" aria-controls="site-nav">Skip to navigation</a>
+	<div role="tablist">
+		<a href="#panel-one" role="tab" aria-selected="true">Skip one</a>
+		<a href="#panel-two" role="button">Jump two</a>
+	</div>
+	<main>
+		<section id="panel-one"><a href="/one">One</a></section>
+		<section id="panel-two"><a href="/two">Two</a></section>
+	</main>
+	<nav id="site-nav"><a href="/about">About</a></nav>
+</body>
+</html>

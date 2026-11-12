@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>cancelled skip link next to its target</title></head>
+<body>
+	<a href="#title" id="skip">Skip to content</a>
+	<main>
+		<h1 id="title">Main content</h1>
+		<a href="/inside">A link after the heading</a>
+	</main>
+	<script>
+		// Scrolls instead of following the fragment, so keyboard focus never leaves the link.
+		document.getElementById("skip").addEventListener("click", (event) => {
+			event.preventDefault();
+			document.getElementById("title").scrollIntoView();
+		});
+	</script>
+</body>
+</html>

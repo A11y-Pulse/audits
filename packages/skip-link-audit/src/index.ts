@@ -4,5 +4,10 @@ export { runSkipLinkAudit } from "./audit";
 export type {
 	SkipLinkElementResult,
 	SkipLinkFailureReason,
+	SkipLinkFocusLanding,
+	SkipLinkFocusPosition,
 	SkipLinkResult,
+	SkipLinkTarget,
+	SkipLinkUnreachableReason,
+	SkipLinkUnreachableResult,
 } from "./result";

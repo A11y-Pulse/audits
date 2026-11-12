@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Radix style tabs</title></head>
+<body>
+	<!--
+		Hand-written approximation of what @radix-ui/react-tabs renders without forceMount, not
+		captured from a live page: every trigger carries aria-controls, but only the active content
+		is mounted.
+	-->
+	<main>
+		<h1>Account</h1>
+		<div dir="ltr" data-orientation="horizontal">
+			<div id="account-tabs" role="tablist" aria-orientation="horizontal" aria-label="Manage your account" tabindex="0" data-orientation="horizontal" style="outline: none">
+				<button type="button" role="tab" aria-selected="true" aria-controls="radix-r0-content-profile" data-state="active" id="radix-r0-trigger-profile" tabindex="-1" data-orientation="horizontal">Profile</button>
+				<button type="button" role="tab" aria-selected="false" aria-controls="radix-r0-content-password" data-state="inactive" id="radix-r0-trigger-password" tabindex="-1" data-orientation="horizontal">Password</button>
+				<button type="button" role="tab" aria-selected="false" aria-controls="radix-r0-content-billing" data-state="inactive" id="radix-r0-trigger-billing" tabindex="-1" data-orientation="horizontal">Billing</button>
+			</div>
+			<div data-state="active" data-orientation="horizontal" role="tabpanel" aria-labelledby="radix-r0-trigger-profile" id="radix-r0-content-profile" tabindex="0">
+				<label for="display-name">Display name</label>
+				<input id="display-name" value="Aroha">
+			</div>
+		</div>
+	</main>
+</body>
+</html>

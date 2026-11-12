@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it } from "vitest";
-import { awaitImageScript, collectImagesScript } from "./browser-scripts";
+import { awaitImagesScript, collectImagesScript } from "./browser-scripts";
 
 const STASH_KEY = "__testStash";
 
@@ -108,16 +108,96 @@ describe("collectImagesScript", () => {
 	});
 });
 
-describe("awaitImageScript", () => {
-	it("returns at once for an element that is not an image", async () => {
-		await expect(awaitImageScript(document.createElement("div"), 10_000)).resolves.toBeUndefined();
+describe("collectImagesScript sources and kinds", () => {
+	it("reads lazy-loading attributes as sources", () => {
+		document.body.innerHTML = `
+			<picture>
+				<source data-srcset="/media/wide.webp 1200w">
+				<img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="/media/IMG_4032.jpg"
+					data-srcset="/media/small.jpg 480w" data-lazy-srcset="/media/lazy.jpg 2x" alt="IMG_4032.jpg">
+			</picture>
+			<img data-lazy-src="/media/hero.jpg" data-original="/media/original.jpg" alt="hero">
+		`;
+
+		const { images } = collect();
+
+		expect(images[0]?.urls).toContain(new URL("/media/IMG_4032.jpg", document.baseURI).href);
+		expect(images[0]?.srcsets).toEqual([
+			"/media/small.jpg 480w",
+			"/media/lazy.jpg 2x",
+			"/media/wide.webp 1200w",
+		]);
+		expect(images[1]?.urls).toEqual([
+			new URL("/media/hero.jpg", document.baseURI).href,
+			new URL("/media/original.jpg", document.baseURI).href,
+		]);
 	});
 
-	it("loads a lazy image eagerly, waits for it, then restores its loading attribute", async () => {
+	it("records where the text alternative came from", () => {
+		document.body.innerHTML = `
+			<img src="/a.jpg" alt="a">
+			<img src="/b.jpg" alt="b" aria-label="label">
+			<svg role="img"><title>IMG_4032</title><rect/></svg>
+		`;
+
+		expect(collect().images.map((image) => [image.altText, image.altTextSource])).toEqual([
+			["a", "alt"],
+			["label", "aria-label"],
+			["IMG_4032", "title"],
+		]);
+	});
+
+	it("collects role=img elements, titled SVGs and image map areas", () => {
+		document.body.innerHTML = `
+			<div role="img" aria-label="IMG_4032.jpg"></div>
+			<svg role="img"><title>logo.svg</title><rect/></svg>
+			<svg><title>not an image role</title></svg>
+			<svg role="img"><rect/></svg>
+			<div role="img"></div>
+			<map name="m"><area href="/north" alt="north.png"><area alt="no link"></map>
+		`;
+
+		expect(collect().images.map((image) => image.altText)).toEqual([
+			"IMG_4032.jpg",
+			"logo.svg",
+			"north.png",
+		]);
+	});
+
+	it("skips an image made presentational, whose alt is never announced", () => {
+		document.body.innerHTML = `
+			<img src="/a.jpg" role="presentation" alt="IMG_4032.jpg">
+			<img src="/b.jpg" role="none" alt="b.jpg">
+		`;
+
+		expect(collect().total).toBe(0);
+	});
+});
+
+describe("awaitImagesScript", () => {
+	function pendingImage(): HTMLImageElement {
 		const img = document.createElement("img");
-		img.loading = "lazy";
 		Object.defineProperty(img, "complete", { value: false });
-		const waiting = awaitImageScript(img, 10_000);
+
+		return img;
+	}
+
+	function stash(elements: Element[]): void {
+		(window as unknown as Record<string, unknown>)[STASH_KEY] = elements;
+	}
+
+	it("returns at once when nothing is still loading", async () => {
+		stash([document.createElement("div"), document.createElement("img")]);
+
+		await expect(awaitImagesScript(STASH_KEY, [0, 1], 10_000)).resolves.toBeUndefined();
+	});
+
+	it("loads lazy images eagerly, waits for them, then restores their loading attribute", async () => {
+		const img = pendingImage();
+		img.loading = "lazy";
+		stash([img]);
+
+		const waiting = awaitImagesScript(STASH_KEY, [0], 10_000);
 		const loadingWhileWaiting = img.loading;
 		img.dispatchEvent(new Event("load"));
 		await waiting;
@@ -126,10 +206,28 @@ describe("awaitImageScript", () => {
 		expect(img.loading).toBe("lazy");
 	});
 
-	it("gives up after the timeout", async () => {
-		const img = document.createElement("img");
-		Object.defineProperty(img, "complete", { value: false });
+	it("stops waiting for an image whose load fails", async () => {
+		const img = pendingImage();
+		stash([img]);
 
-		await expect(awaitImageScript(img, 1)).resolves.toBeUndefined();
+		const waiting = awaitImagesScript(STASH_KEY, [0], 10_000);
+		img.dispatchEvent(new Event("error"));
+
+		await expect(waiting).resolves.toBeUndefined();
+	});
+
+	it("spends one timeout on every stalled image together", async () => {
+		stash(Array.from({ length: 10 }, pendingImage));
+
+		const started = Date.now();
+		await awaitImagesScript(STASH_KEY, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], 50);
+
+		expect(Date.now() - started).toBeLessThan(400);
+	});
+
+	it("only waits for the images asked for", async () => {
+		stash([pendingImage(), document.createElement("img")]);
+
+		await expect(awaitImagesScript(STASH_KEY, [1], 10_000)).resolves.toBeUndefined();
 	});
 });

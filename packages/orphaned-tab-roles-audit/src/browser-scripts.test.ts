@@ -66,6 +66,70 @@ describe("collectTabRolesScript", () => {
 		]);
 	});
 
+	it("reports where a navigating tab goes", () => {
+		document.body.innerHTML = `
+			<a href="https://elsewhere.test/shop?x=1"><span role="tab">Elsewhere</span></a>
+			<a role="tab" href="#panel">Fragment</a>
+		`;
+
+		expect(collect().map((element) => element.href)).toEqual([
+			"https://elsewhere.test/shop?x=1",
+			null,
+		]);
+	});
+
+	it("lists what each aria-controls id resolves to", () => {
+		document.body.innerHTML = `
+			<button role="tab" aria-controls="p1 gone wrapper">A</button>
+			<div id="p1" role="tabpanel"></div>
+			<section id="wrapper"></section>
+		`;
+
+		expect(collect()[0]?.controlsTargets).toEqual([
+			{ id: "p1", found: true, role: "tabpanel", tag: "div" },
+			{ id: "gone", found: false, role: null, tag: null },
+			{ id: "wrapper", found: true, role: null, tag: "section" },
+		]);
+	});
+
+	it("groups tabs by their nearest tablist, nested and aria-owns ones included", () => {
+		document.body.innerHTML = `
+			<div id="outer" role="tablist">
+				<button role="tab" aria-selected="true">Outer A</button>
+				<div role="presentation"><button role="tab">Outer B</button></div>
+				<div id="inner" role="tablist">
+					<button role="tab">Inner A</button>
+				</div>
+			</div>
+			<div id="owner" role="tablist" aria-owns="owned"></div>
+			<button id="owned" role="tab">Owned</button>
+			<button role="tab">Loose</button>
+			<div role="tabpanel"></div>
+		`;
+
+		const collected = collect();
+		const stash = (window as unknown as Record<string, Element[]>)[STASH_KEY]!;
+		const tablistId = (index: number | null | undefined) =>
+			typeof index === "number" ? stash[index]?.id : null;
+
+		expect(collected.map((element) => tablistId(element.tablist))).toEqual([
+			"outer",
+			"outer",
+			"inner",
+			"owner",
+			null,
+			null,
+		]);
+		expect(collected.map((element) => element.selected)).toEqual([
+			true,
+			false,
+			false,
+			false,
+			false,
+			false,
+		]);
+	});
+
 	it("leaves the collected elements on the stash key in collection order", () => {
 		document.body.innerHTML = `<button id="a" role="tab"></button><div id="b" role="tabpanel"></div>`;
 		collect();

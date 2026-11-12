@@ -61,12 +61,91 @@ describe("classifyAltText", () => {
 		});
 
 		it("never matches part of the filename", () => {
-			expect(signalOf("4032", [SRC])).toBe("placeholder");
+			expect(signalOf("4032", [SRC])).toBeNull();
 			expect(signalOf("IMG_4032 at the beach", [SRC])).toBeNull();
 		});
 
 		it("ignores data URIs", () => {
 			expect(signalOf("Team photo", ["data:image/png;base64,iVBORw0KGgo="])).toBeNull();
+		});
+	});
+
+	describe("generated filenames", () => {
+		it.each([
+			["team-photo.jpg", "team-photo-300x200.jpg"],
+			["team-photo.jpg", "team-photo-scaled.jpg"],
+			["team-photo.jpg", "team-photo@2x.jpg"],
+			["team-photo.jpg", "team-photo.a91f3c2b.jpg"],
+			["team-photo.jpg", "team-photo-scaled-1024x683.jpg"],
+			["IMG_4032.jpg", "IMG_4032-e1700000000000-150x150.jpg"],
+		])("fails %s against the generated %s", (alt, file) => {
+			expect(signalOf(alt, [`https://example.test/wp-content/uploads/${file}`])).toBe(
+				"filename-match",
+			);
+		});
+
+		it.each([
+			["team-photo", "team-photo-300x200.jpg"],
+			["Team photo", "team-photo-scaled.jpg"],
+			["hero banner final", "hero-banner-final.a91f3c2b.webp"],
+		])("reviews %s against the generated %s", (alt, file) => {
+			expect(signalOf(alt, [`https://example.test/uploads/${file}`])).toBe("filename-near-match");
+		});
+
+		it("keeps a word that only looks like a hash", () => {
+			expect(signalOf("sunset", ["https://example.test/sunset-facade.jpg"])).toBeNull();
+			expect(signalOf("Sunset facade", ["https://example.test/sunset-facade.jpg"])).toBe(
+				"filename-near-match",
+			);
+		});
+	});
+
+	describe("single-word filenames", () => {
+		it.each([
+			["GitHub", "github.svg"],
+			["Sunset", "sunset.jpg"],
+			["Trailhead", "Trailhead.png"],
+		])("passes %s on %s, where the word is the subject", (alt, file) => {
+			expect(signalOf(alt, [`https://example.test/${file}`])).toBeNull();
+		});
+	});
+
+	describe("script artefacts", () => {
+		it.each([
+			"undefined",
+			"null",
+			"NaN",
+			"[object Object]",
+			"Photo of [object Object]",
+			"{{ image.alt }}",
+			// biome-ignore lint/suspicious/noTemplateCurlyInString: an unrendered template literal is the input under test
+			"${alt}",
+			"<%= alt %>",
+			"%s",
+			"  undefined\n",
+			"{{\n\timage.alt\n}}",
+			"<%=\n  image.alt\n%>",
+		])("fails %j", (alt) => {
+			expect(classifyAltText(alt, [SRC], ENGLISH)).toEqual({ signal: "artefact", source: null });
+		});
+
+		it.each(["Null Island on a map", "An undefined shape", "Not a number"])(
+			"leaves %s alone",
+			(alt) => {
+				expect(signalOf(alt)).toBeNull();
+			},
+		);
+
+		// A script writes these in exactly one spelling; in any other they are a name or a word.
+		it.each(["Nan", "NAN", "Null", "NULL", "Undefined", "nan"])(
+			"leaves %s alone, which no script writes",
+			(alt) => {
+				expect(signalOf(alt)).toBeNull();
+			},
+		);
+
+		it("reviews a multi-line template token among other words", () => {
+			expect(signalOf("Photo of {{\n  person.name\n}}")).toBe("placeholder");
 		});
 	});
 
@@ -79,6 +158,8 @@ describe("classifyAltText", () => {
 			"IMG_4032.HEIC",
 			"img-1234 (1)",
 			"GOPR0042",
+			"IMG 4032",
+			"pano_360",
 			"PXL_20230101_123456789",
 			"Screenshot 2024-01-02 at 10.11.12",
 			"Screen Shot 2020-01-01 at 1.23.45 PM",
@@ -88,12 +169,17 @@ describe("classifyAltText", () => {
 			expect(signalOf(alt)).toBe("camera-name");
 		});
 
-		it.each(["IMG-2000 Pro", "DSC_1234 at sunset", "Image of a dog", "Screenshot of the app"])(
-			"leaves %s alone",
-			(alt) => {
-				expect(signalOf(alt)).toBeNull();
-			},
-		);
+		it.each([
+			"IMG-2000 Pro",
+			"DSC_1234 at sunset",
+			"Image of a dog",
+			"Screenshot of the app",
+			"Pano 360",
+			"WP 6",
+			"Sam 2",
+		])("leaves %s alone", (alt) => {
+			expect(signalOf(alt)).toBeNull();
+		});
 	});
 
 	describe("filename-like alt text", () => {
@@ -120,9 +206,25 @@ describe("classifyAltText", () => {
 			expect(signalOf(alt, [], "sv")).toBe("placeholder");
 		});
 
-		it.each(["300x200", "1920 × 1080", "0001", "*", "-", "..."])("flags %s", (alt) => {
+		it.each([
+			"300x200",
+			"1920 × 1080",
+			"0001",
+			"20240102",
+			"*",
+			"-",
+			"...",
+			"Photo of {{ product.name }}",
+		])("flags %s", (alt) => {
 			expect(signalOf(alt)).toBe("placeholder");
 		});
+
+		it.each(["1", "5", "2024", "Step 2", "50% off"])(
+			"leaves %s, which can be what the image shows",
+			(alt) => {
+				expect(signalOf(alt)).toBeNull();
+			},
+		);
 
 		it("applies the page language's list as well as English", () => {
 			expect(signalOf("bild", [], "sv")).toBe("placeholder");

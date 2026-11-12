@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>markup whose names are compared with the accessibility tree</title></head>
+<body>
+	<span id="lb-a">Basket</span> <span id="lb-b">total</span>
+	<div id="lb-hidden" hidden>Hidden <b>label</b></div>
+	<button id="c-text" type="button">Add to basket</button>
+	<button id="c-nested" type="button"><span>Send</span> <em>now</em></button>
+	<button id="c-blocks" type="button"><div>Line one</div><div>Line two</div></button>
+	<button id="c-img" type="button"><img alt="Print" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" width="10" height="10"> page</button>
+	<button id="c-aria-label" type="button" aria-label="Close dialog">x</button>
+	<button id="c-labelledby" type="button" aria-labelledby="lb-a lb-b" aria-label="ignored">x</button>
+	<button id="c-labelledby-hidden" type="button" aria-labelledby="lb-hidden">x</button>
+	<button id="c-hidden-child" type="button">Save <span hidden>draft</span><span aria-hidden="true">!</span></button>
+	<button id="c-svg-label" type="button"><svg width="20" height="20" role="img" aria-label="Search"><rect width="20" height="20"/></svg></button>
+	<button id="c-svg-title" type="button"><svg width="20" height="20" role="img"><title>Close</title><rect width="20" height="20"/></svg></button>
+	<label for="c-label-for">Email address</label><input id="c-label-for" type="email" title="ignored">
+	<label>Phone <input id="c-label-wrap" type="tel"></label>
+	<label for="c-select">Country</label><select id="c-select"><option>New Zealand</option></select>
+	<label for="c-textarea">Message</label><textarea id="c-textarea"></textarea>
+	<input id="c-check" type="checkbox"><label for="c-check">Remember <strong>me</strong></label>
+	<input id="c-submit" type="submit" value="Apply filters">
+	<a id="c-link" href="/terms">Terms and conditions</a>
+	<a id="c-title" href="/map" title="Map"></a>
+	<input id="c-title-input" type="text" title="Search terms">
+	<input id="c-placeholder" type="text" placeholder="Postcode">
+	<nav id="c-nav" aria-label="Footer"><a id="c-nav-link" href="/about">About</a></nav>
+	<div id="c-role-button" role="button" tabindex="0">Custom <span>control</span></div>
+	<div id="c-role-tab" role="tab" tabindex="0" aria-label="Reviews">R</div>
+</body>
+</html>
