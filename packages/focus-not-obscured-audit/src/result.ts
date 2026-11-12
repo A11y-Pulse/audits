@@ -24,8 +24,17 @@ export type FocusNotObscuredElementResult = {
 	bucket: ObscuringBucket;
 
 	/**
-	 * PNG bytes of this element, clipped and padded. Only captured for a non-"pass" bucket, and
-	 * omitted past `screenshotLimit`.
+	 * How a hidden element was found. Absent when it was hidden where the browser left it on being
+	 * tabbed to. `"scrolled-to-top"` when it passed there, but is hidden once scrolled to the top
+	 * edge of the viewport, which is where the browser puts it when focus moves up the page to it
+	 * (Shift+Tab). `measurement` and `screenshot` then describe the scrolled position.
+	 */
+	foundBy?: "scrolled-to-top";
+
+	/**
+	 * PNG bytes of a strip the width of the viewport around this element, with the element's box
+	 * outlined so it can be located behind whatever covers it. Only captured for a non-"pass"
+	 * bucket, and omitted past `screenshotLimit`.
 	 */
 	screenshot?: Uint8Array;
 };
@@ -33,5 +42,8 @@ export type FocusNotObscuredElementResult = {
 export type FocusNotObscuredResult = {
 	/** Every focusable element that was checked, in tab order. */
 	elements: FocusNotObscuredElementResult[];
-	summary: BaseAuditSummary;
+	summary: BaseAuditSummary & {
+		/** Elements re-measured after being scrolled to the top edge of the viewport. */
+		scrolledToTopChecked: number;
+	};
 };

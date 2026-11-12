@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>positive-tabindex-sidebar</title>
+<style>
+body { margin: 0; font: 16px/1.5 sans-serif; }
+header { display: flex; gap: 16px; padding: 16px 16px 16px 300px; }
+aside { float: left; width: 260px; padding: 0 16px; }
+aside a { display: block; padding: 12px 8px; }
+main { margin-left: 300px; padding: 16px; }
+main p { margin: 0 0 500px; }
+</style></head><body>
+<!-- The sidebar's 20 links carry tabindex 1 to 20, so they take focus before the header that sits
+     above and to the right of them. The move from the last of them up to the header lands further
+     along the line and about level with the sidebar's top, which is what a column wrap looks like. -->
+<header><a id="home" href="#home">Outdoor Co</a><a id="shop" href="#shop">Shop</a></header>
+<aside><nav id="categories" aria-label="Categories"></nav></aside>
+<main>
+<h1>Tents</h1>
+<p>Compare our <a id="domes" href="#domes">dome tents</a>.</p>
+<p>Or read the <a id="guide" href="#guide">buying guide</a>.</p>
+</main>
+<script>
+const nav = document.getElementById("categories");
+for (let i = 1; i <= 20; i++) {
+	const link = document.createElement("a");
+	link.id = `side${i}`;
+	link.href = `#side${i}`;
+	link.tabIndex = i;
+	link.textContent = `Category ${i}`;
+	nav.append(link);
+}
+</script>
+</body></html>

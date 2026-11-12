@@ -1,6 +1,8 @@
 /**
  * Computed-style properties that are likely to draw a visible focus indicator. Layout properties
- * like margin and padding are deliberately excluded.
+ * like margin and padding are deliberately excluded. `opacity` is here both because a change to it
+ * is visible and because an element at opacity 0 cannot show an indicator of its own.
+ * `outline-offset` says whether an outline is drawn outside the element or inside it.
  */
 export const FOCUS_STYLE_PROPERTIES = [
 	"background-color",
@@ -20,7 +22,9 @@ export const FOCUS_STYLE_PROPERTIES = [
 	"box-shadow",
 	"color",
 	"font-weight",
+	"opacity",
 	"outline-color",
+	"outline-offset",
 	"outline-style",
 	"outline-width",
 	"text-decoration",

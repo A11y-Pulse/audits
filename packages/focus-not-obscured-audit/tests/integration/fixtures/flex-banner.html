@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Flex banner</title><style>
+  body { margin: 0; background: #fff; font: 16px/1.5 system-ui, sans-serif; }
+  main { padding: 0 16px; }
+  a { display: block; padding: 8px; }
+  a:focus { outline: 3px solid #0050ff; }
+  .spacer { height: 120vh; }
+  #app-bar { position: fixed; left: 0; right: 0; bottom: 0; display: flex; z-index: 10; }
+  #app-bar > div { flex: 1; height: 72px; background: #0b3d91; color: #fff; text-align: center; }
+  #app-bar > div:nth-child(2) { background: #0a2f6f; }
+</style></head><body>
+  <main>
+    <a href="#a" id="first">First</a>
+    <div class="spacer"></div>
+    <a href="#b" id="under-bar">Under the bar</a>
+  </main>
+  <div id="app-bar"><div>Home</div><div>Search</div><div>Basket</div><div>Account</div></div>
+</body></html>

@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Docs</title><style>
+  body { background: #fff; font: 16px/1.5 system-ui, sans-serif; }
+  :focus { outline: 3px solid #0050ff; }
+</style></head><body>
+  <!-- A router that saves the scroll position into history state on every focus move: the URL
+       never changes, so none of that is a change of context. One real hash change comes first, to
+       show that it is reported once and not again on every later stop. -->
+  <a id="skip" href="#content" onfocus="location.hash = 'overview'">Skip to content</a>
+  <nav>
+    <a id="intro" href="#intro-section">Introduction</a>
+    <a id="install" href="#install-section">Installing</a>
+    <a id="usage" href="#usage-section">Usage</a>
+  </nav>
+  <main id="content"><p>Documentation.</p></main>
+  <script>
+    document.addEventListener("focusin", () => {
+      history.replaceState({ scrollY: window.scrollY, at: Date.now() }, "", location.href);
+    });
+  </script>
+</body></html>

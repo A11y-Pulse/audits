@@ -9,7 +9,7 @@ import {
 	type TabConsumer,
 } from "@a11y-pulse/tab-orchestrator";
 import { findDisorder, type SequenceStop } from "./analyse";
-import { type PageContext, pageContextScript } from "./browser-scripts";
+import { type PageContext, pageContextScript, tabindexValuesScript } from "./browser-scripts";
 import type { FocusOrderElement, FocusOrderResult } from "./result";
 
 export type FocusOrderOptions = Omit<BaseAuditOptions, "failedElementLimit">;
@@ -41,8 +41,52 @@ function emptyResult(): FocusOrderResult {
 	};
 }
 
-function element({ selector, html, tabIndex }: SequenceStop): FocusOrderElement {
-	return { selector, html, tabIndex };
+function element({
+	selector,
+	html,
+	tabIndex,
+	rect,
+	positiveTabindex,
+}: SequenceStop): FocusOrderElement {
+	return {
+		selector,
+		html,
+		tabIndex,
+		rect,
+		...(positiveTabindex === undefined ? {} : { positiveTabindex }),
+	};
+}
+
+/** The `tabindex` in a truncated opening tag, for an element the page no longer has. */
+function tabindexFromHtml(html: string): number | null {
+	const match = /^<[^>]*?\stabindex\s*=\s*["']?\s*(-?\d+)/i.exec(html);
+
+	return match ? Number(match[1]) : null;
+}
+
+/** Note each stop's own positive `tabindex`, read from the page or else from its recorded HTML. */
+async function readPositiveTabindex(
+	adaptor: BrowserAdaptor,
+	sequence: SequenceStop[],
+): Promise<void> {
+	let values: Array<number | null> | undefined;
+
+	try {
+		values = await adaptor.evaluate(
+			tabindexValuesScript,
+			sequence.map((stop) => stop.selector),
+		);
+	} catch {
+		// Fall back on the recorded HTML.
+	}
+
+	sequence.forEach((stop, i) => {
+		const value = values?.[i] ?? tabindexFromHtml(stop.html);
+
+		if (value !== null && value > 0) {
+			stop.positiveTabindex = value;
+		}
+	});
 }
 
 /**
@@ -125,14 +169,20 @@ export function createFocusOrderAudit(options: FocusOrderOptions = {}): TabConsu
 				return result;
 			}
 
+			await readPositiveTabindex(adaptor, sequence);
+
 			// A sequence cut short by a limit or timeout is analysed as far as it got.
 			const disorder = findDisorder(sequence, page);
 
-			result.positiveTabindex = positiveTabindex;
-			result.transitions = disorder.map(({ kind, from, to }) => ({
+			result.positiveTabindex =
+				positiveTabindex || sequence.some((stop) => stop.positiveTabindex !== undefined);
+			result.transitions = disorder.map(({ kind, from, to, distance, direction, steps }) => ({
 				kind,
 				from: element(from),
 				to: element(to),
+				distance,
+				direction,
+				steps,
 			}));
 			result.outcome = disorder.length > 0 ? "disordered" : "unremarkable";
 			result.summary.failed = disorder.length > 0 ? 1 : 0;

@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Product</title><style>
+  body { background: #fff; font: 16px/1.5 system-ui, sans-serif; }
+  :focus { outline: 3px solid #0050ff; }
+</style></head><body>
+  <a id="home" href="#top">Home</a>
+  <!-- Tabs that rewrite the address bar as soon as they are focused, not when they are activated. -->
+  <button id="details" onfocus="location.hash = 'details'">Details</button>
+  <button id="reviews" onfocus="history.pushState({ tab: 'reviews' }, '', '/soft-url.html?tab=reviews')">Reviews</button>
+  <label>Quantity <input id="quantity" value="1"></label>
+  <button id="buy">Add to basket</button>
+</body></html>

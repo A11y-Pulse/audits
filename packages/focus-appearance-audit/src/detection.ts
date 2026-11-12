@@ -7,17 +7,54 @@ import type { ColorOnlyChange } from "./result";
 export { bufferedClip } from "@a11y-pulse/browser-adaptor";
 export type { Rect, StyleSnapshot };
 
+/** Whether a computed colour paints nothing at all. */
+function isTransparent(color: string | undefined): boolean {
+	if (color === undefined) {
+		return false;
+	}
+
+	const value = color.replace(/\s+/g, "").toLowerCase();
+
+	return value === "transparent" || /^rgba\(.*,0\)$/.test(value) || /\/0\)$/.test(value);
+}
+
+// Every function value in a computed `box-shadow` or `text-decoration` is a colour.
+const COLOR_FUNCTION_PATTERN = /[a-z-]+\([^)]*\)/gi;
+
+/** Whether every shadow in a computed `box-shadow` is drawn in a fully transparent colour. */
+function isInvisibleShadow(value: string | undefined): boolean {
+	if (value === undefined || value === "none" || value === "") {
+		return false;
+	}
+
+	const colors = value.match(COLOR_FUNCTION_PATTERN) ?? [];
+
+	return colors.length > 0 && colors.every(isTransparent);
+}
+
 /**
- * Collapse the colour/width of a decoration (outline, each border edge) that is not actually
- * painted: its style is `none` or `hidden`, or its width is `0px`. This keeps a change to a
- * non-rendered property (e.g. `outline-color` while `outline-style` stays `none`) from being
- * mistaken for a visible focus indicator.
+ * Collapse the parts of a style record that are not actually painted, so that a change to one of
+ * them is not mistaken for a visible focus indicator:
+ *
+ * - the colour/width of a decoration (outline, each border edge) whose style is `none` or `hidden`,
+ *   whose width is `0px`, or whose colour is fully transparent (the `outline: 2px solid transparent`
+ *   idiom, which only shows in forced-colours mode);
+ * - a `box-shadow` whose every shadow is fully transparent;
+ * - `opacity`, which is watched to tell whether the element is painted at all and is not itself
+ *   compared (a page fading in would otherwise look like a focus change);
+ * - `outline-offset`, which is watched to tell whether an outline sits inside or outside the element.
  */
 function renderedStyles(record: Record<string, string>): Record<string, string> {
 	const out = { ...record };
 
 	const collapse = (style: string, width: string, color: string): void => {
-		if (out[style] === "none" || out[style] === "hidden" || out[width] === "0px") {
+		if (
+			out[style] === "none" ||
+			out[style] === "hidden" ||
+			out[width] === "0px" ||
+			isTransparent(out[color])
+		) {
+			delete out[style];
 			delete out[width];
 			delete out[color];
 		}
@@ -28,6 +65,14 @@ function renderedStyles(record: Record<string, string>): Record<string, string> 
 	for (const side of ["top", "right", "bottom", "left"]) {
 		collapse(`border-${side}-style`, `border-${side}-width`, `border-${side}-color`);
 	}
+
+	if (isInvisibleShadow(out["box-shadow"])) {
+		out["box-shadow"] = "none";
+	}
+
+	delete out.opacity;
+	// Read to tell where an outline sits when its contrast is measured, and not compared either.
+	delete out["outline-offset"];
 
 	return out;
 }
@@ -119,8 +164,26 @@ export function omitIdleStyleSnapshot(snapshot: StyleSnapshot): StyleSnapshot {
 	};
 }
 
-export function stylesIndicateFocus(baseline: StyleSnapshot, focused: StyleSnapshot): boolean {
-	for (const layer of ["element", "before", "after"] as const) {
+const LAYERS = ["element", "before", "after"] as const;
+
+/**
+ * The painted properties that differ between two style snapshots: plain names for the element
+ * itself, prefixed with `::before` or `::after` for its pseudo-elements.
+ */
+export function changedStyleProperties(baseline: StyleSnapshot, focused: StyleSnapshot): string[] {
+	const changed: string[] = [];
+
+	for (const layer of LAYERS) {
+		// A pseudo-element with no content is not drawn, whatever its styles compute to (it inherits
+		// the element's text colour, for one).
+		if (
+			layer !== "element" &&
+			isIdleComputedValue("content", baseline[layer].content ?? "none") &&
+			isIdleComputedValue("content", focused[layer].content ?? "none")
+		) {
+			continue;
+		}
+
 		const base = renderedStyles(baseline[layer]);
 		const next = renderedStyles(focused[layer]);
 
@@ -130,16 +193,36 @@ export function stylesIndicateFocus(baseline: StyleSnapshot, focused: StyleSnaps
 
 		for (const prop of props) {
 			if (base[prop] !== next[prop]) {
-				return true;
+				changed.push(layer === "element" ? prop : `::${layer} ${prop}`);
 			}
 		}
 	}
 
-	return false;
+	return changed.sort();
 }
 
-// Every function value in a computed `text-decoration` is its colour.
-const DECORATION_COLOR_PATTERN = /[a-z-]+\([^)]*\)/gi;
+export function stylesIndicateFocus(baseline: StyleSnapshot, focused: StyleSnapshot): boolean {
+	return changedStyleProperties(baseline, focused).length > 0;
+}
+
+/**
+ * Whether an element can show nothing of its own: it is fully transparent, clipped down to a pixel
+ * (the "visually hidden" pattern), or positioned off the page. The real `<input>` of a custom
+ * checkbox, radio or switch is hidden one of these ways, and any focus style it has is invisible.
+ */
+export function isUnpainted(rect: Rect, styles: StyleSnapshot): boolean {
+	if (rect.width <= 1 || rect.height <= 1) {
+		return true;
+	}
+
+	if (rect.x + rect.width <= 0 || rect.y + rect.height <= 0) {
+		return true;
+	}
+
+	const opacity = styles.element.opacity;
+
+	return opacity !== undefined && opacity !== "" && Number.parseFloat(opacity) === 0;
+}
 
 function changedRenderedProperties(
 	baseline: Record<string, string>,
@@ -153,8 +236,8 @@ function changedRenderedProperties(
 		if (prop === "text-decoration") {
 			// An unstyled underline is drawn in the text colour, so it changes along with it.
 			return (
-				base[prop]?.replace(DECORATION_COLOR_PATTERN, "") !==
-				next[prop]?.replace(DECORATION_COLOR_PATTERN, "")
+				base[prop]?.replace(COLOR_FUNCTION_PATTERN, "") !==
+				next[prop]?.replace(COLOR_FUNCTION_PATTERN, "")
 			);
 		}
 
@@ -166,17 +249,45 @@ function changedRenderedProperties(
 // not by colour alone.
 export const MIN_LIGHTNESS_CONTRAST = 3;
 
+const BORDER_COLOR_PATTERN = /^border-(top|right|bottom|left)-color$/;
+
+/** Which single colour the changed properties amount to, or null when they are anything more. */
+function colorGroup(changes: string[]): ColorOnlyChange["property"] | null {
+	if (changes.length === 0) {
+		return null;
+	}
+
+	if (changes.every((prop) => BORDER_COLOR_PATTERN.test(prop))) {
+		return "border-color";
+	}
+
+	if (changes.length !== 1) {
+		return null;
+	}
+
+	const [only] = changes;
+
+	return only === "color" || only === "outline-color" || only === "background-color" ? only : null;
+}
+
 /**
- * Report the element's text colour change when it is the only painted difference between the
- * baseline and focused styles, or null otherwise.
+ * Report the colour change when one colour (the text, the border, the outline or the background) is
+ * the only painted difference between the baseline and focused styles, or null otherwise. A border
+ * or outline here was already drawn before focus: one that appears on focus changes its width or
+ * style too.
+ *
+ * `backdrop` is the opaque colour behind the element, when known. A background that is see-through
+ * in one state shows that colour, so it stands in for the see-through one when the two are compared.
  */
 export function colorOnlyChange(
 	baseline: StyleSnapshot,
 	focused: StyleSnapshot,
+	backdrop?: string | null,
 ): ColorOnlyChange | null {
 	const elementChanges = changedRenderedProperties(baseline.element, focused.element);
+	const property = colorGroup(elementChanges);
 
-	if (elementChanges.length !== 1 || elementChanges[0] !== "color") {
+	if (property === null) {
 		return null;
 	}
 
@@ -191,20 +302,51 @@ export function colorOnlyChange(
 
 		const layerChanges = changedRenderedProperties(baseline[layer], focused[layer]);
 
-		if (layerChanges.some((prop) => prop !== "color")) {
+		// Generated content inherits the text colour, so it follows a text colour change. Any other
+		// change there is a second cue.
+		if (layerChanges.some((prop) => property !== "color" || prop !== "color")) {
 			return null;
 		}
 	}
 
-	const unfocusedColor = baseline.element.color!;
-	const focusedColor = focused.element.color!;
-	const unfocusedRgb = parseOpaqueRgb(unfocusedColor);
-	const focusedRgb = parseOpaqueRgb(focusedColor);
+	// Each changed border edge is judged on its own: the edge that changes most is the one seen.
+	let best: { unfocused: string; focused: string; ratio: number | null } | null = null;
+	let shownThrough: string | undefined;
+
+	/** What a background colour looks like: the colour behind the element where it is see-through. */
+	const painted = (color: string): string => {
+		if (property === "background-color" && isTransparent(color) && backdrop) {
+			shownThrough = backdrop;
+
+			return backdrop;
+		}
+
+		return color;
+	};
+
+	for (const prop of elementChanges) {
+		const unfocused = baseline.element[prop]!;
+		const next = focused.element[prop]!;
+		const unfocusedRgb = parseOpaqueRgb(painted(unfocused));
+		const focusedRgb = parseOpaqueRgb(painted(next));
+		const ratio = unfocusedRgb && focusedRgb ? contrastRatio(unfocusedRgb, focusedRgb) : null;
+
+		if (best === null || (ratio !== null && (best.ratio === null || ratio > best.ratio))) {
+			best = { unfocused, focused: next, ratio };
+		}
+	}
+
+	const background = focused.element["background-color"];
 
 	return {
-		unfocusedColor,
-		focusedColor,
-		contrastRatio: unfocusedRgb && focusedRgb ? contrastRatio(unfocusedRgb, focusedRgb) : null,
+		property,
+		unfocusedColor: best!.unfocused,
+		focusedColor: best!.focused,
+		contrastRatio: best!.ratio,
+		...(property !== "background-color" && background && !isTransparent(background)
+			? { backgroundColor: background }
+			: {}),
+		...(shownThrough !== undefined ? { backgroundColor: shownThrough } : {}),
 	};
 }
 

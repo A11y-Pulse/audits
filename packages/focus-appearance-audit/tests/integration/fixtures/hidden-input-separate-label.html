@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Dark mode switch</title><style>
+  body { background: #fff; font: 16px/1.5 system-ui, sans-serif; margin: 40px; }
+  .row { display: flex; align-items: center; gap: 12px; margin: 16px 0; }
+  .switch-input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .switch { display: inline-block; width: 44px; height: 24px; border-radius: 12px; background: #777; position: relative; cursor: pointer; }
+  .switch::after { content: ""; position: absolute; left: 2px; top: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; }
+  .switch-input:checked + .switch { background: #0a7d32; }
+  #good:focus-visible + .switch { box-shadow: 0 0 0 3px #fff, 0 0 0 6px #0050ff; }
+  /* A bare control with no label element at all: the visual is a sibling inside the parent. */
+  .star { position: relative; display: inline-block; width: 32px; height: 32px; }
+  .star input { position: absolute; inset: 0; margin: 0; opacity: 0; }
+  .star span { display: block; width: 32px; height: 32px; background: #ddd; border-radius: 4px; }
+</style></head><body>
+  <h1>Appearance</h1>
+  <div class="row"><input type="checkbox" role="switch" id="good" class="switch-input"><label for="good" class="switch"></label><span>Dark mode</span></div>
+  <div class="row"><input type="checkbox" role="switch" id="bad" class="switch-input"><label for="bad" class="switch"></label><span>Reduce motion</span></div>
+  <div class="row"><span class="star"><input type="checkbox" id="unlabelled" aria-label="Favourite"><span></span></span></div>
+</body></html>

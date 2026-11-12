@@ -6,7 +6,9 @@ import puppeteer from "puppeteer";
 import { afterAll, beforeAll, describe, it } from "vitest";
 
 export {
+	type FixtureHeaders,
 	type FixtureServer,
+	type FixtureServerOptions,
 	type RecordedRequest,
 	startFixtureServer,
 } from "./serve-fixtures";
@@ -56,7 +58,11 @@ export type EnginePage<A> = {
 	/** Fires if the page ever opens a real popup window. */
 	onPopup: (listener: () => void) => void;
 
-	/** Every key pressed through the page's keyboard, in order. */
+	/**
+	 * Every key pressed through the page's keyboard, in order. A key pressed while modifiers are held
+	 * is recorded with them, as in `Shift+Tab`, whichever way the driver was asked for the
+	 * combination.
+	 */
 	keyPresses: string[];
 };
 
@@ -74,7 +80,13 @@ type LaunchedEngine<A> = {
 type Keyboard = {
 	// biome-ignore lint/suspicious/noExplicitAny: each engine types `key` as its own union of key names.
 	press: (key: any, options?: any) => Promise<void>;
+	// biome-ignore lint/suspicious/noExplicitAny: each engine types `key` as its own union of key names.
+	down: (key: any, options?: any) => Promise<void>;
+	// biome-ignore lint/suspicious/noExplicitAny: each engine types `key` as its own union of key names.
+	up: (key: any) => Promise<void>;
 };
+
+const MODIFIER_KEYS = new Set(["Shift", "Control", "Alt", "Meta"]);
 
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
@@ -83,6 +95,19 @@ const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
  */
 export function isPng(bytes: Uint8Array | undefined): boolean {
 	return bytes !== undefined && PNG_SIGNATURE.every((byte, i) => bytes[i] === byte);
+}
+
+// Big-endian, after the signature and the IHDR chunk's length and type.
+const PNG_WIDTH_OFFSET = 16;
+const PNG_HEIGHT_OFFSET = 20;
+
+/**
+ * The pixel dimensions a PNG declares in its header.
+ */
+export function pngSize(bytes: Uint8Array): { width: number; height: number } {
+	const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+
+	return { width: view.getUint32(PNG_WIDTH_OFFSET), height: view.getUint32(PNG_HEIGHT_OFFSET) };
 }
 
 export const WEBKIT_NO_LINK_FOCUS = "WebKit does not move focus to links when Tab is pressed";
@@ -131,10 +156,34 @@ export const ENGINE_NAMES: readonly EngineName[] = [
 // audit is counted too.
 function recordPresses(keyboard: Keyboard, keyPresses: string[]): void {
 	const press = keyboard.press.bind(keyboard);
+	const down = keyboard.down.bind(keyboard);
+	const up = keyboard.up.bind(keyboard);
+	// Puppeteer has no syntax for a combination: the adaptor holds the modifier down around a plain
+	// press. Tracking what is held records that the same way Playwright's "Shift+Tab" is.
+	const held: string[] = [];
+
 	keyboard.press = async (key: string, options?: unknown) => {
-		keyPresses.push(key);
+		keyPresses.push([...held, key].join("+"));
 
 		return press(key, options);
+	};
+
+	keyboard.down = async (key: string, options?: unknown) => {
+		if (MODIFIER_KEYS.has(key) && !held.includes(key)) {
+			held.push(key);
+		}
+
+		return down(key, options);
+	};
+
+	keyboard.up = async (key: string) => {
+		const index = held.indexOf(key);
+
+		if (index !== -1) {
+			held.splice(index, 1);
+		}
+
+		return up(key);
 	};
 }
 

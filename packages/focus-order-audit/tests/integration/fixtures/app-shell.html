@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>app-shell</title>
+<style>
+html, body { height: 100%; }
+body { margin: 0; font: 16px/1.5 sans-serif; display: grid; grid-template: 56px 1fr 40px / 220px 1fr; overflow: hidden; }
+.topbar { grid-column: 1 / -1; display: flex; gap: 16px; align-items: center; padding: 0 16px; }
+nav { overflow-y: auto; }
+nav a, main a { display: block; padding: 8px 16px; }
+/* The page never scrolls: the message list scrolls inside this pane. */
+main { overflow-y: auto; }
+main a.thread { padding-block: 20px; }
+.statusbar { grid-column: 1 / -1; display: flex; gap: 16px; align-items: center; padding: 0 16px; }
+</style></head><body>
+<div class="topbar"><a id="logo" href="#logo">Mailbox</a><a id="compose" href="#compose">Compose</a></div>
+<nav aria-label="Folders"><a id="inbox" href="#inbox">Inbox</a><a id="sent" href="#sent">Sent</a><a id="drafts" href="#drafts">Drafts</a></nav>
+<main id="messages"></main>
+<div class="statusbar"><a id="help" href="#help">Help</a><a id="settings" href="#settings">Settings</a></div>
+<script>
+const messages = document.getElementById("messages");
+for (let i = 1; i <= 40; i++) {
+	const link = document.createElement("a");
+	link.id = `m${i}`;
+	link.href = `#m${i}`;
+	link.textContent = `Message ${i}`;
+	// Uneven rows, so a row scrolled into view does not always land at the same height.
+	if (i % 3 === 0) link.className = "thread";
+	messages.append(link);
+}
+</script>
+</body></html>

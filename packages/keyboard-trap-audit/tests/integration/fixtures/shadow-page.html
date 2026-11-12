@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>shadow-page</title></head><body>
+<site-header></site-header>
+<div id="widget">
+	<button id="w1">Bold</button>
+	<button id="w2">Italic</button>
+</div>
+<site-footer></site-footer>
+<script>
+	// The site's navigation lives in web components, as in many design systems, so no link outside
+	// the widget is in the light DOM.
+	const define = (name, links) =>
+		customElements.define(
+			name,
+			class extends HTMLElement {
+				constructor() {
+					super();
+					this.attachShadow({ mode: "open" }).innerHTML = links
+						.map((text) => `<a href="#${text.toLowerCase()}">${text}</a>`)
+						.join(" ");
+				}
+			},
+		);
+	define("site-header", ["Home", "Trails"]);
+	define("site-footer", ["Contact", "Privacy"]);
+
+	// Cycles Tab and Shift+Tab between its own buttons and ignores Escape.
+	const buttons = [...document.querySelectorAll("#widget button")];
+	document.getElementById("widget").addEventListener("keydown", (event) => {
+		if (event.key !== "Tab") return;
+		event.preventDefault();
+		const index = buttons.indexOf(document.activeElement);
+		buttons[(index + 1) % buttons.length].focus();
+	});
+</script>
+</body></html>

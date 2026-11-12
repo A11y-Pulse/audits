@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Cookie banner</title><style>
+  body { margin: 0; background: #fff; font: 16px/1.5 system-ui, sans-serif; }
+  main { padding: 0 16px; }
+  a { display: block; padding: 8px; }
+  a:focus { outline: 3px solid #0050ff; }
+  .spacer { height: 120vh; }
+  #cookie-banner {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    background: #1b1b2f; color: #fff; z-index: 100;
+    padding: 0;
+  }
+  #cookie-banner p { margin: 0; padding: 28px 24px; }
+  #cookie-banner .actions { padding: 0 24px 16px; }
+  #cookie-banner button { font: inherit; padding: 6px 12px; }
+</style></head><body>
+  <main>
+    <h1>Our shop</h1>
+    <a href="#products" id="first">Products</a>
+    <div class="spacer"></div>
+    <a href="#privacy" id="privacy">Privacy policy</a>
+  </main>
+  <div id="cookie-banner" role="region" aria-label="Cookies">
+    <p>We use cookies to improve your experience, measure traffic and personalise what you see on this site and others.</p>
+    <div class="actions"><button type="button" id="accept">Accept all</button> <button type="button" id="reject">Reject</button></div>
+  </div>
+</body></html>

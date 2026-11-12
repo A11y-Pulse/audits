@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>multi-column</title>
+<style>
+body { margin: 0; font: 16px/1.5 sans-serif; }
+header, footer { padding: 16px; }
+header a { display: inline-block; padding: 40px 8px; }
+ul { column-count: 4; column-gap: 24px; margin: 0; padding: 16px; list-style: none; }
+li a { display: block; padding: 8px; }
+</style></head><body>
+<header><a id="home" href="#home">Store directory</a></header>
+<main>
+<!-- 200 links in four columns of 50: each column is 2,000px tall, so every wrap climbs well over
+     a viewport, and the first column starts below the header link that shares its left edge. -->
+<ul id="stores"></ul>
+</main>
+<footer><a id="contact" href="#contact">Contact us</a></footer>
+<script>
+const list = document.getElementById("stores");
+for (let i = 1; i <= 200; i++) {
+	const item = document.createElement("li");
+	const link = document.createElement("a");
+	link.id = `store${i}`;
+	link.href = `#store${i}`;
+	link.textContent = `Store ${i}`;
+	item.append(link);
+	list.append(item);
+}
+</script>
+</body></html>

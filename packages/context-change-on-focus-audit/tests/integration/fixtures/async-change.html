@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Offers</title><style>
+  body { background: #fff; font: 16px/1.5 system-ui, sans-serif; }
+  :focus { outline: 3px solid #0050ff; }
+  label { display: block; }
+</style></head><body>
+  <!-- #quick opens its window within the time a tab stop is given to settle. #slow opens it 150ms
+       later, by which time focus is several fields further on. The fields after them keep the
+       session going long enough for that timer to come due. -->
+  <label>Email <input id="quick" onfocus="setTimeout(() => window.open('/quick-offer'), 5)"></label>
+  <label>Phone <input id="slow" onfocus="setTimeout(() => window.open('/slow-offer'), 150)"></label>
+  <div id="fields"></div>
+  <script>
+    const fields = document.getElementById("fields");
+
+    for (let n = 1; n <= 40; n++) {
+      const label = document.createElement("label");
+      label.textContent = `Field ${n} `;
+      const input = document.createElement("input");
+      input.id = `field-${n}`;
+      label.append(input);
+      fields.append(label);
+    }
+  </script>
+</body></html>

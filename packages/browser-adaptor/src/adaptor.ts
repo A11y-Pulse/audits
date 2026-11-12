@@ -6,6 +6,7 @@ export type KeyName =
 	| "Tab"
 	| "Shift+Tab"
 	| "Enter"
+	| "Space"
 	| "Escape"
 	| "ArrowUp"
 	| "ArrowDown"
@@ -76,4 +77,20 @@ export interface BrowserAdaptor {
 	 * This function must not throw.
 	 */
 	ensureFocusReporting(): Promise<void>;
+
+	/**
+	 * How many native dialogs (`alert`, `confirm`, `prompt`, `beforeunload`) the adaptor has dismissed
+	 * since this was last called. A dialog blocks the page's scripts until it is answered, so an
+	 * adaptor has to dismiss them itself or a page that raises one hangs the audit. Optional: an
+	 * adaptor without it is taken to report none.
+	 */
+	takeDismissedDialogs?(): number;
+
+	/**
+	 * Dismiss native dialogs from now until the returned function is called. A tab session holds this
+	 * for as long as it runs, so the adaptor need not interfere with the page's dialogs, or with a
+	 * caller's own handling of them, the rest of the time. Optional: an adaptor without it is taken
+	 * to deal with dialogs by itself.
+	 */
+	startDismissingDialogs?(): () => void;
 }

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Product filters</title>
+<style>
+	ul { list-style: none; margin: 0; padding: 0; }
+	li { margin: 4px 0; }
+	button:focus { outline: 2px solid #1a4fd8; }
+</style>
+</head><body>
+<h1>Filters</h1>
+<!-- Enough ordinary controls that a per-stop cost shows up over the fixed cost of a session. -->
+<ul id="filters"></ul>
+<script>
+	const list = document.getElementById("filters");
+
+	for (let i = 0; i < 40; i++) {
+		const item = document.createElement("li");
+		const button = document.createElement("button");
+		button.type = "button";
+		button.id = `filter-${i}`;
+		button.className = `chip chip-${i % 5}`;
+		button.textContent = `Filter ${i}`;
+		item.append(button);
+		list.append(item);
+	}
+</script>
+</body></html>

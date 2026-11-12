@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><title>vertical-rl-scramble</title>
+<style>
+html { writing-mode: vertical-rl; }
+body { margin: 0; font: 16px/1.8 serif; }
+a { display: block; padding: 8px; }
+/* The block axis runs right to left, and column-reverse lays the source out against it: the first
+   section in the source is drawn last, at the far left. */
+main { display: flex; flex-direction: column-reverse; }
+section { inline-size: 80vh; block-size: 1500px; padding: 16px; box-sizing: border-box; }
+</style></head><body>
+<main>
+<section><h2>調理</h2><a id="stove" href="#stove">ストーブ</a></section>
+<section><h2>寝具</h2><a id="bag" href="#bag">寝袋</a></section>
+<section><h2>テント</h2><a id="tent" href="#tent">四季用テント</a></section>
+<section><h2>案内</h2><a id="home" href="#home">山の道具店</a></section>
+</main>
+</body></html>

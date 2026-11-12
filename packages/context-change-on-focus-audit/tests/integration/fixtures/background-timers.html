@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Account</title><style>
+  body { background: #fff; font: 16px/1.5 system-ui, sans-serif; }
+  :focus { outline: 3px solid #0050ff; }
+  a { display: block; }
+</style></head><body>
+  <!-- A page whose links do nothing on focus, with things going on in the background that have
+       nothing to do with the keyboard: each function below is started by the test before the
+       session, the way a page starts them as it loads. -->
+  <nav id="links"></nav>
+  <script>
+    const links = document.getElementById("links");
+
+    for (let n = 0; n < 40; n++) {
+      const link = document.createElement("a");
+      link.id = `l${n}`;
+      link.href = `#l${n}`;
+      link.textContent = `Statement ${n}`;
+      links.append(link);
+    }
+
+    // A session-expiry redirect.
+    function startExpiryCountdown(ms) {
+      setTimeout(() => {
+        location.href = "/other-page.html";
+      }, ms);
+    }
+
+    // The same, counted down on an interval.
+    function startExpiryInterval(ticks) {
+      let n = 0;
+
+      setInterval(() => {
+        if (++n === ticks) {
+          location.href = "/other-page.html";
+        }
+      }, 60);
+    }
+
+    // A poll loop that re-arms itself and, some way in, opens a window.
+    function startPolling(ticks) {
+      let n = 0;
+
+      (function tick() {
+        if (++n === ticks) {
+          window.open("/promotion");
+        }
+
+        setTimeout(tick, 60);
+      })();
+    }
+
+    // A warning raised on a schedule.
+    function startWarningCountdown(ms) {
+      setTimeout(() => alert("Your session is about to expire"), ms);
+    }
+  </script>
+</body></html>

@@ -1,4 +1,4 @@
-import type { CDPSession, JSHandle, KeyInput, Page } from "puppeteer";
+import type { CDPSession, Dialog, JSHandle, KeyInput, Page } from "puppeteer";
 import type { BrowserAdaptor, ElementRef, KeyName, Rect } from "../adaptor";
 import { nextPaintScript } from "../paint";
 
@@ -9,6 +9,53 @@ const cdpSessions = new WeakMap<Page, Promise<CDPSession | null>>();
 
 // Pages that have had focus emulation enabled at least once.
 const focusEmulatedPages = new WeakSet<Page>();
+
+// Dialog dismissal per page, shared by every adaptor wrapping that page: how many dialogs were
+// dismissed and not yet reported, how many callers currently want dialogs dismissed, the listener
+// doing it while any does, and the last dialog the page raised, which may still be open.
+type DialogState = {
+	count: number;
+	holds: number;
+	listener: ((dialog: Dialog) => void) | null;
+	watching: boolean;
+	last: Dialog | null;
+};
+
+function dialogStateOf(page: Page): DialogState {
+	let state = dialogStates.get(page);
+
+	if (state === undefined) {
+		state = { count: 0, holds: 0, listener: null, watching: false, last: null };
+		dialogStates.set(page, state);
+	}
+
+	return state;
+}
+
+/**
+ * Remember the last dialog `page` raised, without answering it. Puppeteer leaves a dialog nobody
+ * answers open, and an open dialog blocks every call to the page, so whoever starts dismissing
+ * dialogs later has to be able to close one that was raised before they started. Watching answers
+ * nothing, so the caller's own `dialog` handler is unaffected.
+ */
+function watchDialogsOn(page: Page): void {
+	if (typeof page.on !== "function") {
+		return;
+	}
+
+	const state = dialogStateOf(page);
+
+	if (state.watching) {
+		return;
+	}
+
+	state.watching = true;
+	page.on("dialog", (dialog: Dialog) => {
+		state.last = dialog;
+	});
+}
+
+const dialogStates = new WeakMap<Page, DialogState>();
 
 const DEFAULT_SCREENSHOT_CLIP_SCALE = 2;
 
@@ -44,7 +91,78 @@ export type PuppeteerAdaptorOptions = {
 	 * scroll into view, where the page's state does not matter.
 	 */
 	captureBeyondViewport?: boolean;
+
+	/**
+	 * Whether to dismiss native dialogs (`alert`, `confirm`, `prompt`, `beforeunload`), and count
+	 * them. A dialog blocks the page until something answers it, so an unanswered one hangs every
+	 * later call.
+	 *
+	 * - `true`, the default: only while something has asked for it through `startDismissingDialogs`,
+	 *   which a tab session does for as long as it runs. Outside that the page's dialogs are the
+	 *   caller's to handle, and inside it a `dialog` listener of the caller's that answers a dialog
+	 *   as it is raised still gets to.
+	 * - `"always"`: from construction, for the page's lifetime. For a caller that hands the whole
+	 *   page over, such as the audit runner.
+	 * - `false`: never. The caller handles `dialog` events itself.
+	 */
+	dismissDialogs?: boolean | "always";
 };
+
+/**
+ * Dismiss the dialogs `page` raises, counting them, until the returned function is called. The
+ * listener is on the page only while at least one caller holds it, so a caller's own `dialog`
+ * handler has the page to itself the rest of the time.
+ */
+function dismissDialogsOn(page: Page): () => void {
+	if (typeof page.on !== "function") {
+		return () => {};
+	}
+
+	const held = dialogStateOf(page);
+
+	if (held.holds++ === 0) {
+		// A dialog raised before anyone was dismissing them may still be open, blocking the page.
+		// Dismissing one that was answered since rejects, which is fine. It is not counted: it
+		// predates whatever is starting now.
+		const earlier = held.last;
+		held.last = null;
+
+		if (earlier !== null) {
+			Promise.resolve()
+				.then(() => earlier.dismiss())
+				.catch(() => {});
+		}
+
+		const listener = (dialog: Dialog): void => {
+			held.count++;
+
+			// Not answered until every other listener has had the dialog: one of the caller's own that
+			// answers it as it is raised then gets to, instead of finding it already handled. The
+			// dismissal rejects when that happened, which is as good as dismissed.
+			setTimeout(() => {
+				dialog.dismiss().catch(() => {});
+			}, 0);
+		};
+
+		held.listener = listener;
+		page.on("dialog", listener);
+	}
+
+	let released = false;
+
+	return () => {
+		if (released) {
+			return;
+		}
+
+		released = true;
+
+		if (--held.holds === 0 && held.listener !== null) {
+			page.off("dialog", held.listener);
+			held.listener = null;
+		}
+	};
+}
 
 /** A BrowserAdaptor backed by a Puppeteer Page. */
 export class PuppeteerAdaptor implements BrowserAdaptor {
@@ -54,6 +172,8 @@ export class PuppeteerAdaptor implements BrowserAdaptor {
 
 	private readonly captureBeyondViewport: boolean;
 
+	private readonly dismissDialogs: boolean | "always";
+
 	constructor(
 		private readonly page: Page,
 		options: PuppeteerAdaptorOptions = {},
@@ -61,6 +181,28 @@ export class PuppeteerAdaptor implements BrowserAdaptor {
 		this.screenshotClipScale = options.screenshotClipScale ?? DEFAULT_SCREENSHOT_CLIP_SCALE;
 		this.optimizeForSpeed = options.optimizeForSpeed ?? true;
 		this.captureBeyondViewport = options.captureBeyondViewport ?? false;
+		this.dismissDialogs = options.dismissDialogs ?? true;
+
+		if (this.dismissDialogs === "always") {
+			dismissDialogsOn(page);
+		} else if (this.dismissDialogs) {
+			watchDialogsOn(page);
+		}
+	}
+
+	startDismissingDialogs(): () => void {
+		return this.dismissDialogs === false ? () => {} : dismissDialogsOn(this.page);
+	}
+
+	takeDismissedDialogs(): number {
+		const state = dialogStates.get(this.page);
+		const count = state?.count ?? 0;
+
+		if (state) {
+			state.count = 0;
+		}
+
+		return count;
 	}
 
 	evaluate<T>(
@@ -108,11 +250,11 @@ export class PuppeteerAdaptor implements BrowserAdaptor {
 	}
 
 	async screenshotClip(clip: Rect, scale = 1): Promise<Uint8Array> {
-		await this.page.evaluate(nextPaintScript);
-
 		const session = await cdpSession(this.page);
 
 		if (!session) {
+			await this.page.evaluate(nextPaintScript);
+
 			// Without CDP the public API is all there is. With captureBeyondViewport off it intersects
 			// the clip with the viewport, so a clip that does not fit comes back smaller than asked
 			// for, with a shifted origin.
@@ -124,6 +266,9 @@ export class PuppeteerAdaptor implements BrowserAdaptor {
 			})) as Uint8Array;
 		}
 
+		// No wait for a paint first: Chromium renders a frame of the page as it stands for every
+		// capture it is asked for through CDP.
+		//
 		// Straight to CDP rather than page.screenshot(): with captureBeyondViewport off, Puppeteer
 		// intersects the clip with the visual viewport and silently moves the origin that callers
 		// align element rects against. Keeping captureBeyondViewport off ensures that Chromium does

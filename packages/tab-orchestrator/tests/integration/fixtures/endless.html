@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Feed</title></head><body>
+<div id="feed"><a class="item" href="#item-0" onfocus="more()">Item 0</a></div>
+<script>
+	let count = 0;
+
+	// Infinite scroll, driven by focus: reaching the last item loads another.
+	function more() {
+		count++;
+		const item = document.createElement("a");
+		item.className = "item";
+		item.href = "#item-" + count;
+		item.textContent = "Item " + count;
+		item.setAttribute("onfocus", "more()");
+		document.getElementById("feed").append(" ", item);
+	}
+</script>
+</body></html>

@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Smooth scrolling with a sticky footer</title><style>
+  body { margin: 0; background: #fff; font: 16px/1.5 system-ui, sans-serif; }
+  main { padding: 0 16px; }
+  a { display: block; padding: 8px; }
+  a:focus { outline: 3px solid #0050ff; }
+  .spacer { height: 120vh; }
+  html { scroll-behavior: smooth; }
+  #footer { position: fixed; left: 0; right: 0; bottom: 0; height: 80px; background: #111; color: #fff; z-index: 10; }
+</style></head><body>
+  <main>
+    <a href="#a" id="one">One</a>
+    <div class="spacer"></div>
+    <a href="#b" id="two">Two</a>
+    <div class="spacer"></div>
+    <a href="#c" id="three">Three</a>
+  </main>
+  <div id="footer">Footer</div>
+</body></html>

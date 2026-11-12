@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Transparent effects canvas</title><style>
+  body { margin: 0; background: #fff; font: 16px/1.5 system-ui, sans-serif; }
+  main { padding: 0 16px; }
+  a { display: block; padding: 8px; }
+  a:focus { outline: 3px solid #0050ff; }
+  .spacer { height: 120vh; }
+  /* A confetti or particle layer: nothing is drawn on it between effects. */
+  #effects { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 50; pointer-events: none; }
+</style></head><body>
+  <main>
+    <a href="#a" id="first">First</a>
+    <a href="#b" id="second">Second</a>
+    <div class="spacer"></div>
+    <a href="#c" id="last">Last</a>
+  </main>
+  <canvas id="effects" width="300" height="150" aria-hidden="true"></canvas>
+</body></html>

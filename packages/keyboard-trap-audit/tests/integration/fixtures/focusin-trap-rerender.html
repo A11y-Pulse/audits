@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>focusin-trap-rerender</title></head><body>
+<div id="chat" role="region" aria-label="Chat">
+	<input id="message" aria-label="Message">
+	<button id="send">Send</button>
+</div>
+<footer id="footer"><a id="after" href="#a">After the chat</a></footer>
+<script>
+	// Pulls focus back whenever it lands outside, and has no Escape handling.
+	const chat = document.getElementById("chat");
+	const footer = document.getElementById("footer");
+	document.addEventListener("focusin", (event) => {
+		if (!chat.contains(event.target)) document.getElementById("message").focus();
+	});
+	// The footer is rendered again whenever focus moves, the way a framework re-renders on a state
+	// change, so the link in it is a new element each time.
+	document.addEventListener("focusin", () => {
+		footer.innerHTML = '<a id="after" href="#a">After the chat</a>';
+	});
+</script>
+</body></html>

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Sticky header</title><style>
+  body { margin: 0; background: #fff; font: 16px/1.5 system-ui, sans-serif; }
+  main { padding: 0 16px; }
+  a { display: block; padding: 8px; }
+  a:focus { outline: 3px solid #0050ff; }
+  .spacer { height: 120vh; }
+  #site-header { position: sticky; top: 0; height: 72px; background: #0b3d91; z-index: 10; }
+  #site-header a { color: #fff; display: inline-block; }
+</style></head><body>
+  <header id="site-header"><nav><a href="#home" id="home">Home</a></nav></header>
+  <main>
+    <h1>Long article</h1>
+    <a href="#s1" id="s1">Section one</a>
+    <div class="spacer"></div>
+    <a href="#s2" id="s2">Section two</a>
+    <div class="spacer"></div>
+    <a href="#s3" id="s3">Section three</a>
+    <div class="spacer"></div>
+    <a href="#s4" id="s4">Section four</a>
+    <div class="spacer"></div>
+  </main>
+</body></html>

@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Booking</title></head><body>
+<button id="first" type="button">First</button>
+<label>Departure <input id="departure" type="date"></label>
+<site-footer></site-footer>
+<script>
+	customElements.define("site-footer", class extends HTMLElement {
+		constructor() {
+			super();
+			this.attachShadow({ mode: "open" }).innerHTML =
+				'<nav><a class="link" href="#terms">Terms</a> <a class="link" href="#privacy">Privacy</a></nav>';
+		}
+	});
+</script>
+</body></html>

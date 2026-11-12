@@ -1,0 +1,11 @@
+---
+"@a11y-pulse/focus-appearance-audit": minor
+"@a11y-pulse/tab-orchestrator": minor
+"@a11y-pulse/audit-runner": minor
+---
+
+Check the contrast of focus indicators (WCAG 1.4.11 Non-text Contrast).
+
+- `@a11y-pulse/focus-appearance-audit`: each element whose indicator can be measured gains `indicatorContrast`: the ratio, the two colours, what they were compared against and how they were found. The indicator is compared with the colours next to it, as 1.4.11 asks, not with how the element looked before focus: an outline or box-shadow outside the element with the background behind the element; an inset shadow or an outline pulled inside by a negative `outline-offset` with the element's own fill; a border with either; a background fill with the surroundings; an indicator found only in the screenshots with the unchanged pixels next to it. Text colour is never measured. Where the unfocused colour of the measured part is known, `stateChangeRatio` gives the contrast between the two states, for information only. The ratio is `null`, with a `reason`, for translucent colours, when too little changed, when what is next to the indicator has no single colour, and when a weak indicator was still transitioning in; over an image or gradient, or for an element positioned over other content, the screenshots are used. The browser's default focus ring is not measured, however it was found. `summary.lowContrastIndicators` counts indicators under the new `MIN_INDICATOR_CONTRAST` (3), less those whose only change is one colour that `colorOnly` measured; the new `hasLowContrastIndicator` is the test. `passed` is unaffected.
+- `@a11y-pulse/tab-orchestrator`: when styles are read, a tab stop's `activeElement` also carries `backdrop` (the first opaque background colour behind the element, or `null` when it cannot be told from the ancestors: behind an image or translucent colour, or for an element positioned out of the flow) and `animating` (a transition or animation was running on or around it). `outline-offset` joins `FOCUS_STYLE_PROPERTIES`.
+- `@a11y-pulse/audit-runner`: new `focusIndicatorContrastToAxe` mapping for the `focus-indicator-contrast` audit. An element whose only focus change is one colour is left to `focus-color-only` when that audit measured the change, and reported here when it could not.
