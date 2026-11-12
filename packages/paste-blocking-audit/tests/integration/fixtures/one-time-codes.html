@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Two-step sign in</title>
+</head>
+<body>
+<main>
+	<h1>Check your phone</h1>
+	<form id="hinted" method="post" action="/verify">
+		<label for="code">Verification code</label>
+		<input id="code" name="code" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+		<button type="submit">Verify</button>
+	</form>
+
+	<form id="unhinted" method="post" action="/verify">
+		<p>We sent a 6-digit code to your phone.</p>
+		<input id="otp" name="code" inputmode="numeric" placeholder="6-digit code">
+		<button type="submit">Verify</button>
+	</form>
+
+	<form id="filtered" method="post" action="/verify">
+		<label for="totp">Authenticator app code</label>
+		<input id="totp" name="totp" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+		<button type="submit">Verify</button>
+	</form>
+</main>
+<script>
+	// A digits-only key filter that forgets modifier keys, so Ctrl+V and Cmd+V do nothing.
+	document.getElementById("totp").addEventListener("keydown", (event) => {
+		if (event.key.length === 1 && !/\d/.test(event.key)) {
+			event.preventDefault();
+		}
+	});
+</script>
+</body>
+</html>

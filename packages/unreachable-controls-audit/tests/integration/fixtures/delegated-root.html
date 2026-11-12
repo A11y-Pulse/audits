@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>delegated root listeners</title>
+<style>body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; } .row { padding: 8px; }</style></head><body>
+<div id="root">
+	<header><a id="logo" href="#home">Ridgeline</a></header>
+	<main>
+		<div class="row"><span>Summit 3</span> <button id="add-1" type="button">Add</button></div>
+		<div class="row"><span>Meadow 4</span> <button id="add-2" type="button">Add</button></div>
+	</main>
+</div>
+<script>
+	// The way React and other frameworks listen: once, at the root, for every event.
+	const root = document.getElementById("root");
+
+	for (const type of ["click", "mousedown", "keydown", "touchstart"]) {
+		root.addEventListener(type, () => {});
+		document.addEventListener(type, () => {});
+		document.body.addEventListener(type, () => {});
+	}
+</script>
+</body></html>

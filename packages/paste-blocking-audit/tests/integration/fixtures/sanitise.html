@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sign in</title>
+</head>
+<body>
+<main>
+	<h1>Sign in</h1>
+	<form id="login" method="post" action="/login">
+		<label for="username">Username</label>
+		<input id="username" type="text" name="username" autocomplete="username">
+
+		<label for="password">Password</label>
+		<input id="password" type="password" name="password" autocomplete="current-password" value="kept">
+
+		<button type="submit">Log in</button>
+	</form>
+	<p id="log"></p>
+</main>
+<script>
+	// Takes over the paste to strip stray whitespace, then writes the text in itself.
+	document.getElementById("password").addEventListener("paste", (event) => {
+		event.preventDefault();
+		event.target.value = event.clipboardData.getData("text/plain").trim();
+	});
+
+	// Writes the pasted text in a moment later, as a framework's state update would.
+	document.getElementById("username").addEventListener("paste", (event) => {
+		event.preventDefault();
+		const text = event.clipboardData.getData("text/plain");
+
+		setTimeout(() => {
+			event.target.value = text.toLowerCase();
+		}, 0);
+	});
+</script>
+</body>
+</html>

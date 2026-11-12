@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spring sale</title>
+<style>
+	body { font: 16px/1.5 system-ui, sans-serif; margin: 0; }
+	main { padding: 0 2rem 2rem; }
+	button, .tile { font: inherit; }
+	.tile { display: inline-block; padding: 0.5rem 0.75rem; border: 1px solid #333; cursor: pointer; }
+	[hidden] { display: none; }
+	/* Three full-width slides side by side: two are always parked outside the document. */
+	.hero { overflow: hidden; width: 100vw; }
+	.track { display: flex; width: 300vw; }
+	.slide { width: 100vw; padding: 2rem; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div class="hero">
+	<div class="track">
+		<div class="slide"><h2>Tents from $199</h2><p>Two and four person.</p></div>
+		<div class="slide"><h2>Sleeping bags</h2><p>Down and synthetic.</p></div>
+		<div class="slide"><h2>Free delivery</h2><p>On orders over $100.</p></div>
+	</div>
+</div>
+<main>
+	<h1>Spring sale</h1>
+	<!-- Only a mouse opens it: no key handler. -->
+	<div id="filters-toggle" class="tile" role="button" tabindex="0" aria-expanded="false" aria-controls="filters">Filters</div>
+	<div id="filters" hidden><p>Brand, size and price.</p></div>
+
+	<button id="sort-toggle" type="button" aria-expanded="false" aria-controls="sort-options">Sort</button>
+	<ul id="sort-options" hidden><li>Price</li><li>Rating</li></ul>
+
+	<!-- No aria-controls: its panel can only be seen by looking at the whole page. -->
+	<button id="help-toggle" type="button" aria-expanded="false">Help</button>
+	<div id="help" hidden><p>Call us on 0800 000 000.</p></div>
+</main>
+<script>
+	// The carousel never stops: a new slide every 400ms, far more often than a real one, so that
+	// one always changes while a trigger is being operated.
+	const track = document.querySelector(".track");
+	let slide = 0;
+
+	setInterval(() => {
+		slide = (slide + 1) % 3;
+		track.style.transform = `translateX(-${slide * 100}vw)`;
+	}, 400);
+
+	for (const [buttonId, panelId] of [["filters-toggle", "filters"], ["sort-toggle", "sort-options"], ["help-toggle", "help"]]) {
+		const button = document.getElementById(buttonId);
+
+		button.addEventListener("click", () => {
+			const open = button.getAttribute("aria-expanded") !== "true";
+
+			button.setAttribute("aria-expanded", String(open));
+			document.getElementById(panelId).hidden = !open;
+		});
+	}
+</script>
+</body>
+</html>

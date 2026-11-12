@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Trailhead Outfitters</title>
+		<style>
+			body { margin: 0; font: 16px/1.5 system-ui, sans-serif; color: #1c1c1c; }
+			header, main, footer { max-width: 760px; margin: 0 auto; padding: 16px; }
+			nav a { margin-right: 16px; }
+			.carousel { position: relative; }
+			.carousel__viewport { overflow: hidden; width: 760px; height: 280px; border-radius: 8px; }
+			.carousel__track { display: flex; width: 2280px; transition: transform 80ms ease-out; }
+			.slide { flex: 0 0 760px; height: 280px; box-sizing: border-box; padding: 32px; color: #fff; }
+			.slide:nth-child(1) { background: #24523b; }
+			.slide:nth-child(2) { background: #7a3b1d; }
+			.slide:nth-child(3) { background: #1d4f7a; }
+			.slide a { color: #fff; }
+			.carousel__arrows { position: absolute; right: 16px; bottom: 16px; }
+			.carousel__dots button { width: 12px; height: 12px; border-radius: 50%; border: 0; background: #bbb; }
+			.carousel__dots button[aria-current="true"] { background: #222; }
+		</style>
+	</head>
+	<body>
+		<header>
+			<nav aria-label="Main">
+				<a href="/tents">Tents</a><a href="/packs">Packs</a><a href="/boots">Boots</a>
+			</nav>
+		</header>
+		<main>
+			<h1>Spring sale</h1>
+			<section class="carousel" aria-roledescription="carousel" aria-label="Featured offers">
+				<div class="carousel__viewport" id="offers">
+					<div class="carousel__track" id="offers-track">
+						<div class="slide"><h2>Two-person tents</h2><a href="/tents">Shop tents</a></div>
+						<div class="slide"><h2>Daypacks from $49</h2><a href="/packs">Shop packs</a></div>
+						<div class="slide"><h2>Waterproof boots</h2><a href="/boots">Shop boots</a></div>
+					</div>
+				</div>
+				<div class="carousel__arrows">
+					<button type="button" id="prev">Previous slide</button>
+					<button type="button" id="next">Next slide</button>
+				</div>
+				<div class="carousel__dots">
+					<button type="button" aria-label="Slide 1" aria-current="true"></button>
+					<button type="button" aria-label="Slide 2"></button>
+					<button type="button" aria-label="Slide 3"></button>
+				</div>
+			</section>
+			<p>Free returns on every order over $75.</p>
+		</main>
+		<footer><a href="/contact">Contact us</a></footer>
+		<script>
+			const track = document.getElementById("offers-track");
+			const dots = document.querySelectorAll(".carousel__dots button");
+			let index = 0;
+
+			function show(next) {
+				index = (next + 3) % 3;
+				track.style.transform = `translateX(${-760 * index}px)`;
+				dots.forEach((dot, i) => dot.setAttribute("aria-current", String(i === index)));
+			}
+
+			document.getElementById("prev").addEventListener("click", () => show(index - 1));
+			document.getElementById("next").addEventListener("click", () => show(index + 1));
+			window.rotation = setInterval(() => show(index + 1), 250);
+		</script>
+	</body>
+</html>

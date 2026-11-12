@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Checkout</title>
+<style>
+	body { font: 16px/1.5 system-ui, sans-serif; margin: 2rem; max-width: 40rem; }
+	button, input { font: inherit; }
+	label { display: block; margin-top: 0.5rem; }
+	[hidden] { display: none; }
+</style>
+</head>
+<body>
+<main>
+	<h1>Checkout</h1>
+	<form id="checkout" action="other.html">
+		<label for="name">Full name</label>
+		<input id="name" name="name" type="text" value="Aroha Ngata">
+
+		<!-- A native checkbox that reveals more fields and says so with aria-expanded. -->
+		<label><input id="other-address" name="other" type="checkbox" aria-expanded="false" aria-controls="other-fields"> Ship to a different address</label>
+		<div id="other-fields" hidden>
+			<label for="street">Street</label>
+			<input id="street" name="street" type="text">
+		</div>
+
+		<fieldset>
+			<legend>Delivery</legend>
+			<label><input id="delivery-standard" name="delivery" type="radio" value="standard" checked> Standard</label>
+			<!-- A radio that reveals the pickup options. -->
+			<label><input id="delivery-pickup" name="delivery" type="radio" value="pickup" aria-expanded="false" aria-controls="pickup-fields"> Pick up in store</label>
+			<div id="pickup-fields" hidden>
+				<label for="store">Store</label>
+				<input id="store" name="store" type="text">
+			</div>
+		</fieldset>
+
+		<!-- A custom switch that also expands a region. -->
+		<div id="gift-switch" role="switch" tabindex="0" aria-checked="false" aria-expanded="false" aria-controls="gift-fields">Add a gift message</div>
+		<div id="gift-fields" hidden>
+			<label for="gift">Message</label>
+			<input id="gift" name="gift" type="text">
+		</div>
+
+		<button id="place" type="submit">Continue</button>
+	</form>
+</main>
+<script>
+	window.__fixture = { submits: 0 };
+
+	document.getElementById("checkout").addEventListener("submit", (event) => {
+		event.preventDefault();
+		window.__fixture.submits++;
+	});
+
+	const other = document.getElementById("other-address");
+
+	other.addEventListener("change", () => {
+		other.setAttribute("aria-expanded", String(other.checked));
+		document.getElementById("other-fields").hidden = !other.checked;
+	});
+
+	for (const radio of document.querySelectorAll("[name=delivery]")) {
+		radio.addEventListener("change", () => {
+			const pickup = document.getElementById("delivery-pickup");
+
+			pickup.setAttribute("aria-expanded", String(pickup.checked));
+			document.getElementById("pickup-fields").hidden = !pickup.checked;
+		});
+	}
+
+	const gift = document.getElementById("gift-switch");
+
+	function toggleGift() {
+		const on = gift.getAttribute("aria-checked") !== "true";
+
+		gift.setAttribute("aria-checked", String(on));
+		gift.setAttribute("aria-expanded", String(on));
+		document.getElementById("gift-fields").hidden = !on;
+	}
+
+	gift.addEventListener("click", toggleGift);
+	gift.addEventListener("keydown", (event) => {
+		if (event.key === " ") {
+			event.preventDefault();
+			toggleGift();
+		}
+	});
+</script>
+</body>
+</html>

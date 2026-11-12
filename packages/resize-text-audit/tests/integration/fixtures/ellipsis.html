@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Resize text: intentional truncation</title>
+		<style>
+			body {
+				margin: 24px;
+				font: 16px/1.5 sans-serif;
+			}
+			.inbox {
+				width: 30vw;
+				margin: 0;
+				padding: 0;
+				list-style: none;
+			}
+			.inbox li {
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+				border-bottom: 1px solid #ccc;
+			}
+			.excerpt {
+				width: 40vw;
+				display: -webkit-box;
+				-webkit-box-orient: vertical;
+				-webkit-line-clamp: 2;
+				line-clamp: 2;
+				overflow: hidden;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Inbox</h1>
+		<ul class="inbox">
+			<!-- Already truncated at full size. -->
+			<li id="long">
+				Your order has shipped and is expected to arrive on Thursday between nine and five
+			</li>
+			<!-- Fits at full size, gains an ellipsis at 200%. -->
+			<li id="short">Password changed successfully</li>
+		</ul>
+		<!-- Two lines at most at full size, clamped from more at 200%. -->
+		<p id="excerpt" class="excerpt">
+			The quarterly report is ready to review and has been shared with your team for comment.
+		</p>
+	</body>
+</html>

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Specifications</title>
+<style>
+	body { font: 16px/1.5 system-ui, sans-serif; margin: 2rem; }
+	button { font: inherit; display: block; }
+	[hidden] { display: none; }
+</style>
+</head>
+<body>
+<main><h1>Specifications</h1><div id="list"></div></main>
+<script>
+	const list = document.getElementById("list");
+
+	for (let i = 0; i < 30; i++) {
+		const button = document.createElement("button");
+		const panel = document.createElement("div");
+
+		button.id = `spec-${i}`;
+		button.type = "button";
+		button.textContent = `Specification ${i + 1}`;
+		button.setAttribute("aria-expanded", "false");
+		button.setAttribute("aria-controls", `spec-panel-${i}`);
+		panel.id = `spec-panel-${i}`;
+		panel.hidden = true;
+		panel.textContent = `Details for specification ${i + 1}.`;
+
+		button.addEventListener("click", () => {
+			const open = button.getAttribute("aria-expanded") !== "true";
+
+			button.setAttribute("aria-expanded", String(open));
+			panel.hidden = !open;
+		});
+
+		list.append(button, panel);
+	}
+</script>
+</body>
+</html>

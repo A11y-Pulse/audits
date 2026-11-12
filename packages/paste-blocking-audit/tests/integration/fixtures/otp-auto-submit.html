@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Check your phone</title>
+</head>
+<body>
+<main>
+	<h1>Check your phone</h1>
+
+	<!-- Verifies in the background as soon as six digits are in the field. -->
+	<form id="single" method="post" action="/verify-form">
+		<label for="code">6-digit code</label>
+		<input id="code" name="code" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+		<button type="submit">Verify</button>
+	</form>
+	<p id="status" role="status"></p>
+
+	<!-- Submits the form as soon as every box is filled. -->
+	<form id="split" method="post" action="/verify-split">
+		<fieldset>
+			<legend>Backup device code</legend>
+			<input id="b1" class="box" inputmode="numeric" maxlength="1" aria-label="Digit 1">
+			<input id="b2" class="box" inputmode="numeric" maxlength="1" aria-label="Digit 2">
+			<input id="b3" class="box" inputmode="numeric" maxlength="1" aria-label="Digit 3">
+			<input id="b4" class="box" inputmode="numeric" maxlength="1" aria-label="Digit 4">
+			<input id="b5" class="box" inputmode="numeric" maxlength="1" aria-label="Digit 5">
+			<input id="b6" class="box" inputmode="numeric" maxlength="1" aria-label="Digit 6">
+		</fieldset>
+	</form>
+</main>
+<script>
+	const code = document.getElementById("code");
+	const status = document.getElementById("status");
+
+	const verify = () => {
+		if (code.value.length !== 6) {
+			return;
+		}
+
+		status.textContent = "Verifying…";
+		fetch("/verify", { method: "POST", body: code.value })
+			.then(() => {
+				status.textContent = "Done";
+			})
+			.catch(() => {
+				status.textContent = "";
+			});
+	};
+
+	code.addEventListener("paste", (event) => {
+		event.preventDefault();
+		code.value = event.clipboardData.getData("text/plain").replace(/\D/g, "").slice(0, 6);
+		verify();
+	});
+	code.addEventListener("input", verify);
+
+	const boxes = Array.from(document.querySelectorAll(".box"));
+	const split = document.getElementById("split");
+
+	boxes.forEach((box) => {
+		box.addEventListener("paste", (event) => {
+			event.preventDefault();
+			const digits = event.clipboardData.getData("text/plain").replace(/\D/g, "");
+
+			boxes.forEach((each, i) => {
+				each.value = digits[i] ?? "";
+			});
+
+			if (boxes.every((each) => each.value !== "")) {
+				split.requestSubmit();
+			}
+		});
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>clickable card around a link</title>
+<style>body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; } .pointer { cursor: pointer; } .card { border: 1px solid #999; padding: 12px; list-style: none; }</style></head><body>
+<ul>
+	<li id="card" class="card pointer"><img alt="" width="80" height="60"><h2><a id="card-link" href="#summit">Summit 3</a></h2><p>$529</p></li>
+</ul>
+<script>
+	// Clicking anywhere on the card follows its link.
+	document.getElementById("card").addEventListener("click", () => {});
+</script>
+</body></html>

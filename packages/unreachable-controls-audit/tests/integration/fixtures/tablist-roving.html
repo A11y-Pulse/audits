@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>roving tabindex</title>
+<style>body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; } .pointer { cursor: pointer; } [role=tab] { display: inline-block; padding: 8px; cursor: pointer; }</style></head><body>
+<div role="tablist" aria-label="Product information">
+	<div id="tab-1" role="tab" tabindex="0" aria-selected="true" aria-controls="panel-1">Description</div>
+	<div id="tab-2" role="tab" tabindex="-1" aria-selected="false" aria-controls="panel-2">Specifications</div>
+	<div id="tab-3" role="tab" tabindex="-1" aria-selected="false" aria-controls="panel-3">Reviews</div>
+</div>
+<div id="panel-1" role="tabpanel" aria-labelledby="tab-1"><p>A two-person tent.</p></div>
+<!-- The same pattern without a composite role: one tab stop, the rest moved to with arrow keys. -->
+<ul id="steps">
+	<li id="step-1" class="pointer" role="button" tabindex="0">Basket</li>
+	<li id="step-2" class="pointer" role="button" tabindex="-1">Delivery</li>
+	<li id="step-3" class="pointer" role="button" tabindex="-1">Payment</li>
+</ul>
+<script>
+	for (const el of document.querySelectorAll("[role=tab], #steps li")) {
+		el.addEventListener("click", () => {});
+		el.addEventListener("keydown", () => {});
+	}
+</script>
+</body></html>

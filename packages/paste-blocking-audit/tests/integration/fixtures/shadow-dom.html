@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sign in</title>
+</head>
+<body>
+<main>
+	<h1>Sign in</h1>
+	<login-form></login-form>
+</main>
+<script>
+	customElements.define(
+		"login-form",
+		class extends HTMLElement {
+			connectedCallback() {
+				const root = this.attachShadow({ mode: "open" });
+
+				root.innerHTML = `
+					<form>
+						<label for="user">Username</label>
+						<input id="user" type="text" name="username" autocomplete="username">
+						<label for="pass">Password</label>
+						<input id="pass" type="password" name="password" autocomplete="current-password">
+						<button type="submit">Sign in</button>
+					</form>`;
+
+				// Inserts through the selection, which only reaches the focused field.
+				root.getElementById("user").addEventListener("paste", (event) => {
+					event.preventDefault();
+					document.execCommand("insertText", false, event.clipboardData.getData("text/plain"));
+				});
+
+				root.querySelector("form").addEventListener("paste", (event) => {
+					if (event.target.type === "password") {
+						event.preventDefault();
+					}
+				});
+			}
+		},
+	);
+</script>
+</body>
+</html>

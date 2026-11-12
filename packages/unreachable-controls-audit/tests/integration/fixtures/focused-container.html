@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>a focusable container with delegated listeners</title>
+<style>body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; } #orders { height: 120px; overflow: auto; border: 1px solid #767676; } #apply { display: inline-block; padding: 8px; border: 1px solid #767676; }</style></head><body>
+<!-- A scrollable region made focusable so keyboard users can scroll it. Its listeners serve the
+     buttons inside. -->
+<div id="orders" tabindex="0">
+	<p>Order 1041 <button id="view-1" type="button">View</button></p>
+	<p>Order 1042 <button id="view-2" type="button">View</button></p>
+	<p>Order 1043 <button id="view-3" type="button">View</button></p>
+</div>
+<!-- A click target with a tab stop, nothing focusable inside, and no role. -->
+<div id="apply" tabindex="0">Apply filters</div>
+<script>
+	const orders = document.getElementById("orders");
+
+	orders.addEventListener("click", () => {});
+	orders.addEventListener("keydown", () => {});
+	document.getElementById("apply").addEventListener("click", () => {});
+</script>
+</body></html>

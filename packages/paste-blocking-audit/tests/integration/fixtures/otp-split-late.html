@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Enter your code</title>
+</head>
+<body>
+<main>
+	<h1>Enter the code we sent you</h1>
+	<form id="verify" method="post" action="/verify">
+		<fieldset>
+			<legend>6-digit code</legend>
+			<input id="d1" class="digit" inputmode="numeric" maxlength="1" aria-label="Digit 1" autocomplete="one-time-code">
+			<input id="d2" class="digit" inputmode="numeric" maxlength="1" aria-label="Digit 2">
+			<input id="d3" class="digit" inputmode="numeric" maxlength="1" aria-label="Digit 3">
+			<input id="d4" class="digit" inputmode="numeric" maxlength="1" aria-label="Digit 4">
+			<input id="d5" class="digit" inputmode="numeric" maxlength="1" aria-label="Digit 5">
+			<input id="d6" class="digit" inputmode="numeric" maxlength="1" aria-label="Digit 6">
+		</fieldset>
+		<button type="submit">Verify</button>
+	</form>
+	<button id="resend" type="button">Send a new code</button>
+</main>
+<script>
+	const digits = Array.from(document.querySelectorAll(".digit"));
+
+	digits.forEach((digit) => {
+		// Reads the pasted code and spreads it across the boxes on the next tick, without cancelling
+		// the paste, then moves focus to the box after the last one filled.
+		digit.addEventListener("paste", (event) => {
+			const code = event.clipboardData.getData("text/plain").replace(/\D/g, "");
+
+			setTimeout(() => {
+				digits.forEach((box, i) => {
+					box.value = code[i] ?? "";
+				});
+
+				digits[Math.min(code.length, digits.length - 1)].focus();
+			}, 0);
+		});
+	});
+</script>
+</body>
+</html>

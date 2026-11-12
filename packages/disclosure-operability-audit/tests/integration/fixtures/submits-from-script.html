@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Search results</title>
+<style>
+	body { font: 16px/1.5 system-ui, sans-serif; margin: 2rem; max-width: 40rem; }
+	button, input { font: inherit; }
+	[hidden] { display: none; }
+</style>
+</head>
+<body>
+<main>
+	<h1>Search results</h1>
+	<form id="filters" action="other.html">
+		<label for="q">Search</label>
+		<input id="q" name="q" type="text" value="tent">
+		<!-- Declares a disclosure, but its handler sends the form from script. -->
+		<button id="apply" type="button" aria-expanded="false" aria-controls="applied">Apply filters</button>
+		<p id="applied" hidden>Filters applied.</p>
+	</form>
+	<button id="sort-toggle" type="button" aria-expanded="false" aria-controls="sort-options">Sort</button>
+	<ul id="sort-options" hidden><li>Price</li><li>Rating</li></ul>
+</main>
+<script>
+	window.__fixture = { submits: 0 };
+
+	const form = document.getElementById("filters");
+
+	form.addEventListener("submit", (event) => {
+		event.preventDefault();
+		window.__fixture.submits++;
+	});
+
+	document.getElementById("apply").addEventListener("click", () => {
+		form.submit();
+	});
+
+	const sort = document.getElementById("sort-toggle");
+
+	sort.addEventListener("click", () => {
+		const open = sort.getAttribute("aria-expanded") !== "true";
+
+		sort.setAttribute("aria-expanded", String(open));
+		document.getElementById("sort-options").hidden = !open;
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Store</title>
+<style>
+	body { font: 16px/1.5 system-ui, sans-serif; margin: 2rem; }
+	.panel { display: none; }
+	.panel.open { display: block; }
+	[hidden] { display: none; }
+</style>
+</head>
+<body>
+<nav aria-label="Main">
+	<!-- A link that leaves the page and also claims to expand a menu. -->
+	<a id="shop-link" href="/other.html" aria-expanded="false" aria-controls="shop-panel">Shop</a>
+	<div id="shop-panel" class="panel"><a href="/other.html?c=tents">Tents</a></div>
+	<a id="wrapped-link" href="/other.html"><span id="wrapped" role="button" aria-expanded="false">More</span></a>
+</nav>
+<main>
+	<h1>Newsletter</h1>
+	<form action="/other.html" method="get">
+		<label for="email">Email</label>
+		<input id="email" name="email" type="email">
+		<button id="subscribe" aria-expanded="false" aria-controls="thanks">Subscribe</button>
+		<button id="disabled-toggle" type="button" aria-expanded="false" disabled>Preferences</button>
+		<input id="city" name="city" role="combobox" aria-expanded="false" aria-controls="cities" aria-label="City">
+		<ul id="cities" role="listbox" hidden></ul>
+	</form>
+	<div id="thanks" hidden>Thanks</div>
+	<button id="mobile-menu" type="button" aria-expanded="false" hidden>Menu</button>
+	<details id="native"><summary id="native-summary">Privacy</summary><p>We never share your address.</p></details>
+</main>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Store finder</title>
+<style>
+	body { font: 16px/1.5 system-ui, sans-serif; margin: 2rem; max-width: 40rem; }
+	button { font: inherit; }
+	[hidden] { display: none; }
+</style>
+</head>
+<body>
+<main>
+	<h1>Store finder</h1>
+	<!-- Every toggle takes about half a second: the panel is built before it is shown. -->
+	<button id="hours-toggle" type="button" aria-expanded="false" aria-controls="hours">Opening hours</button>
+	<div id="hours" hidden><p>Monday to Saturday, 9am to 5:30pm.</p></div>
+</main>
+<script>
+	const toggle = document.getElementById("hours-toggle");
+	let pending = false;
+
+	toggle.addEventListener("click", () => {
+		if (pending) {
+			return;
+		}
+
+		pending = true;
+
+		setTimeout(() => {
+			const open = toggle.getAttribute("aria-expanded") !== "true";
+
+			toggle.setAttribute("aria-expanded", String(open));
+			document.getElementById("hours").hidden = !open;
+			pending = false;
+		}, 550);
+	});
+</script>
+</body>
+</html>

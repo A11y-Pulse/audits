@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Help centre</title>
+<style>
+	body { font: 16px/1.5 system-ui, sans-serif; margin: 2rem; max-width: 40rem; }
+	button { font: inherit; display: block; margin-top: 1rem; }
+	.answer { display: none; }
+	.answer.open { display: block; }
+	[hidden] { display: none; }
+</style>
+</head>
+<body>
+<main>
+	<h1>Help centre</h1>
+	<!-- aria-expanded is written once and never updated. -->
+	<button id="stale-toggle" type="button" aria-expanded="false">How do I change my email address?</button>
+	<div id="stale-answer" class="answer"><p>Go to Account, then Details, and choose Change email.</p></div>
+
+	<!-- No expanded state at all: only aria-controls. -->
+	<button id="faq-toggle" type="button" aria-controls="faq-answer">How do I export my order history?</button>
+	<div id="faq-answer" hidden><p>Open Orders and choose Export as CSV.</p></div>
+
+	<!-- aria-controls naming content already on show is not a disclosure. -->
+	<button id="sort-button" type="button" aria-controls="results">Sort by date</button>
+	<ul id="results"><li>Order 1042</li><li>Order 1043</li></ul>
+
+	<!-- The state changes but nothing is shown: the panel was never wired up. -->
+	<button id="empty-toggle" type="button" aria-expanded="false">Opening hours</button>
+</main>
+<script>
+	document.getElementById("stale-toggle").addEventListener("click", () => {
+		document.getElementById("stale-answer").classList.toggle("open");
+	});
+
+	document.getElementById("faq-toggle").addEventListener("click", () => {
+		const answer = document.getElementById("faq-answer");
+
+		answer.hidden = !answer.hidden;
+	});
+
+	const empty = document.getElementById("empty-toggle");
+
+	empty.addEventListener("click", () => {
+		empty.setAttribute("aria-expanded", String(empty.getAttribute("aria-expanded") !== "true"));
+	});
+</script>
+</body>
+</html>

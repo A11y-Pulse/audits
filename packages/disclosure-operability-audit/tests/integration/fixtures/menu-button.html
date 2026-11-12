@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Account</title>
+<style>
+	body { font: 16px/1.5 system-ui, sans-serif; margin: 2rem; }
+	button { font: inherit; }
+	[role="menu"] { list-style: none; margin: 0; padding: 0.25rem; border: 1px solid #888; width: 12rem; position: absolute; background: #fff; }
+	[role="menuitem"] { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 0.5rem; }
+	[hidden] { display: none; }
+</style>
+</head>
+<body>
+<header>
+	<a id="home" href="#top">Home</a>
+	<button id="account-button" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="account-menu">Account</button>
+	<ul id="account-menu" role="menu" aria-labelledby="account-button" hidden>
+		<li role="none"><button id="item-orders" type="button" role="menuitem" tabindex="-1">Orders</button></li>
+		<li role="none"><button id="item-details" type="button" role="menuitem" tabindex="-1">Details</button></li>
+		<li role="none"><button id="item-sign-out" type="button" role="menuitem" tabindex="-1">Sign out</button></li>
+	</ul>
+</header>
+<main><h1>Your account</h1><p>Signed in as sam@example.com.</p></main>
+<script>
+	const button = document.getElementById("account-button");
+	const menu = document.getElementById("account-menu");
+
+	function setOpen(open) {
+		button.setAttribute("aria-expanded", String(open));
+		menu.hidden = !open;
+
+		if (open) {
+			menu.querySelector("[role=menuitem]").focus();
+		}
+	}
+
+	// Opens from the button and moves focus into the menu. Only Escape closes it, sending focus
+	// back to the button.
+	button.addEventListener("click", () => setOpen(true));
+
+	menu.addEventListener("keydown", (event) => {
+		if (event.key === "Escape") {
+			setOpen(false);
+			button.focus();
+		}
+	});
+</script>
+</body>
+</html>

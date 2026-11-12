@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>How to season a cast iron pan</title>
+		<style>
+			body { margin: 0; font: 16px/1.6 Georgia, serif; }
+			header, main { max-width: 680px; margin: 0 auto; padding: 16px; }
+			nav a { margin-right: 16px; transition: color 150ms; }
+			nav a:hover { color: #a33; }
+			img { width: 680px; height: 240px; background: #ddd; }
+			button { transition: background-color 200ms; }
+			.toast { width: 680px; height: 120px; background: #e7f3e7; }
+		</style>
+	</head>
+	<body>
+		<header>
+			<nav aria-label="Main"><a href="/recipes">Recipes</a><a href="/guides">Guides</a></nav>
+		</header>
+		<main>
+			<h1>How to season a cast iron pan</h1>
+			<img
+				src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+				alt="A black skillet on a gas hob"
+			/>
+			<p>Wipe a thin layer of oil over the whole pan, then bake it upside down for an hour.</p>
+			<p>Updated <time id="clock">12:00:00</time></p>
+			<button type="button">Save this guide</button>
+			<div id="notices"></div>
+		</main>
+		<script>
+			// A clock ticking is an update, not movement.
+			const clock = document.getElementById("clock");
+
+			setInterval(() => {
+				clock.textContent = new Date().toLocaleTimeString("en-NZ");
+			}, 100);
+
+			// A notice that appears once and stays put.
+			setTimeout(() => {
+				const toast = document.createElement("div");
+
+				toast.className = "toast";
+				toast.textContent = "Saved to your reading list.";
+				document.getElementById("notices").append(toast);
+			}, 700);
+		</script>
+	</body>
+</html>

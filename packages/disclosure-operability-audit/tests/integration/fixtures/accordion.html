@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Frequently asked questions</title>
+<style>
+	body { font: 16px/1.5 system-ui, sans-serif; margin: 2rem; max-width: 40rem; }
+	.accordion h3 { margin: 0; }
+	.accordion button { font: inherit; width: 100%; text-align: left; padding: 0.75rem; border: 1px solid #888; background: #f4f4f4; }
+	/* Animated by height, as most accordion libraries do: the panel stays in the layout tree. */
+	.panel { overflow: hidden; height: 0; transition: height 120ms ease; }
+	.panel.open { height: 6rem; }
+	.panel p { margin: 0; padding: 0.75rem; }
+	.spacer { height: 150vh; }
+</style>
+</head>
+<body>
+<main>
+	<h1>Frequently asked questions</h1>
+	<p><a id="contact" href="#footer">Contact us</a></p>
+	<div class="spacer" aria-hidden="true"></div>
+	<div class="accordion">
+		<h3><button id="q1" type="button" aria-expanded="true" aria-controls="a1">When will my order arrive?</button></h3>
+		<div id="a1" class="panel open" role="region" aria-labelledby="q1"><p>Most orders arrive within three working days.</p></div>
+		<h3><button id="q2" type="button" aria-expanded="false" aria-controls="a2">Can I change my order?</button></h3>
+		<div id="a2" class="panel" role="region" aria-labelledby="q2"><p>Yes, until it has been packed. <a href="#footer">Contact us</a> to change it.</p></div>
+		<h3><button id="q3" type="button" aria-expanded="false" aria-controls="a3">How do I return an item?</button></h3>
+		<div id="a3" class="panel" role="region" aria-labelledby="q3"><p>Print a label from your account and drop the parcel at any post office.</p></div>
+	</div>
+	<footer id="footer"><p>Call 0800 000 000</p></footer>
+</main>
+<script>
+	for (const button of document.querySelectorAll(".accordion button")) {
+		button.addEventListener("click", () => {
+			const open = button.getAttribute("aria-expanded") !== "true";
+
+			button.setAttribute("aria-expanded", String(open));
+			document.getElementById(button.getAttribute("aria-controls")).classList.toggle("open", open);
+		});
+	}
+</script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Checkout</title>
+</head>
+<body>
+<main>
+	<h1>Trailhead Outfitters</h1>
+	<form role="search" action="/search">
+		<label for="q">Search products</label>
+		<input id="q" type="search" name="q">
+		<button type="submit">Search</button>
+	</form>
+
+	<form id="checkout" method="post" action="/checkout">
+		<label for="email">Email for your receipt</label>
+		<input id="email" type="email" name="email" autocomplete="email">
+
+		<label for="postcode">Postcode</label>
+		<input id="postcode" name="postcode" inputmode="numeric" autocomplete="postal-code">
+
+		<label for="promo">Promo code</label>
+		<input id="promo" name="promo_code" inputmode="numeric" onpaste="return false">
+
+		<label for="csc">Security code</label>
+		<input id="csc" name="csc" inputmode="numeric" maxlength="4" autocomplete="cc-csc">
+
+		<input type="password" name="honeypot" hidden>
+		<button type="submit">Pay now</button>
+	</form>
+</main>
+</body>
+</html>
