@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Panels all labelled by the first tab</title></head>
+<body>
+	<!--
+		A copy-paste bug: each panel was duplicated from the first and kept its aria-labelledby, so
+		the second and third tabs have no panel of their own.
+	-->
+	<main>
+		<h1>Account settings</h1>
+		<div id="settings-tabs" role="tablist" aria-label="Settings">
+			<button id="tab-1" role="tab" aria-selected="true">Profile</button>
+			<button id="tab-2" role="tab" aria-selected="false" tabindex="-1">Billing</button>
+			<button id="tab-3" role="tab" aria-selected="false" tabindex="-1">Notifications</button>
+		</div>
+		<div id="panel-1" role="tabpanel" aria-labelledby="tab-1">
+			<p>Your name and photo.</p>
+		</div>
+		<div id="panel-2" role="tabpanel" aria-labelledby="tab-1" hidden>
+			<p>Your payment method and invoices.</p>
+		</div>
+		<div id="panel-3" role="tabpanel" aria-labelledby="tab-1" hidden>
+			<p>Which emails we send you.</p>
+		</div>
+	</main>
+</body>
+</html>

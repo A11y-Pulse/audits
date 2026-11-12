@@ -7,10 +7,13 @@ import {
 	type AuditMetadata,
 	type AuditNode,
 	type AuditOutput,
+	evidenceCheck,
 	sortedResultToAxe,
 } from "./audit-output";
 
 export const ORPHANED_TAB_ROLES_AUDIT_ID = "orphaned-tab-roles";
+
+export const ORPHANED_TAB_ROLES_EVIDENCE_CHECK_ID = "orphaned-tab-roles-evidence";
 
 const METADATA: AuditMetadata = {
 	id: ORPHANED_TAB_ROLES_AUDIT_ID,
@@ -46,6 +49,21 @@ function toAuditNode(element: OrphanedTabRolesElement): AuditNode {
 	if (element.finding) {
 		node.failureSummary = failureSummary(element, element.finding);
 	}
+
+	node.evidence = evidenceCheck(
+		ORPHANED_TAB_ROLES_EVIDENCE_CHECK_ID,
+		"serious",
+		element.role === "tab"
+			? "The tab list this tab belongs to and what its aria-controls names"
+			: "The tab panel's role",
+		{
+			role: element.role,
+			reason: element.finding ?? undefined,
+			tablist: element.tablist,
+			controls: element.controls,
+			href: element.href,
+		},
+	);
 
 	return node;
 }

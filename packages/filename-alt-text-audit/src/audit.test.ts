@@ -1,13 +1,19 @@
 import { fakeStashAdaptor } from "@a11y-pulse/integration-harness/fake-stash-adaptor";
 import { describe, expect, it } from "vitest";
 import { runFilenameAltTextAudit } from "./audit";
-import { type CollectedImage, collectImagesScript, type ImageCollection } from "./browser-scripts";
+import {
+	awaitImagesScript,
+	type CollectedImage,
+	collectImagesScript,
+	type ImageCollection,
+} from "./browser-scripts";
 
 const BASE_URL = "https://example.test/products/";
 
 function image(altText: string, src: string, extra: Partial<CollectedImage> = {}): CollectedImage {
 	return {
 		altText,
+		altTextSource: "alt",
 		truncated: false,
 		urls: [new URL(src, BASE_URL).href],
 		srcsets: [],
@@ -41,6 +47,7 @@ describe("runFilenameAltTextAudit", () => {
 				selector: "#image-0",
 				html: '<img src="IMG_4032.jpg" alt="IMG_4032.jpg">',
 				altText: "IMG_4032.jpg",
+				altTextSource: "alt",
 				signal: "filename-match",
 				matchedSource: `${BASE_URL}IMG_4032.jpg`,
 				screenshot: new Uint8Array([1]),
@@ -121,6 +128,50 @@ describe("runFilenameAltTextAudit", () => {
 		expect(result.needsReview[0]?.screenshot).toEqual(new Uint8Array([1]));
 		expect(result.passed[0]).not.toHaveProperty("screenshot");
 		expect(page.screenshotted()).toEqual([0, 1]);
+	});
+
+	it("fails a leftover script value and reports where the text came from", async () => {
+		const page = fakePage(
+			collection([
+				image("undefined", "tent.jpg"),
+				image("{{ image.alt }}", "tent.jpg", { altTextSource: "aria-label" }),
+			]),
+		);
+
+		const result = await runFilenameAltTextAudit(page.adaptor);
+
+		expect(result.failed).toMatchObject([
+			{ altText: "undefined", altTextSource: "alt", signal: "artefact", matchedSource: null },
+			{ altText: "{{ image.alt }}", altTextSource: "aria-label", signal: "artefact" },
+		]);
+		expect(result.summary).toMatchObject({ failed: 2, needsReview: 0 });
+	});
+
+	it("waits for the images it screenshots in one call, and never screenshots an area", async () => {
+		const page = fakePage(
+			collection([
+				image("IMG_1.jpg", "IMG_1.jpg"),
+				image("map.png", "map.png", { html: '<area href="/north" alt="map.png">' }),
+				image("IMG_2.jpg", "IMG_2.jpg"),
+			]),
+		);
+		const waits: unknown[][] = [];
+		const evaluate = page.adaptor.evaluate;
+
+		page.adaptor.evaluate = (async (fn: unknown, ...args: unknown[]) => {
+			if (fn === awaitImagesScript) {
+				waits.push(args);
+			}
+
+			return (evaluate as (...all: unknown[]) => unknown)(fn, ...args);
+		}) as typeof evaluate;
+
+		const result = await runFilenameAltTextAudit(page.adaptor);
+
+		expect(waits).toHaveLength(1);
+		expect(waits[0]?.[1]).toEqual([0, 2]);
+		expect(page.screenshotted()).toEqual([0, 2]);
+		expect(result.failed[1]).not.toHaveProperty("screenshot");
 	});
 
 	it("spends the screenshot limit on failed images first", async () => {

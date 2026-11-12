@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>skip link that is display none</title>
+<style>
+	.skip-link { display: none; }
+	.skip-link:focus { display: block; }
+</style>
+</head>
+<body>
+	<a class="skip-link" href="#main">Skip to content</a>
+	<header>
+	<nav aria-label="Primary">
+		<a href="/products">Products</a>
+		<a href="/pricing">Pricing</a>
+		<a href="/contact">Contact</a>
+	</nav>
+	</header>
+	<main id="main" tabindex="-1">
+		<h1>Main content</h1>
+	</main>
+</body>
+</html>

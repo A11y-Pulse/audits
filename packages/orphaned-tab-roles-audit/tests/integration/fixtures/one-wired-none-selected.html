@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>One wired tab, no selected state</title></head>
+<body>
+	<!--
+		Only the first tab was ever wired to a panel, and no tab exposes aria-selected, so nothing
+		suggests the other panels are merely unmounted.
+	-->
+	<main>
+		<h1>Holiday cottages</h1>
+		<div id="cottage-tabs" role="tablist" aria-label="Cottage details">
+			<button id="tab-overview" role="tab" aria-controls="panel-overview">Overview</button>
+			<button id="tab-prices" role="tab">Prices</button>
+			<button id="tab-map" role="tab">Map</button>
+		</div>
+		<div id="panel-overview" role="tabpanel" aria-labelledby="tab-overview">
+			<p>Three bedrooms, sleeps six, a short walk from the beach.</p>
+		</div>
+	</main>
+</body>
+</html>

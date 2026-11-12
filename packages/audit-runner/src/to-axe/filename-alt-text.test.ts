@@ -14,6 +14,7 @@ function image(overrides: Partial<FilenameAltTextImage> = {}): FilenameAltTextIm
 		selector: "#a",
 		html: "<img>",
 		altText: "Packed tent",
+		altTextSource: "alt",
 		signal: null,
 		matchedSource: null,
 		...overrides,
@@ -107,5 +108,31 @@ describe("filenameAltTextToAxe", () => {
 			message: 'Image with the alt text "DSC_0192"',
 			data: { screenshot },
 		});
+	});
+
+	it("carries the alt text, where it came from and what it matched as structured evidence", () => {
+		const output = filenameAltTextToAxe(
+			result(
+				[
+					image({
+						altText: "IMG_4032.jpg",
+						signal: "filename-match",
+						matchedSource: "/uploads/IMG_4032.jpg",
+					}),
+				],
+				[],
+				[],
+			),
+		);
+		const check = output.violations[0]?.nodes[0]?.any[0];
+
+		expect(check?.id).toBe(FILENAME_ALT_TEXT_EVIDENCE_CHECK_ID);
+		expect(check?.data).toMatchObject({
+			altText: "IMG_4032.jpg",
+			reason: "filename-match",
+			matchedSource: "/uploads/IMG_4032.jpg",
+		});
+		expect(check?.data).toHaveProperty("altTextSource");
+		expect(check?.data).not.toHaveProperty("screenshot");
 	});
 });

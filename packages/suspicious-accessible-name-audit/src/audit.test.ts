@@ -53,6 +53,7 @@ describe("runSuspiciousNameAudit", () => {
 				role: "spinbutton",
 				signal: "attribute-match",
 				evidence: "class",
+				labelSelector: null,
 				criterion: "2.4.6",
 			},
 			expect.objectContaining({ selector: "#element-1", signal: "artefact", criterion: "1.1.1" }),
@@ -91,7 +92,7 @@ describe("runSuspiciousNameAudit", () => {
 	});
 
 	it("lists at most reportLimit elements per bucket but counts them all", async () => {
-		const page = fakePage([element("undefined"), element("null"), element("true")], 5);
+		const page = fakePage([element("undefined"), element("null"), element("NaN")], 5);
 
 		const result = await runSuspiciousNameAudit(page.adaptor, { reportLimit: 2 });
 

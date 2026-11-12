@@ -37,7 +37,9 @@ console.log(result.failed[0]);
 //   selector: "#nav-dogs",
 //   html: '<a id="nav-dogs" role="tab" href="/dogs">',
 //   role: "tab",
-//   finding: "tab-used-as-link"
+//   finding: "tab-used-as-link",
+//   tablist: "#site-nav",
+//   href: "https://who.likesdogs.nz/dogs"
 // }
 
 await browser.close();
@@ -54,8 +56,9 @@ For each tab, the first rule that applies:
 | none | `passed` | The tab is associated with a tab panel |
 | `tab-used-as-link` | `failed` | The tab is, or sits inside, a link to another document. Fragment links (`#panel`), same-page URLs and `javascript:` links do not count |
 | `controls-not-a-tabpanel` | `needsReview` | `aria-controls` points at an element that is not a tab panel |
+| none | `passed` | The tab is not selected, the selected tab in the same tablist is associated with exactly one tab panel that belongs to it alone, and no tab panel on the page is left without a tab. This is how libraries that mount only the active panel look: React Aria puts `aria-controls` on the selected tab alone, and Radix leaves the other tabs' `aria-controls` naming panels that are not rendered |
 | `tab-without-panel` | `failed` | The page has no tab panels, or the tab has no `aria-controls` and every tab panel on the page is associated with another tab |
-| `association-unverifiable` | `needsReview` | Anything else: tab panels without an association exist, or the tab's `aria-controls` names a panel that is not in the page |
+| `association-unverifiable` | `needsReview` | Anything else: tab panels without an association exist, or the tab's `aria-controls` names a panel that is not in the page and the selected tab in its tablist is not paired one-to-one with a panel |
 
 For each tab panel:
 
@@ -65,7 +68,7 @@ For each tab panel:
 | `tabpanel-without-tab` | `failed` | The page has no tabs, or every tab on the page is associated with another panel or has an `aria-controls` that points only at tab panels or at nothing mounted yet, so each already has a panel of its own |
 | `association-unverifiable` | `needsReview` | Some tab declares no association, so it may be this panel's |
 
-The failures never depend on guessing which panel belongs to which tab, only on there being none left over for it. That is also why the check is document-wide rather than per tablist: an unwired tab widget next to a wired one fails, because the wired widget's panels are all spoken for.
+The failures never depend on guessing which panel belongs to which tab, only on there being none left over for it. Panels are counted document-wide, but only a selected tab paired one-to-one with a panel vouches for the other tabs, and only those in its own tablist: an unwired tablist next to a wired one fails, because the wired tablist's panels are all spoken for. A tab's tablist is its nearest ancestor with `role="tablist"`, or the tablist whose `aria-owns` names it.
 
 ## Browser support
 
@@ -96,6 +99,13 @@ type OrphanedTabRolesElement = {
     | "controls-not-a-tabpanel"
     | "association-unverifiable"
     | null;
+  // Tabs only: selector for the tablist the tab belongs to, or null outside one.
+  tablist?: string | null;
+  // When aria-controls is set: each id, whether it is in the document, and the
+  // target's explicit role and tag name.
+  controls?: { id: string; found: boolean; role: string | null; tag: string | null }[];
+  // For tab-used-as-link: where the link goes.
+  href?: string;
 };
 
 type OrphanedTabRolesResult = {
@@ -127,7 +137,7 @@ Cases where the audit reports a problem that is not one. Each says which bucket 
 In the A11y Pulse audit runner, `failed` is reported in `violations` and `needsReview` in `incomplete`.
 
 - **Widgets wired up after load** (`incomplete`). A script that adds `aria-controls` when a tab is first activated leaves its tabs and panels without an association when the audit runs.
-- **Lazily mounted panels** (`incomplete`). A tab whose `aria-controls` names a panel the page has not rendered yet is reviewed rather than passed. Only a page with no tab panels at all fails it.
+- **Lazily mounted panels with nothing mounted to vouch for them** (`incomplete`). A tab whose `aria-controls` names a panel the page has not rendered yet passes when the selected tab in its tablist has a panel of its own. When it does not (no tab is selected, the selected tab has no panel, or it shares panels with other tabs), or the tab is outside a tablist, it is reviewed. Only a page with no tab panels at all fails it.
 - **Tabs that control a region** (`incomplete`). A tab whose `aria-controls` names a wrapper without `role="tabpanel"` may still work. The tab panels beside it are reviewed too, since the wrapper may hold one of them.
 
 ## License

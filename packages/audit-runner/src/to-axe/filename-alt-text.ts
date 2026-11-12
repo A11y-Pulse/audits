@@ -7,6 +7,7 @@ import {
 	type AuditMetadata,
 	type AuditNode,
 	type AuditOutput,
+	evidenceCheck,
 	sortedResultToAxe,
 } from "./audit-output";
 
@@ -28,6 +29,7 @@ const REPLACEMENT = 'a description of what the image shows, or alt="" if the ima
 
 const FINDINGS: Record<AltTextSignal, string> = {
 	"filename-match": "is the image's filename",
+	artefact: "is a leftover script value or template token",
 	"filename-near-match": "matches the image's filename",
 	"camera-name": "looks like a camera or screenshot file name",
 	"filename-like": "looks like a filename",
@@ -37,7 +39,7 @@ const FINDINGS: Record<AltTextSignal, string> = {
 function failureSummary(image: FilenameAltTextImage, signal: AltTextSignal): string {
 	const finding = `The alt text "${image.altText}" ${FINDINGS[signal]}.`;
 
-	if (signal === "filename-match") {
+	if (signal === "filename-match" || signal === "artefact") {
 		return `${finding} Replace it with ${REPLACEMENT}.`;
 	}
 
@@ -51,14 +53,18 @@ function toAuditNode(image: FilenameAltTextImage): AuditNode {
 		node.failureSummary = failureSummary(image, image.signal);
 	}
 
-	if (image.screenshot) {
-		node.evidence = {
-			id: FILENAME_ALT_TEXT_EVIDENCE_CHECK_ID,
-			impact: "serious",
-			message: `Image with the alt text "${image.altText}"`,
-			data: { screenshot: image.screenshot },
-		};
-	}
+	node.evidence = evidenceCheck(
+		FILENAME_ALT_TEXT_EVIDENCE_CHECK_ID,
+		"serious",
+		`Image with the alt text "${image.altText}"`,
+		{
+			altText: image.altText,
+			altTextSource: image.altTextSource,
+			reason: image.signal ?? undefined,
+			matchedSource: image.matchedSource ?? undefined,
+			screenshot: image.screenshot,
+		},
+	);
 
 	return node;
 }

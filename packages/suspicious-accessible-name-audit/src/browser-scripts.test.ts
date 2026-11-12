@@ -43,6 +43,20 @@ describe("collectNamedElementsScript", () => {
 			]);
 		});
 
+		it("records the host a link points at", () => {
+			document.body.innerHTML = `
+				<a href="https://docs.example.com/guide">docs.example.com</a>
+				<a href="/guide">Guide</a>
+				<button type="button">Guide</button>
+			`;
+
+			expect(collect().elements.map(({ hrefHost }) => hrefHost)).toEqual([
+				"docs.example.com",
+				window.location.hostname || null,
+				null,
+			]);
+		});
+
 		it("falls back to value, title and placeholder", () => {
 			document.body.innerHTML = `
 				<input type="submit" value="Go">
@@ -214,6 +228,52 @@ describe("collectNamedElementsScript", () => {
 			const stash = (window as unknown as Record<string, unknown>)[STASH_KEY] as Element[];
 
 			expect(stash.map((el) => el.localName)).toEqual(["button"]);
+		});
+
+		it("stashes the labelling element after the collected ones and points at it", () => {
+			document.body.innerHTML = `
+				<label for="email">Email</label><input id="email">
+				<span id="total">Basket total</span><button aria-labelledby="total">x</button>
+				<button aria-label="Close">x</button>
+			`;
+
+			const { elements } = collect();
+			const stash = (window as unknown as Record<string, unknown>)[STASH_KEY] as Element[];
+
+			expect(elements.map(({ labelIndex }) => labelIndex ?? null)).toEqual([3, 4, null]);
+			expect(stash.map((el) => el.localName)).toEqual([
+				"input",
+				"button",
+				"button",
+				"label",
+				"span",
+			]);
+		});
+
+		it("counts elements past the limit without naming the unnamed ones", () => {
+			document.body.innerHTML = `
+				<button>a</button>
+				<button>b</button>
+				<button aria-label="c"></button>
+				<button></button>
+				<input>
+				<label for="d">d</label><input id="d">
+				<a href="/e"><img alt="e"></a>
+				<nav></nav>
+			`;
+
+			const { elements, total } = collect(1);
+
+			expect(elements).toHaveLength(1);
+			expect(total).toBe(5);
+		});
+	});
+
+	describe("inline SVG", () => {
+		it("names a control by the title of the SVG inside it", () => {
+			expect(
+				only(`<button><svg role="img"><title>Close</title><rect/></svg></button>`),
+			).toMatchObject({ name: "Close", source: "content" });
 		});
 	});
 });

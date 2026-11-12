@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>a tablist nested in a tab panel</title></head>
+<body>
+	<div id="outer-tabs" role="tablist" aria-label="Settings">
+		<button id="outer-general" role="tab" aria-selected="true" aria-controls="outer-panel-general">General</button>
+		<button id="outer-privacy" role="tab" aria-selected="false" tabindex="-1">Privacy</button>
+	</div>
+	<div id="outer-panel-general" role="tabpanel" aria-labelledby="outer-general">
+		<div id="inner-tabs" role="tablist" aria-label="Language">
+			<button id="inner-display" role="tab" aria-selected="true">Display</button>
+			<button id="inner-input" role="tab" aria-selected="false" tabindex="-1">Input</button>
+		</div>
+		<p>English (New Zealand)</p>
+	</div>
+</body>
+</html>

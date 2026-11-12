@@ -98,6 +98,7 @@ describe("classifyName with a vocabulary", () => {
 		expect(classifyWith("ogiltig", { artefacts: ["ogiltig"] }, { source: "title" })).toEqual({
 			signal: "artefact",
 			evidence: null,
+			verdict: "failed",
 		});
 	});
 
@@ -105,6 +106,7 @@ describe("classifyName with a vocabulary", () => {
 		expect(classifyWith("bild3", { placeholderStems: ["bild"] })).toEqual({
 			signal: "placeholder-suffix",
 			evidence: null,
+			verdict: "review",
 		});
 	});
 
@@ -115,7 +117,7 @@ describe("classifyName with a vocabulary", () => {
 	it("reports a custom role word at the end of a name", () => {
 		expect(
 			classifyWith("Stäng knapp", { roleWords: { button: ["knapp"] } }, { source: "aria-label" }),
-		).toEqual({ signal: "role-word", evidence: "knapp" });
+		).toEqual({ signal: "role-word", evidence: "knapp", verdict: "review" });
 	});
 });
 

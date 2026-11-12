@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>menu revealed by :target is not a skip target</title>
+	<style>
+		#menu { display: none; }
+		#menu:target { display: block; }
+	</style>
+</head>
+<body>
+	<header>
+		<a href="#menu" id="toggle">Menu</a>
+		<a href="/search">Search</a>
+		<a href="/cart">Cart</a>
+	</header>
+	<div class="content">
+		<h1>Welcome</h1>
+		<a href="/start">Get started</a>
+	</div>
+	<!-- No script and no ARIA: the menu opens because following the link makes it the :target. -->
+	<nav id="menu" aria-label="Site">
+		<a href="#" id="close">Close</a>
+		<a href="/products">Products</a>
+		<a href="/pricing">Pricing</a>
+	</nav>
+</body>
+</html>

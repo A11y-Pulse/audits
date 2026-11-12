@@ -34,24 +34,34 @@ export type CollectedElement = {
 	/** The nearest `lang` attribute, or null when nothing declares one. */
 	lang: string | null;
 	identifiers: Identifier[];
+	/** The host a link's `href` points at, for a link. */
+	hrefHost?: string | null;
 	/** A button or link with no visible letters or digits, such as one showing only an icon. */
 	iconOnly: boolean;
 	/** A link with other text in its paragraph, list item or table cell, or an `aria-describedby`. */
 	linkContext: boolean;
 	/** Shallow outerHTML. */
 	html: string;
+	/**
+	 * Where the first `<label>` or `aria-labelledby` target the name was read from sits in the
+	 * stashed array, for `label` and `aria-labelledby` sources.
+	 */
+	labelIndex?: number | null;
 };
 
 export type NamedElementCollection = {
 	elements: CollectedElement[];
-	/** Every named element, including those past the collection limit. */
+	/**
+	 * Every named element. Those past the collection limit are counted from their attributes and
+	 * text alone, without the full name computation.
+	 */
 	total: number;
 };
 
 /**
  * Collect every rendered button, link, form field, labelled landmark, dialog and iframe that has
  * an accessible name, descending open shadow roots. The collected elements are left on
- * `window[stashKey]`, in the same order.
+ * `window[stashKey]`, in the same order, followed by the labelling elements `labelIndex` points at.
  */
 export function collectNamedElementsScript(
 	stashKey: string,
@@ -111,8 +121,14 @@ export function collectNamedElementsScript(
 	};
 
 	const elements: Element[] = [];
+	const labellers: Element[] = [];
+	const labellerOf: (Element | null)[] = [];
 	const collected: CollectedElement[] = [];
 	let total = 0;
+	// The element nameOf last read content from, so the icon-only check does not read it again.
+	let contentCache: { el: Element; text: string } | null = null;
+	// The first element the name being computed was read from.
+	let labeller: Element | null = null;
 
 	const isRendered = (el: Element): boolean =>
 		typeof el.checkVisibility === "function"
@@ -205,24 +221,43 @@ export function collectNamedElementsScript(
 		}
 
 		const label = node.getAttribute("aria-label")?.trim();
-		const text =
-			label ||
-			(node instanceof HTMLImageElement
-				? node.alt
-				: Array.from(node.childNodes)
-						.map((child) => textOf(child, skipHidden))
-						.join(""));
+		let text: string;
+
+		if (label) {
+			text = label;
+		} else if (node instanceof HTMLImageElement) {
+			text = node.alt;
+		} else if (node.localName === "svg") {
+			// An inline SVG is named by its <title>, which is never rendered as a box.
+			text =
+				Array.from(node.children).find((child) => child.localName === "title")?.textContent ?? "";
+		} else {
+			text = Array.from(node.childNodes)
+				.map((child) => textOf(child, skipHidden))
+				.join("");
+		}
 
 		// Block boundaries separate words; inline ones do not.
 		return getComputedStyle(node).display.startsWith("inline") ? text : ` ${text} `;
 	};
 
-	const contentOf = (el: Element, skipHidden = true): string =>
-		collapse(
+	const contentOf = (el: Element, skipHidden = true): string => {
+		if (skipHidden && contentCache?.el === el) {
+			return contentCache.text;
+		}
+
+		const text = collapse(
 			Array.from(el.childNodes)
 				.map((child) => textOf(child, skipHidden))
 				.join(""),
 		);
+
+		if (skipHidden) {
+			contentCache = { el, text };
+		}
+
+		return text;
+	};
 
 	const labelledByText = (el: Element, ids: string): string => {
 		const root = el.getRootNode() as Document | ShadowRoot;
@@ -233,6 +268,8 @@ export function collectNamedElementsScript(
 				.map((id) => {
 					const target = root.getElementById(id);
 
+					labeller ??= target;
+
 					// A hidden label still names the element, along with everything inside it.
 					return target ? contentOf(target, !isHidden(target)) : "";
 				})
@@ -241,6 +278,8 @@ export function collectNamedElementsScript(
 	};
 
 	const nameOf = (el: Element, role: string): { name: string; source: NameSource } | null => {
+		labeller = null;
+
 		const labelledBy = el.getAttribute("aria-labelledby")?.trim();
 		const fromLabelledBy = labelledBy ? labelledByText(el, labelledBy) : "";
 
@@ -266,6 +305,8 @@ export function collectNamedElementsScript(
 		);
 
 		if (fromLabels) {
+			labeller = labels?.[0] ?? null;
+
 			return { name: fromLabels, source: "label" };
 		}
 
@@ -293,6 +334,34 @@ export function collectNamedElementsScript(
 		const placeholder = collapse(el.getAttribute("placeholder") ?? "");
 
 		return placeholder ? { name: placeholder, source: "placeholder" } : null;
+	};
+
+	// A cheap stand-in for nameOf, for counting what lies past the element limit.
+	const mayHaveName = (el: Element, role: string): boolean => {
+		if (
+			["aria-label", "aria-labelledby", "title", "placeholder"].some((attribute) =>
+				el.getAttribute(attribute)?.trim(),
+			)
+		) {
+			return true;
+		}
+
+		if (LABELLED_ROLES.has(role)) {
+			return false;
+		}
+
+		if ("labels" in el && ((el.labels as NodeListOf<HTMLLabelElement> | null)?.length ?? 0) > 0) {
+			return true;
+		}
+
+		if (el instanceof HTMLInputElement && BUTTON_INPUT_TYPES.has(el.type.toLowerCase())) {
+			return Boolean(el.getAttribute("value")?.trim());
+		}
+
+		return (
+			NAME_FROM_CONTENT.has(role) &&
+			Boolean(el.textContent?.trim() || el.querySelector("img[alt]:not([alt=''])"))
+		);
 	};
 
 	const identifiersOf = (el: Element): Identifier[] => {
@@ -339,6 +408,14 @@ export function collectNamedElementsScript(
 				continue;
 			}
 
+			if (collected.length === elementLimit) {
+				if (mayHaveName(el, role)) {
+					total++;
+				}
+
+				continue;
+			}
+
 			const named = nameOf(el, role);
 
 			if (!named) {
@@ -347,13 +424,12 @@ export function collectNamedElementsScript(
 
 			total++;
 
-			if (collected.length === elementLimit) {
-				continue;
-			}
-
 			const isControl = role === "button" || role === "link";
 
+			const fromOtherElement = named.source === "label" || named.source === "aria-labelledby";
+
 			elements.push(el);
+			labellerOf.push(fromOtherElement ? labeller : null);
 			collected.push({
 				name: named.name.slice(0, textLimit),
 				truncated: named.name.length > textLimit,
@@ -361,6 +437,9 @@ export function collectNamedElementsScript(
 				role,
 				lang: el.closest("[lang]")?.getAttribute("lang") ?? null,
 				identifiers: identifiersOf(el),
+				hrefHost: el.matches("a[href], area[href]")
+					? (el as HTMLAnchorElement | HTMLAreaElement).hostname || null
+					: null,
 				iconOnly: isControl && !/[\p{L}\p{N}]/u.test(contentOf(el)),
 				linkContext: role === "link" && hasLinkContext(el, named.name),
 				html: (el.cloneNode(false) as Element).outerHTML,
@@ -370,7 +449,14 @@ export function collectNamedElementsScript(
 
 	visit(document);
 
-	(window as unknown as Record<string, unknown>)[stashKey] = elements;
+	for (const [i, label] of labellerOf.entries()) {
+		if (label) {
+			collected[i]!.labelIndex = elements.length + labellers.length;
+			labellers.push(label);
+		}
+	}
+
+	(window as unknown as Record<string, unknown>)[stashKey] = [...elements, ...labellers];
 
 	return { elements: collected, total };
 }

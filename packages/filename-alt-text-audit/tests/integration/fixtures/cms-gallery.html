@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>a CMS gallery with lazy loading, generated sizes and non-img images</title>
+	<style>
+		img, svg, [role="img"] { display: inline-block; width: 60px; height: 40px; }
+		#role-img { background: url("images/IMG_4032.svg") center / cover; }
+	</style>
+</head>
+<body>
+	<main>
+		<h1>Summer returns</h1>
+		<figure>
+			<img id="lazy-filename" class="lazyload" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="images/IMG_4032.svg" alt="IMG_4032.svg" width="60" height="40">
+			<img id="lazy-stem" class="lazyload" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-srcset="uploads/hero-banner-final.svg 1x" alt="hero-banner-final" width="60" height="40">
+		</figure>
+		<figure>
+			<img id="wp-size" src="uploads/2024/05/packed-tent-300x200.svg" alt="packed-tent.svg" width="60" height="40">
+			<img id="wp-stem" src="uploads/2024/05/returns-desk-scaled.a91f3c2b.svg" alt="Returns desk" width="60" height="40">
+		</figure>
+		<p>
+			<img id="brand" src="images/logo.svg" alt="Trailhead" width="60" height="40">
+			<img id="step" src="images/a91f3c.svg" alt="1" width="60" height="40">
+			<img id="presentational" role="presentation" src="images/IMG_4032.svg" alt="IMG_4032.svg" width="60" height="40">
+		</p>
+		<div id="role-img" role="img" aria-label="IMG_4032.svg"></div>
+		<svg id="svg-title" role="img" viewBox="0 0 60 40"><title>undefined</title><rect width="60" height="40" fill="#2a6"/></svg>
+		<img id="template" src="images/packed-tent.svg" alt="{{ image.alt }}" width="60" height="40">
+		<img id="template-lines" src="images/packed-tent.svg" alt="{{
+			image.alt
+		}}" width="60" height="40">
+		<img id="person" src="images/packed-tent.svg" alt="Nan" width="60" height="40">
+		<img id="store-map" src="images/packed-tent.svg" usemap="#stores" alt="Map of our three stores" width="60" height="40">
+		<map name="stores">
+			<area id="area" shape="rect" coords="0,0,30,40" href="/stores/north" alt="north.png">
+		</map>
+	</main>
+</body>
+</html>

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>skip link written as a path</title></head>
+<body>
+	<a href="path-href.html#main">Skip to content</a>
+	<header>
+	<nav aria-label="Primary">
+		<a href="/products">Products</a>
+		<a href="/pricing">Pricing</a>
+		<a href="/contact">Contact</a>
+	</nav>
+	</header>
+	<main id="main" tabindex="-1">
+		<h1>Main content</h1>
+	</main>
+	<script>
+		// Sites that set <base> have to write same-document links as full URLs.
+		const absolute = document.createElement("a");
+		absolute.href = location.origin + location.pathname + "#main";
+		absolute.textContent = "Skip to content (absolute)";
+		document.body.insertBefore(absolute, document.body.children[1]);
+	</script>
+</body>
+</html>

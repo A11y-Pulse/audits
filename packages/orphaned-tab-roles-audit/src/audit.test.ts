@@ -37,6 +37,7 @@ describe("runOrphanedTabRolesAudit", () => {
 				html: '<a role="tab" href="/elsewhere">',
 				role: "tab",
 				finding: "tab-used-as-link",
+				tablist: null,
 			},
 		]);
 		expect(result.needsReview).toMatchObject([
@@ -44,6 +45,28 @@ describe("runOrphanedTabRolesAudit", () => {
 		]);
 		expect(result.passed.map((entry) => entry.selector)).toEqual(["#element-1", "#element-3"]);
 		expect(result.summary).toEqual({ checked: 4, failed: 1, needsReview: 1, passed: 2 });
+	});
+
+	it("reports the tablist, the aria-controls targets and the link target as evidence", async () => {
+		const dangling = [{ id: "panel-gone", found: false, role: null, tag: null }];
+		const page = fakePage([
+			element({ navigates: true, href: "https://shop.test/sale", tablist: 3 }),
+			element({ hasControls: true, tablist: 3, controlsTargets: dangling }),
+			element({ role: "tabpanel", html: "<div>" }),
+		]);
+
+		const result = await runOrphanedTabRolesAudit(page.adaptor);
+
+		expect(result.failed).toMatchObject([
+			{ selector: "#element-0", tablist: "#element-3", href: "https://shop.test/sale" },
+		]);
+		expect(result.failed[0]).not.toHaveProperty("controls");
+		expect(result.needsReview).toMatchObject([
+			{ selector: "#element-1", tablist: "#element-3", controls: dangling },
+			{ selector: "#element-2", role: "tabpanel" },
+		]);
+		expect(result.needsReview[0]).not.toHaveProperty("href");
+		expect(result.needsReview[1]).not.toHaveProperty("tablist");
 	});
 
 	it("reports up to the report limit but counts everything", async () => {

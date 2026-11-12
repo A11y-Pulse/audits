@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>unrendered templates and translation keys on screen</title></head>
+<body>
+	<ul>
+		<li><a id="token-link" href="/item">{{ item.title }}</a></li>
+		<li><a id="object-link" href="/item">[object Object]</a></li>
+	</ul>
+	<label id="token-label" for="token-field">{{ field.label }}</label>
+	<input id="token-field" type="text">
+	<button id="docs-copy" type="button" aria-label="Copy {{ name }} snippet"><svg width="20" height="20" aria-hidden="true"><rect width="20" height="20"/></svg></button>
+	<p>Read about <a id="docs-link" href="/docs/dunder">__init__</a> in the reference.</p>
+	<a id="key-title" href="/home" title="nav.homeTitle"><svg width="20" height="20" aria-hidden="true"><rect width="20" height="20"/></svg></a>
+	<button id="key-visible" type="button">common:buttons.submit</button>
+	<p>Hosted at <a id="host" href="https://docs.example.com/">docs.example.com</a>.</p>
+	<p>Also at <a id="host-br" href="https://servicos.gov.br/">servicos.gov.br</a> and <a id="host-own" href="https://my_shop.example.store/">my_shop.example.store</a>.</p>
+	<p>See <a id="api-java" href="/docs/concurrent">java.util.concurrent</a> and <a id="api-python" href="/docs/join">os.path.join</a>.</p>
+	<button id="svg-title" type="button"><svg width="20" height="20" role="img"><title>Close</title><rect width="20" height="20"/></svg></button>
+	<a id="visible-null" href="/null">null</a>
+</body>
+</html>

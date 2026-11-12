@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>a listing page with a nav and facet filters</title></head>
+<body>
+	<nav aria-label="Main">
+		<ul>
+			<li><a id="nav-home" href="/">Home</a></li>
+			<li><a id="nav-phones" href="/phones">Phones</a></li>
+			<li><a id="nav-basket" href="/basket" aria-label="Basket, 2 items"><svg width="20" height="20" aria-hidden="true"><rect width="20" height="20"/></svg></a></li>
+		</ul>
+	</nav>
+	<form id="filters" aria-label="Filter results">
+		<fieldset>
+			<legend>Year</legend>
+			<input type="checkbox" id="2023" name="year" value="2023"><label for="2023">2023</label>
+			<input type="checkbox" id="2024" name="year" value="2024"><label for="2024">2024</label>
+		</fieldset>
+		<fieldset>
+			<legend>Brand</legend>
+			<input type="checkbox" id="iPhone" name="brand"><label for="iPhone">iPhone</label>
+			<input type="checkbox" id="samsung" name="brand"><label for="samsung">Samsung</label>
+			<button id="brand-chip" type="button" data-brand="Coca-Cola" aria-label="Coca-Cola"><svg width="20" height="20" aria-hidden="true"><rect width="20" height="20"/></svg></button>
+		</fieldset>
+		<fieldset>
+			<legend>Features</legend>
+			<input type="checkbox" id="wi-fi" name="feature"><label id="wifi-label" for="wi-fi">Wi-Fi</label>
+			<input type="checkbox" id="feature_5g" name="feature" aria-labelledby="fiveg-label"><span id="fiveg-label">feature_5g</span>
+		</fieldset>
+		<label for="email">Email address</label>
+		<input id="email" name="email" type="email" autocomplete="email">
+		<input id="apply" type="submit" value="Apply filters">
+	</form>
+	<button id="add" type="button" data-testid="add-to-cart" aria-label="add-to-cart"><svg width="20" height="20" aria-hidden="true"><rect width="20" height="20"/></svg></button>
+</body>
+</html>

@@ -10,10 +10,13 @@ import {
 	type AuditNode,
 	type AuditOutput,
 	emptyOutput,
+	evidenceCheck,
 	toResult,
 } from "./audit-output";
 
 export const SUSPICIOUS_ACCESSIBLE_NAME_AUDIT_ID = "suspicious-accessible-name";
+
+export const SUSPICIOUS_ACCESSIBLE_NAME_EVIDENCE_CHECK_ID = "suspicious-accessible-name-evidence";
 
 const METADATA: Omit<AuditMetadata, "impact" | "tags"> = {
 	id: SUSPICIOUS_ACCESSIBLE_NAME_AUDIT_ID,
@@ -66,6 +69,21 @@ function toAuditNode(element: SuspiciousNameElement): AuditNode {
 	if (element.signal) {
 		node.failureSummary = failureSummary(element, element.signal);
 	}
+
+	node.evidence = evidenceCheck(
+		SUSPICIOUS_ACCESSIBLE_NAME_EVIDENCE_CHECK_ID,
+		element.criterion === null ? "minor" : "serious",
+		`Accessible name "${element.name}", taken from ${element.nameSource}`,
+		{
+			name: element.name,
+			nameSource: element.nameSource,
+			role: element.role,
+			reason: element.signal ?? undefined,
+			matched: element.evidence ?? undefined,
+			labelSelector: element.labelSelector ?? undefined,
+			criterion: element.criterion,
+		},
+	);
 
 	return node;
 }

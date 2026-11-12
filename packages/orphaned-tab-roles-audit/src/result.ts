@@ -1,4 +1,4 @@
-import type { TabRole } from "./browser-scripts";
+import type { ControlsTarget, TabRole } from "./browser-scripts";
 import type { TabRoleFinding } from "./classify";
 
 export type OrphanedTabRolesElement = {
@@ -12,6 +12,18 @@ export type OrphanedTabRolesElement = {
 
 	/** What is wrong with the element's association, or null when it has one. */
 	finding: TabRoleFinding | null;
+
+	/** Selector for the tablist a tab belongs to, or null when it is outside one. Tabs only. */
+	tablist?: string | null;
+
+	/**
+	 * Every id in the element's `aria-controls` with what it resolves to, so a dangling id or one
+	 * that names something other than a tab panel can be seen. Present when `aria-controls` is set.
+	 */
+	controls?: ControlsTarget[];
+
+	/** Where the link goes. Present for `tab-used-as-link`. */
+	href?: string;
 };
 
 export type OrphanedTabRolesResult = {

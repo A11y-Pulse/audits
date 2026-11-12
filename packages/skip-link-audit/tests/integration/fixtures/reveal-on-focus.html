@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>skip link revealed on focus</title>
+<style>
+	.skip-link { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+	.skip-link:focus { position: static; width: auto; height: auto; clip-path: none; }
+</style>
+</head>
+<body>
+	<a class="skip-link" href="#main">Skip to content</a>
+	<header>
+	<nav aria-label="Primary">
+		<a href="/products">Products</a>
+		<a href="/pricing">Pricing</a>
+		<a href="/contact">Contact</a>
+	</nav>
+	</header>
+	<main id="main" tabindex="-1">
+		<h1>Main content</h1>
+	</main>
+</body>
+</html>

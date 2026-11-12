@@ -11,6 +11,7 @@ export { ROLE_WORDS, roleWordsFor } from "./role-words";
 export type { RoleWords, Vocabulary, VocabularyOverride } from "./vocabulary";
 export {
 	DEFAULT_ARTEFACTS,
+	DEFAULT_REVIEW_WORDS,
 	DEFAULT_VOCABULARY,
 	PLACEHOLDER_STEMS,
 	resolveVocabulary,
