@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Winter promotions | Trailhead Outfitters</title>
+<style>
+	body { margin: 0; background: #fff; color: #1f2937; font: 16px/1.5 Arial, sans-serif; }
+	a { color: #1d4ed8; }
+	:focus-visible { outline: 2px solid #1a73e8; outline-offset: 2px; }
+	header { display: flex; align-items: center; gap: 24px; padding: 12px 16px; background: #1c1c1c; }
+	header a { color: #fff; }
+	main { max-width: 960px; margin: 0 auto; padding: 16px; }
+	section { margin-bottom: 32px; }
+	h1 { font-size: 28px; }
+	h2 { font-size: 20px; }
+
+	/* Slides change on a timer, and nothing on the page stops them. */
+	#hero-carousel { position: relative; width: 100%; height: 220px; overflow: hidden; background: #e5e7eb; }
+	#hero-track { display: flex; width: 300%; height: 100%; transition: transform 0.4s ease; }
+	.slide { flex: 0 0 33.3333%; box-sizing: border-box; padding: 32px; font-size: 22px; }
+	.slide:nth-child(1) { background: #dbeafe; }
+	.slide:nth-child(2) { background: #dcfce7; }
+	.slide:nth-child(3) { background: #fef3c7; }
+
+	/* Scrolls for ever, with a button that stops it. */
+	#news-ticker { display: flex; align-items: center; gap: 12px; height: 56px; padding: 0 12px; background: #f3f4f6; }
+	#ticker-window { flex: 1; height: 40px; overflow: hidden; }
+	#ticker-text { display: inline-block; white-space: nowrap; line-height: 40px; animation: ticker 12s linear infinite; }
+	#news-ticker.paused #ticker-text { animation-play-state: paused; }
+	@keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-60%); } }
+
+	/* A loading indicator: movement that is essential, and small. */
+	#stock-status { display: flex; align-items: center; gap: 8px; }
+	#stock-spinner { width: 20px; height: 20px; border: 3px solid #d1d5db; border-top-color: #1d4ed8; border-radius: 50%; animation: spin 1s linear infinite; }
+	@keyframes spin { to { transform: rotate(360deg); } }
+
+	.offers { display: flex; gap: 16px; }
+	.offer { flex: 1; box-sizing: border-box; padding: 12px; background: #fef3c7; }
+	/* Tall enough for its text at full size, and not a pixel taller. */
+	#offer-fixed { height: 96px; overflow: hidden; }
+	#offer-grows { min-height: 96px; }
+	.offer p { margin: 0; }
+
+	.tile { display: inline-block; padding: 8px 12px; border: 1px solid #6b7280; border-radius: 4px; cursor: pointer; }
+	#filters, #sort-options { margin-top: 8px; padding: 12px; border: 1px solid #d1d5db; }
+	[hidden] { display: none; }
+	/* The rest of a long page, so that the ticker's button is not beside the carousel. */
+	.below-fold { margin-top: 1600px; }
+</style>
+</head>
+<body>
+<header>
+	<a id="logo-link" href="promotions.html">Trailhead Outfitters</a>
+	<a id="nav-sale" href="sale.html">Sale</a>
+</header>
+
+<main>
+	<h1>Winter promotions</h1>
+
+	<section aria-label="Featured offers">
+		<div id="hero-carousel">
+			<div id="hero-track">
+				<div class="slide">Four-season tents from $399</div>
+				<div class="slide">Down jackets: two for one</div>
+				<div class="slide">Free delivery on snowshoes</div>
+			</div>
+		</div>
+	</section>
+
+	<section aria-label="Store news">
+		<div id="news-ticker">
+			<button id="ticker-pause" type="button" aria-pressed="false">Pause news</button>
+			<div id="ticker-window">
+				<span id="ticker-text">Queenstown store open late on Thursdays. Avalanche course places still available for August. Ski touring demo day this Saturday. Order by 2pm for next-day delivery.</span>
+			</div>
+		</div>
+	</section>
+
+	<section aria-label="Stock">
+		<div id="stock-status" role="status">
+			<div id="stock-spinner" class="spinner"></div>
+			<span>Checking stock in your nearest store</span>
+		</div>
+	</section>
+
+	<section>
+		<h2>This week</h2>
+		<div class="offers">
+			<div id="offer-fixed" class="offer">
+				<p id="offer-fixed-text">Crampons and ice axes are 20% off until Sunday, in store and online, while stocks last across all of our South Island branches.</p>
+			</div>
+			<div id="offer-grows" class="offer">
+				<p id="offer-grows-text">Merino base layers are three for the price of two until Sunday, in store and online, while stocks last across all of our branches.</p>
+			</div>
+		</div>
+	</section>
+
+	<section>
+		<h2>Gift options</h2>
+		<!-- Takes focus and handles clicks and keys, but says nothing about what it is. -->
+		<div id="gift-tile" class="tile" tabindex="0">Add gift wrap</div>
+		<div id="gift-button" class="tile" role="button" tabindex="0">Add a gift note</div>
+		<p id="gift-result" aria-live="polite"></p>
+	</section>
+
+	<section>
+		<h2>Browse</h2>
+		<!-- Declares itself a disclosure and takes focus, but only a mouse can open it. -->
+		<div id="filters-toggle" class="tile" role="button" tabindex="0" aria-expanded="false" aria-controls="filters">Filters</div>
+		<div id="filters" hidden>
+			<a id="filter-tents" href="tents.html">Tents</a>
+		</div>
+
+		<button id="sort-toggle" type="button" aria-expanded="false" aria-controls="sort-options">Sort</button>
+		<div id="sort-options" hidden>
+			<a id="sort-price" href="price.html">Price</a>
+		</div>
+	</section>
+
+	<section class="below-fold">
+		<h2>Delivery</h2>
+		<p>Orders over $100 are delivered free anywhere in New Zealand.</p>
+	</section>
+</main>
+
+<script>
+	// The carousel: next slide every 1.5 seconds, for ever.
+	const track = document.getElementById("hero-track");
+	let slide = 0;
+	setInterval(() => {
+		slide = (slide + 1) % 3;
+		track.style.transform = `translateX(-${slide * 33.3333}%)`;
+	}, 1500);
+
+	const ticker = document.getElementById("news-ticker");
+	const pause = document.getElementById("ticker-pause");
+	pause.addEventListener("click", () => {
+		const paused = ticker.classList.toggle("paused");
+		pause.setAttribute("aria-pressed", String(paused));
+		pause.textContent = paused ? "Play news" : "Pause news";
+	});
+
+	const result = document.getElementById("gift-result");
+	for (const [id, message] of [["gift-tile", "Gift wrap added"], ["gift-button", "Gift note added"]]) {
+		const tile = document.getElementById(id);
+		const activate = () => { result.textContent = message; };
+		tile.addEventListener("click", activate);
+		tile.addEventListener("keydown", (event) => {
+			if (event.key === "Enter" || event.key === " ") {
+				event.preventDefault();
+				activate();
+			}
+		});
+	}
+
+	const toggle = (buttonId, panelId) => {
+		const button = document.getElementById(buttonId);
+		const panel = document.getElementById(panelId);
+		const open = button.getAttribute("aria-expanded") !== "true";
+		button.setAttribute("aria-expanded", String(open));
+		panel.hidden = !open;
+	};
+	// No key handler: a div with role="button" gets no clicks from Enter or Space.
+	document.getElementById("filters-toggle").addEventListener("click", () => toggle("filters-toggle", "filters"));
+	document.getElementById("sort-toggle").addEventListener("click", () => toggle("sort-toggle", "sort-options"));
+</script>
+</body>
+</html>

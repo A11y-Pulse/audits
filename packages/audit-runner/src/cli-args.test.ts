@@ -134,4 +134,72 @@ describe("parseArgs", () => {
 			message: "Unsupported protocol: file:",
 		});
 	});
+
+	it("accepts a page load timeout and a limit on the whole run, in milliseconds", () => {
+		expect(parseArgs(["https://a.test", "--timeout", "5000", "--max-duration=0"])).toMatchObject({
+			kind: "run",
+			timeout: 5000,
+			maxDuration: 0,
+		});
+	});
+
+	it("leaves the limits and the error-page switch unset unless given", () => {
+		const parsed = parseArgs(["https://a.test"]);
+
+		expect(parsed).not.toHaveProperty("timeout");
+		expect(parsed).not.toHaveProperty("maxDuration");
+		expect(parsed).not.toHaveProperty("ignoreHttpErrors");
+	});
+
+	it("rejects a limit that is not a whole number of milliseconds", () => {
+		for (const value of ["soon", "-1", "1.5", "10s"]) {
+			expect(parseArgs(["https://a.test", `--timeout=${value}`])).toEqual({
+				kind: "error",
+				message: `Invalid value for --timeout: ${value}. Expected a number of milliseconds.`,
+			});
+		}
+
+		expect(parseArgs(["https://a.test", "--max-duration", "forever"])).toMatchObject({
+			kind: "error",
+		});
+	});
+
+	it("rejects a page load timeout of zero, which would wait forever", () => {
+		expect(parseArgs(["https://a.test", "--timeout", "0"])).toMatchObject({ kind: "error" });
+	});
+
+	it("accepts --ignore-http-errors as a switch that takes no value", () => {
+		expect(parseArgs(["--ignore-http-errors", "https://a.test"])).toMatchObject({
+			kind: "run",
+			url: "https://a.test/",
+			ignoreHttpErrors: true,
+		});
+		expect(parseArgs(["https://a.test", "--ignore-http-errors=yes"])).toEqual({
+			kind: "error",
+			message: "--ignore-http-errors does not take a value.",
+		});
+	});
+
+	it("collects --skip ids, comma-separated or repeated, without duplicates", () => {
+		const ids = ["moving-content", "reflow", "text-spacing"];
+
+		expect(
+			parseArgs(["https://example.com", "--skip", "moving-content, reflow", "--skip=reflow"], ids),
+		).toMatchObject({ kind: "run", skip: ["moving-content", "reflow"] });
+		expect(parseArgs(["https://example.com"], ids)).not.toHaveProperty("skip");
+	});
+
+	it("rejects a --skip id that is not an audit, naming it", () => {
+		const parsed = parseArgs(["https://example.com", "--skip", "reflow,refow"], ["reflow"]);
+
+		expect(parsed).toEqual({
+			kind: "error",
+			message: "Invalid value for --skip: refow. Run with --list-audits for the ids it accepts.",
+		});
+		expect(parseArgs(["https://example.com", "--skip", ","], ["reflow"]).kind).toBe("error");
+	});
+
+	it("reports --list-audits without needing a url", () => {
+		expect(parseArgs(["--list-audits"])).toEqual({ kind: "list-audits" });
+	});
 });

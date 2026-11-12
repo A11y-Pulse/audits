@@ -1,4 +1,4 @@
-import type { PageGroup } from "../expectations";
+import { LISTENER_INSPECTION_ENGINES, type PageGroup } from "../expectations";
 
 const STATIC = "static.html";
 
@@ -103,6 +103,7 @@ export const interaction: PageGroup = {
 			target: "#card-1",
 			outcome: "incomplete",
 			variants: [STATIC],
+			engines: LISTENER_INSPECTION_ENGINES,
 		},
 		{
 			scenario: "clickable card handled by a delegated listener (documented false negative)",
@@ -306,6 +307,33 @@ export const interaction: PageGroup = {
 			audit: "placeholder-only-label",
 			target: "#search-input",
 			outcome: "violations",
+		},
+		{
+			scenario: "menu button that opens from the keyboard and exposes its state",
+			audit: "disclosure-operability",
+			target: "#menu-packs",
+			outcome: "passes",
+		},
+		{
+			scenario: "size guide toggle that opens from the keyboard and exposes its state",
+			audit: "disclosure-operability",
+			target: "#size-guide-toggle",
+			outcome: "passes",
+		},
+		{
+			scenario: "focusable controls all have a role",
+			audit: "control-without-role",
+			outcome: "clean",
+		},
+		{
+			scenario: "page with nothing that moves on its own",
+			audit: "moving-content",
+			outcome: "inapplicable",
+		},
+		{
+			scenario: "fluid storefront at 200% zoom",
+			audit: "resize-text",
+			outcome: "clean",
 		},
 	],
 };

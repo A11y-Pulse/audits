@@ -85,5 +85,20 @@ export const site: PageGroup = {
 			outcome: "passes",
 			variants: [ABOUT],
 		},
+		{
+			scenario: "site page with nothing that moves on its own",
+			audit: "moving-content",
+			outcome: "inapplicable",
+		},
+		{
+			scenario: "site page text at 200% zoom",
+			audit: "resize-text",
+			outcome: "clean",
+		},
+		{
+			scenario: "site page whose controls all take focus",
+			audit: "keyboard-reachability",
+			outcome: "clean",
+		},
 	],
 };

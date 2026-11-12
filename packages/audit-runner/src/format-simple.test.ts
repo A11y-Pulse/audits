@@ -15,12 +15,12 @@ function violation(overrides: Partial<Result>): Result {
 	};
 }
 
-function results(violations: Result[]): AxeResults {
+function results(violations: Result[], incomplete: Result[] = []): AxeResults {
 	return {
 		url: "https://a.test/",
 		violations,
 		passes: [],
-		incomplete: [],
+		incomplete,
 	} as unknown as AxeResults;
 }
 
@@ -96,6 +96,99 @@ describe("formatSimple", () => {
 
 	it("reports a clean page", () => {
 		expect(formatSimple(results([]), false)).toBe("✔ No failed audits on https://a.test/");
+	});
+
+	it("lists a finding that needs review, naming the element and why, on a page with no failures", () => {
+		const trap = violation({
+			id: "keyboard-trap",
+			impact: "serious",
+			help: "Keyboard focus must be able to leave every component it can enter",
+			helpUrl: "",
+			nodes: [
+				{
+					target: ["#toolbar"],
+					html: '<div id="toolbar">',
+					any: [],
+					all: [],
+					none: [],
+					failureSummary:
+						"Focus cycled within 2 element(s) and did not leave via Tab or Escape.\nSecond line.",
+				},
+			],
+		} as unknown as Partial<Result>);
+		const output = formatSimple(results([], [trap]), false);
+		const [failed, review] = output.split("⚠");
+
+		expect(failed).toContain("✔ No failed audits on https://a.test/");
+		expect(review).toContain("1 audit needs review");
+		expect(review).toContain("keyboard-trap · serious");
+		expect(review).toContain("  › selector  #toolbar\n");
+		expect(review).toContain(
+			"    why       Focus cycled within 2 element(s) and did not leave via",
+		);
+		expect(review).not.toContain("Second line.");
+	});
+
+	it("lists review findings after the failed audits, not among them", () => {
+		const output = formatSimple(
+			results(
+				[violation({ id: "html-has-lang", nodes: nodesTargeting("html") })],
+				[violation({ id: "focus-order", nodes: nodesTargeting("#jump") })],
+			),
+			false,
+		);
+
+		expect(output).toContain("✖ 1 failed audit on https://a.test/");
+		expect(output.indexOf("html-has-lang")).toBeLessThan(output.indexOf("needs review"));
+		expect(output.indexOf("needs review")).toBeLessThan(output.indexOf("focus-order"));
+	});
+
+	it("shows an audit that could not run, with the reason, since it has no element to name", () => {
+		const failedAudit = violation({
+			id: "reflow",
+			impact: null,
+			help: "Reflow could not be completed",
+			description: "Reflow did not finish, so this page has not been checked by it: boom",
+			helpUrl: "",
+		});
+		const output = formatSimple(results([], [failedAudit]), false);
+
+		expect(output).toContain("1 audit needs review");
+		expect(output).toContain("reflow\n  Reflow could not be completed");
+		expect(output).toContain("this page has not been checked by it: boom");
+	});
+
+	it("explains a failed node with the first line of its summary, past axe-core's heading", () => {
+		const nodes = [
+			{
+				target: ["img"],
+				html: "<img>",
+				any: [],
+				all: [],
+				none: [],
+				failureSummary:
+					"Fix any of the following:\n  Element does not have an alt attribute\n  aria-label attribute does not exist",
+			},
+		];
+		const output = formatSimple(
+			results([violation({ nodes } as unknown as Partial<Result>)]),
+			false,
+		);
+
+		expect(output).toContain(
+			"    why       Fix any of the following: Element does not have an alt attribute\n",
+		);
+		expect(output).not.toContain("aria-label attribute does not exist");
+	});
+
+	it("shows fewer elements for a review finding than for a failure", () => {
+		const output = formatSimple(
+			results([], [violation({ nodes: nodesTargeting("a", "b", "c", "d", "e") })]),
+			false,
+		);
+
+		expect(output).toContain("selector  c\n    … and 2 more");
+		expect(output).not.toContain("selector  d");
 	});
 
 	it("colours output only when asked", () => {
