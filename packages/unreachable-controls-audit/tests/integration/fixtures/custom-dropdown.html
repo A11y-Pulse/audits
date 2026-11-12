@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>custom dropdown with no keyboard support</title>
+<style>body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; } .select { width: 200px; border: 1px solid #666; padding: 8px; cursor: pointer; } .options { width: 216px; border: 1px solid #666; } .option { padding: 8px; cursor: pointer; }</style></head><body>
+<span id="size-label">Size</span>
+<div id="size" class="select">Two person</div>
+<div id="size-options" class="options">
+	<div id="opt-1" class="option" onclick="choose(this)">One person</div>
+	<div id="opt-2" class="option" onclick="choose(this)">Two person</div>
+	<div id="opt-3" class="option" onclick="choose(this)">Four person</div>
+</div>
+<button id="add" type="button">Add to basket</button>
+<script>
+	function choose(option) {
+		document.getElementById("size").textContent = option.textContent;
+	}
+
+	document.getElementById("size").onclick = () => {
+		const options = document.getElementById("size-options");
+		options.hidden = !options.hidden;
+	};
+</script>
+</body></html>

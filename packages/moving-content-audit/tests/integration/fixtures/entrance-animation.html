@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Atlas Studio</title>
+		<style>
+			body { margin: 0; font: 16px/1.5 system-ui, sans-serif; }
+			.hero { width: 760px; height: 300px; margin: 0 auto; padding: 32px; box-sizing: border-box; background: #18324a; color: #fff; animation: rise 3s ease-out both; }
+			.hero p { animation: rise 2s ease-out 1s both; }
+			.cta { display: inline-block; padding: 8px 16px; background: #fff; color: #18324a; transition: transform 200ms; }
+			.cta:hover { transform: scale(1.05); }
+			@keyframes rise {
+				from { opacity: 0; transform: translateY(24px); }
+				to { opacity: 1; transform: none; }
+			}
+		</style>
+	</head>
+	<body>
+		<section class="hero" id="hero">
+			<h1>Maps for people who walk</h1>
+			<p>Hand-drawn topographic maps of 120 regional parks.</p>
+			<a class="cta" href="/maps">Browse the maps</a>
+		</section>
+	</body>
+</html>

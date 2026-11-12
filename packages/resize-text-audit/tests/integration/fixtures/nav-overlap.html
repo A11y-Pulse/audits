@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Resize text: overlapping navigation</title>
+		<style>
+			body {
+				margin: 0;
+				font: 16px/1.5 sans-serif;
+			}
+			/* Each item is a share of the viewport and never wraps, so at 200% the labels are wider
+			   than their items and run into each other. */
+			#nav {
+				display: flex;
+				margin: 0;
+				padding: 12px 0;
+				list-style: none;
+				background: #223;
+			}
+			#nav li {
+				flex: 0 0 18vw;
+				min-width: 0;
+				white-space: nowrap;
+			}
+			#nav a {
+				color: #fff;
+			}
+			main {
+				padding: 24px;
+			}
+		</style>
+	</head>
+	<body>
+		<ul id="nav">
+			<li><a id="nav-products" href="#">Products and pricing</a></li>
+			<li><a id="nav-support" href="#">Support and contact</a></li>
+			<li><a id="nav-company" href="#">Company information</a></li>
+		</ul>
+		<main>
+			<h1>Accounting software for small teams</h1>
+			<p>Send invoices, track expenses and file returns from one place.</p>
+		</main>
+	</body>
+</html>

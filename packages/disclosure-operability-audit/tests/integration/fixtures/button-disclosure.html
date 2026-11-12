@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Delivery and returns</title>
+<style>
+	body { font: 16px/1.5 system-ui, sans-serif; margin: 2rem; max-width: 40rem; }
+	.toggle { font: inherit; padding: 0.5rem 0.75rem; }
+	[hidden] { display: none; }
+</style>
+</head>
+<body>
+<main>
+	<h1>Trail runner jacket</h1>
+	<p>Lightweight shell for wet weather. <a href="#reviews">Read reviews</a></p>
+	<h2><button id="delivery-toggle" class="toggle" type="button" aria-expanded="false" aria-controls="delivery">Delivery and returns</button></h2>
+	<div id="delivery" hidden>
+		<p>Free delivery over $50. Returns within 30 days, <a id="returns-link" href="#returns">see how</a>.</p>
+	</div>
+	<h2 id="reviews">Reviews</h2>
+	<p>Rated 4.6 by 212 customers.</p>
+</main>
+<script>
+	const toggle = document.getElementById("delivery-toggle");
+
+	toggle.addEventListener("click", () => {
+		const open = toggle.getAttribute("aria-expanded") !== "true";
+
+		toggle.setAttribute("aria-expanded", String(open));
+		document.getElementById("delivery").hidden = !open;
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Your order</title>
+<style>
+	body { font: 16px/1.5 system-ui, sans-serif; margin: 2rem; max-width: 40rem; }
+	button, input { font: inherit; }
+	[hidden] { display: none; }
+	#backdrop { position: fixed; inset: 0; background: rgb(0 0 0 / 40%); }
+	#reschedule-dialog { position: fixed; top: 20%; left: 50%; transform: translateX(-50%); background: #fff; padding: 1.5rem; border: 1px solid #333; }
+</style>
+</head>
+<body>
+<main>
+	<h1>Your order</h1>
+	<p>Arriving Thursday 14 March. <a id="track" href="#tracking">Track parcel</a></p>
+	<!-- Opens a dialog that keeps focus inside it and does not close on Escape. -->
+	<button id="reschedule" type="button" aria-expanded="false" aria-haspopup="dialog" aria-controls="reschedule-dialog">Change delivery date…</button>
+	<h2 id="tracking">Tracking</h2>
+	<p>Left the depot at 06:12.</p>
+</main>
+<div id="backdrop" hidden></div>
+<div id="reschedule-dialog" role="dialog" aria-modal="true" aria-labelledby="reschedule-title" hidden>
+	<h2 id="reschedule-title">Change delivery date</h2>
+	<form id="reschedule-form" action="other.html">
+		<label for="new-date">New date</label>
+		<input id="new-date" name="date" type="text" value="15 March">
+		<button id="confirm" type="submit">Confirm</button>
+		<button id="keep" type="button">Keep current date</button>
+	</form>
+</div>
+<script>
+	window.__fixture = { submits: 0, keysInDialog: 0, opens: 0 };
+
+	const opener = document.getElementById("reschedule");
+	const dialog = document.getElementById("reschedule-dialog");
+	const backdrop = document.getElementById("backdrop");
+
+	function setOpen(open) {
+		dialog.hidden = !open;
+		backdrop.hidden = !open;
+		opener.setAttribute("aria-expanded", String(open));
+
+		if (open) {
+			document.getElementById("new-date").focus();
+		} else {
+			opener.focus();
+		}
+	}
+
+	opener.addEventListener("click", () => {
+		window.__fixture.opens++;
+		setOpen(true);
+	});
+	document.getElementById("keep").addEventListener("click", () => setOpen(false));
+
+	// The focus trap: anything outside the open dialog hands focus straight back.
+	document.addEventListener("focusin", (event) => {
+		if (!dialog.hidden && !dialog.contains(event.target)) {
+			document.getElementById("new-date").focus();
+		}
+	});
+
+	dialog.addEventListener("keydown", (event) => {
+		if (event.key === "Enter" || event.key === " ") {
+			window.__fixture.keysInDialog++;
+		}
+	});
+
+	document.getElementById("reschedule-form").addEventListener("submit", (event) => {
+		event.preventDefault();
+		window.__fixture.submits++;
+	});
+</script>
+</body>
+</html>

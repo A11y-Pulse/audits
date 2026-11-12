@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Resize text: responsive page</title>
+		<style>
+			body {
+				margin: 0;
+				font: 16px/1.5 sans-serif;
+			}
+			header {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 8px 24px;
+				align-items: center;
+				padding: 16px 24px;
+				border-bottom: 1px solid #ccc;
+			}
+			header nav {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 8px 16px;
+			}
+			main {
+				padding: 24px;
+			}
+			.cards {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+				gap: 16px;
+			}
+			.card {
+				border: 1px solid #ccc;
+				border-radius: 8px;
+				padding: 16px;
+				overflow: hidden;
+			}
+			.card h2 {
+				margin: 0 0 8px;
+				font-size: 1.25rem;
+			}
+			.layout {
+				display: flex;
+				gap: 24px;
+			}
+			.layout aside {
+				flex: 0 0 30%;
+			}
+			@media (max-width: 700px) {
+				.layout {
+					flex-direction: column;
+				}
+			}
+			footer {
+				padding: 24px;
+				border-top: 1px solid #ccc;
+			}
+		</style>
+	</head>
+	<body>
+		<header>
+			<strong>Harbour Books</strong>
+			<nav aria-label="Main">
+				<a href="#">New releases</a>
+				<a href="#">Bestsellers</a>
+				<a href="#">Gift cards</a>
+				<a href="#">Events and signings</a>
+				<a href="#">Contact us</a>
+			</nav>
+		</header>
+		<main>
+			<h1>Books chosen by people who read them</h1>
+			<div class="layout">
+				<section>
+					<div class="cards">
+						<article class="card">
+							<h2>Staff picks</h2>
+							<p>Twelve novels our booksellers pressed into each other's hands this winter.</p>
+							<a href="#">Browse the staff picks</a>
+						</article>
+						<article class="card">
+							<h2>Local authors</h2>
+							<p>Poetry, memoir and crime written within a short walk of the shop.</p>
+							<a href="#">Meet the authors</a>
+						</article>
+						<article class="card">
+							<h2>Children's corner</h2>
+							<p>Picture books and early readers, sorted by age so you can find one quickly.</p>
+							<a href="#">Find a bedtime story</a>
+						</article>
+					</div>
+				</section>
+				<aside>
+					<h2>Opening hours</h2>
+					<p>Monday to Saturday, nine until half past five. Closed on public holidays.</p>
+				</aside>
+			</div>
+		</main>
+		<footer>
+			<p>Harbour Books, 14 Quay Street. Free delivery on orders over fifty dollars.</p>
+		</footer>
+	</body>
+</html>

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Resize text: positioned labels that collide</title>
+		<style>
+			body {
+				margin: 0;
+				font: 16px/1.5 sans-serif;
+			}
+			#bar {
+				position: relative;
+				height: 48px;
+				background: #223;
+			}
+			#bar a {
+				position: absolute;
+				top: 12px;
+				color: #fff;
+				white-space: nowrap;
+			}
+			/* `text-overflow` does nothing here: the link does not clip its overflow. */
+			#label-orders {
+				left: 10%;
+				text-overflow: ellipsis;
+			}
+			#label-account {
+				left: 30%;
+			}
+			main {
+				padding: 24px;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="bar">
+			<a id="label-orders" href="#">Orders and returns</a>
+			<a id="label-account" href="#">Account settings</a>
+		</div>
+		<main>
+			<h1>Your account</h1>
+		</main>
+	</body>
+</html>

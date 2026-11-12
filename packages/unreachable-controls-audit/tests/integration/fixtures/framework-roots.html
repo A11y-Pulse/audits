@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>framework roots with nothing focusable</title>
+<style>body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; } #hours, #toasts { width: 320px; padding: 8px; }</style></head><body>
+<header><a id="home" href="#home">Ridgeline Outfitters</a></header>
+<!-- A small widget rendered by a framework: text only, nothing to operate. -->
+<div id="hours"><h2>Opening hours</h2><p>Monday to Friday, 9am to 5pm</p></div>
+<!-- A portal container holding a toast. -->
+<div id="toasts"><div class="toast" role="status">Saved to your wishlist</div></div>
+<script>
+	// React is not installed here, so this attaches by hand what React 17 and later attach to a root
+	// and to every portal container: one listener for each event it supports, whether or not any
+	// component handles it.
+	const SUPPORTED = [
+		"abort", "animationend", "animationiteration", "animationstart", "auxclick", "beforeinput",
+		"blur", "cancel", "canplay", "change", "click", "close", "compositionend", "compositionstart",
+		"contextmenu", "copy", "cut", "dblclick", "drag", "dragend", "dragenter", "dragleave",
+		"dragover", "dragstart", "drop", "error", "focusin", "focusout", "input", "invalid", "keydown",
+		"keypress", "keyup", "load", "mousedown", "mousemove", "mouseout", "mouseover", "mouseup",
+		"paste", "pause", "play", "pointercancel", "pointerdown", "pointermove", "pointerout",
+		"pointerover", "pointerup", "reset", "scroll", "submit", "toggle", "touchcancel", "touchend",
+		"touchmove", "touchstart", "transitionend", "wheel",
+	];
+
+	for (const id of ["hours", "toasts"]) {
+		const root = document.getElementById(id);
+
+		for (const type of SUPPORTED) {
+			root.addEventListener(type, () => {});
+			root.addEventListener(type, () => {}, true);
+		}
+	}
+</script>
+</body></html>

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Resize text: horizontal scrollers</title>
+		<style>
+			body {
+				margin: 24px;
+				font: 16px/1.5 sans-serif;
+			}
+			.table-wrap,
+			pre,
+			.tabs {
+				overflow-x: auto;
+			}
+			table {
+				min-width: 900px;
+				border-collapse: collapse;
+			}
+			th,
+			td {
+				padding: 8px 16px;
+				border: 1px solid #ccc;
+				text-align: left;
+				white-space: nowrap;
+			}
+			.tabs {
+				display: flex;
+				gap: 24px;
+				white-space: nowrap;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Usage this month</h1>
+		<div class="tabs">
+			<a href="#">Overview of requests</a>
+			<a href="#">Bandwidth by region</a>
+			<a href="#">Errors and timeouts</a>
+			<a href="#">Billing and invoices</a>
+			<a href="#">Team members and roles</a>
+		</div>
+		<div class="table-wrap" tabindex="0" role="region" aria-label="Usage by project">
+			<table>
+				<thead>
+					<tr>
+						<th>Project</th>
+						<th>Requests</th>
+						<th>Bandwidth</th>
+						<th>Error rate</th>
+						<th>Last deployed</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td>Marketing site</td>
+						<td>1,204,553</td>
+						<td>88.2 GB</td>
+						<td>0.02%</td>
+						<td>Tuesday at 14:05</td>
+					</tr>
+					<tr>
+						<td>Customer dashboard</td>
+						<td>9,880,112</td>
+						<td>412.7 GB</td>
+						<td>0.31%</td>
+						<td>Yesterday at 09:41</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+		<pre
+			tabindex="0"
+		><code>curl --request GET --url https://api.example.com/v1/projects/marketing-site/usage --header "Authorization: Bearer YOUR_TOKEN"</code></pre>
+	</body>
+</html>

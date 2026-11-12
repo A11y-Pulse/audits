@@ -1,0 +1,12 @@
+{
+	"name": "resize-text-audit-puppeteer-example",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"start": "node index.mjs"
+	},
+	"dependencies": {
+		"@a11y-pulse/resize-text-audit": "file:../..",
+		"puppeteer": "^25.3.0"
+	}
+}

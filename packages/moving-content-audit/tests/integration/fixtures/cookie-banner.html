@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>The Daily Ledger</title>
+		<style>
+			body { margin: 0; font: 16px/1.6 Georgia, serif; }
+			main { max-width: 680px; margin: 0 auto; padding: 16px; }
+			.consent { position: fixed; left: 0; right: 0; bottom: 0; height: 140px; box-sizing: border-box; padding: 24px; background: #1d2733; color: #fff; transform: translateY(100%); transition: transform 200ms ease-out; }
+			.consent.is-open { transform: none; }
+			.consent button { font: inherit; padding: 8px 16px; }
+		</style>
+	</head>
+	<body>
+		<main>
+			<h1>Council approves new ferry timetable</h1>
+			<p>The first sailing will leave at 6:15am on weekdays from next month.</p>
+			<p>Commuters told the committee that the gap before 7am left them with no way to reach early shifts.</p>
+		</main>
+		<script>
+			// A consent bar that a tag manager adds late, and that slides up once and stays.
+			window.startScenario = (delay) => {
+				setTimeout(() => {
+					const bar = document.createElement("div");
+
+					bar.className = "consent";
+					bar.id = "consent";
+					bar.setAttribute("role", "region");
+					bar.setAttribute("aria-label", "Cookies");
+					bar.innerHTML =
+						"<p>We use cookies to measure readership.</p><button type='button'>Accept</button> <button type='button'>Decline</button>";
+					document.body.append(bar);
+					requestAnimationFrame(() => requestAnimationFrame(() => bar.classList.add("is-open")));
+				}, delay);
+			};
+		</script>
+	</body>
+</html>

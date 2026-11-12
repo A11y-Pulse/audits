@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sign in with your mobile number</title>
+</head>
+<body>
+<main>
+	<h1>Sign in with your mobile number</h1>
+
+	<form id="login" method="post" action="/login">
+		<label for="phone">Mobile number</label>
+		<input id="phone" type="tel" name="phone" autocomplete="username tel" maxlength="11">
+
+		<label for="password">Password</label>
+		<input id="password" type="password" name="password" autocomplete="current-password" maxlength="12">
+
+		<button type="submit">Log in</button>
+	</form>
+
+	<form id="app-lock" method="post" action="/unlock">
+		<label for="pin">4-digit PIN</label>
+		<input id="pin" type="password" name="pin" inputmode="numeric" maxlength="4" autocomplete="current-password">
+		<button type="submit">Unlock</button>
+	</form>
+
+	<form id="recovery" method="post" action="/recover">
+		<label for="backup">8-digit backup code</label>
+		<input id="backup" name="backup_code" inputmode="numeric" pattern="\d{8}" autocomplete="one-time-code">
+		<button type="submit">Recover</button>
+	</form>
+</main>
+<script>
+	const pasted = {};
+
+	const guard = (id, accepts) => {
+		const field = document.getElementById(id);
+
+		field.addEventListener("paste", (event) => {
+			const text = event.clipboardData.getData("text/plain");
+			pasted[id] = text;
+
+			// Text of the wrong kind is turned away; anything else is left to the browser.
+			if (!accepts(text, field)) {
+				event.preventDefault();
+			}
+		});
+	};
+
+	// Digits only, as a phone or PIN field often insists, and nothing longer than the field holds.
+	guard("phone", (text, field) => /^\d+$/.test(text) && text.length <= field.maxLength);
+	guard("pin", (text, field) => /^\d+$/.test(text) && text.length <= field.maxLength);
+	guard("password", (text, field) => text.length <= field.maxLength);
+
+	// Only a whole backup code is taken.
+	guard("backup", (text) => /^\d{8}$/.test(text));
+
+	window.pasted = pasted;
+</script>
+</body>
+</html>

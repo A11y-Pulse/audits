@@ -1,0 +1,95 @@
+import type { Page } from "playwright-core";
+import { describe, expect, it, vi } from "vitest";
+import { PlaywrightAdaptor } from "./playwright";
+
+function cdpPage(overrides: Partial<Record<string, unknown>> = {}): Page {
+	return {
+		context: () => ({ newCDPSession: async () => ({ send: async () => ({ data: "" }) }) }),
+		...overrides,
+	} as unknown as Page;
+}
+
+describe("PlaywrightAdaptor", () => {
+	it("getViewport delegates to page.viewportSize()", async () => {
+		const page = cdpPage({ viewportSize: () => ({ width: 1280, height: 800 }) });
+
+		await expect(new PlaywrightAdaptor(page).getViewport()).resolves.toEqual({
+			width: 1280,
+			height: 800,
+		});
+	});
+
+	it("getViewport reads the window's size when the context was created without a viewport", async () => {
+		const evaluate = vi.fn(async () => ({ width: 1400, height: 913 }));
+		const page = cdpPage({ viewportSize: () => null, evaluate });
+
+		await expect(new PlaywrightAdaptor(page).getViewport()).resolves.toEqual({
+			width: 1400,
+			height: 913,
+		});
+		expect(evaluate).toHaveBeenCalledTimes(1);
+	});
+
+	it("setViewport delegates to page.setViewportSize()", async () => {
+		const setViewportSize = vi.fn(async () => {});
+		const page = cdpPage({ setViewportSize });
+
+		await new PlaywrightAdaptor(page).setViewport({ width: 320, height: 1024 });
+
+		expect(setViewportSize).toHaveBeenCalledWith({ width: 320, height: 1024 });
+	});
+
+	it("evaluate runs the packed function in the page", async () => {
+		const page = cdpPage({
+			evaluate: vi.fn(async (fn: (arg: unknown) => unknown, arg: unknown) => fn(arg)),
+		});
+
+		await expect(
+			new PlaywrightAdaptor(page).evaluate(function double(n: number) {
+				return n * 2;
+			}, 7),
+		).resolves.toBe(14);
+	});
+
+	it("screenshotClip passes the scale through to the capture", async () => {
+		const send = vi.fn(async () => ({ data: "" }));
+		const page = {
+			context: () => ({ newCDPSession: async () => ({ send }) }),
+			evaluate: async () => {},
+		} as unknown as Page;
+		const clip = { x: 0, y: 0, width: 10, height: 10 };
+
+		await new PlaywrightAdaptor(page).screenshotClip(clip, 3);
+
+		expect(send).toHaveBeenCalledWith(
+			"Page.captureScreenshot",
+			expect.objectContaining({ clip: { ...clip, scale: 3 } }),
+		);
+	});
+
+	// Evidence can sit anywhere on the page, so unlike the shared browser adaptor this one captures
+	// beyond the viewport.
+	it("captures beyond the viewport", async () => {
+		const send = vi.fn(async () => ({ data: "" }));
+		const page = {
+			context: () => ({ newCDPSession: async () => ({ send }) }),
+			evaluate: async () => {},
+		} as unknown as Page;
+
+		await new PlaywrightAdaptor(page).screenshotClip({ x: 0, y: 0, width: 10, height: 10 }, 1);
+
+		expect(send).toHaveBeenCalledWith(
+			"Page.captureScreenshot",
+			expect.objectContaining({ captureBeyondViewport: true }),
+		);
+	});
+
+	// The shared browser adaptor defaults to 2. Resize text captures at the page's own scale, matching
+	// this package's Puppeteer adaptor, so the audit's pixel maths is unchanged across engines.
+	it("defaults screenshotClipScale to 1 and honours an override", () => {
+		expect(new PlaywrightAdaptor(cdpPage()).screenshotClipScale).toBe(1);
+		expect(new PlaywrightAdaptor(cdpPage(), { screenshotClipScale: 2 }).screenshotClipScale).toBe(
+			2,
+		);
+	});
+});

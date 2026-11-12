@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Filters</title>
+<style>
+	body { font: 16px/1.5 system-ui, sans-serif; margin: 2rem; }
+	.filter-head { cursor: pointer; padding: 0.5rem; border: 1px solid #888; width: 14rem; }
+	.filter-body { padding: 0.5rem; }
+	[hidden] { display: none; }
+</style>
+</head>
+<body>
+<main>
+	<h1>Tents</h1>
+	<!-- Focusable and announced as a button, but only a click operates it. -->
+	<div id="brand-filter" class="filter-head" role="button" tabindex="0" aria-expanded="false" aria-controls="brand-options">Brand</div>
+	<div id="brand-options" class="filter-body" hidden>
+		<label><input type="checkbox" name="brand" value="alpine"> Alpine Co</label>
+		<label><input type="checkbox" name="brand" value="ridge"> Ridgeline</label>
+	</div>
+	<!-- Cannot take focus at all. -->
+	<div id="price-filter" class="filter-head" aria-expanded="false" aria-controls="price-options">Price</div>
+	<div id="price-options" class="filter-body" hidden>
+		<label><input type="radio" name="price" value="low"> Under $200</label>
+		<label><input type="radio" name="price" value="high"> $200 and over</label>
+	</div>
+	<p><a href="#results">Skip to results</a></p>
+	<h2 id="results">12 tents</h2>
+</main>
+<script>
+	for (const [head, body] of [["brand-filter", "brand-options"], ["price-filter", "price-options"]]) {
+		const trigger = document.getElementById(head);
+
+		trigger.addEventListener("click", () => {
+			const open = trigger.getAttribute("aria-expanded") !== "true";
+
+			trigger.setAttribute("aria-expanded", String(open));
+			document.getElementById(body).hidden = !open;
+		});
+	}
+</script>
+</body>
+</html>

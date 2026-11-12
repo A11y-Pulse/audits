@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Store</title>
+<style>
+	body { font: 16px/1.5 system-ui, sans-serif; margin: 2rem; }
+	button { font: inherit; }
+	[hidden] { display: none; }
+</style>
+</head>
+<body>
+<main>
+	<h1>Store</h1>
+	<!-- Declares a menu but takes the user to another page when activated. -->
+	<button id="go" type="button" aria-expanded="false" aria-haspopup="true">Categories</button>
+	<button id="later" type="button" aria-expanded="false" aria-controls="later-panel">Opening hours</button>
+	<div id="later-panel" hidden>Nine to five.</div>
+</main>
+<script>
+	document.getElementById("go").addEventListener("click", () => {
+		location.href = "other.html";
+	});
+</script>
+</body>
+</html>

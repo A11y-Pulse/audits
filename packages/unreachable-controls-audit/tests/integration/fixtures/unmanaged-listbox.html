@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>listboxes with and without keyboard support</title>
+<style>body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; } [role=option] { padding: 8px; }</style></head><body>
+<!-- Nothing in this listbox takes focus and nothing drives it. -->
+<div id="colours" role="listbox" aria-label="Colour">
+	<div id="red" role="option" aria-selected="true">Red</div>
+	<div id="green" role="option" aria-selected="false">Green</div>
+</div>
+<!-- This one is driven from its combobox with aria-activedescendant. -->
+<input id="city" role="combobox" aria-label="City" aria-controls="cities" aria-expanded="true" aria-activedescendant="akl">
+<ul id="cities" role="listbox" aria-label="Cities">
+	<li id="akl" role="option" onclick="void 0">Auckland</li>
+	<li id="wlg" role="option" onclick="void 0">Wellington</li>
+</ul>
+</body></html>

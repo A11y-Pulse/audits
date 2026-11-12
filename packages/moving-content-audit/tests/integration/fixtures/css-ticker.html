@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Harbour Daily</title>
+		<style>
+			body { margin: 0; font: 16px/1.5 Georgia, serif; }
+			main { max-width: 760px; margin: 0 auto; padding: 16px; }
+			.ticker { overflow: hidden; width: 760px; height: 48px; background: #111; color: #fff; white-space: nowrap; }
+			.ticker__track { display: inline-block; line-height: 48px; padding-left: 760px; animation: ticker 12s linear infinite; }
+			.ticker__track span { margin-right: 48px; }
+			@keyframes ticker {
+				from { transform: translateX(0); }
+				to { transform: translateX(-100%); }
+			}
+		</style>
+	</head>
+	<body>
+		<main>
+			<div class="ticker" id="headlines" aria-label="Latest headlines">
+				<div class="ticker__track">
+					<span>Ferry timetable changes from Monday</span>
+					<span>Council approves waterfront cycleway</span>
+					<span>Markets close higher for a third day</span>
+				</div>
+			</div>
+			<h1>Ferry timetable changes from Monday</h1>
+			<p>Sailings between the city and the eastern bays will run every twenty minutes at peak.</p>
+			<a href="/timetable">See the new timetable</a>
+		</main>
+	</body>
+</html>

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Network map</title>
+		<style>
+			body { margin: 0; font: 16px/1.5 system-ui, sans-serif; }
+			main { max-width: 760px; margin: 0 auto; padding: 16px; }
+			svg { display: block; background: #f2f5f7; }
+		</style>
+	</head>
+	<body>
+		<main>
+			<h1>Network map</h1>
+			<svg id="map" width="600" height="300" viewBox="0 0 600 300" role="img" aria-label="Lines across the harbour">
+				<g id="tiles">
+					<rect x="0" y="40" width="1200" height="60" fill="#2a7f62"></rect>
+					<rect x="0" y="140" width="1200" height="60" fill="#0b4f6c"></rect>
+					<circle cx="900" cy="250" r="30" fill="#e9c46a"></circle>
+				</g>
+			</svg>
+			<p>Drag to explore, or use the list of lines below.</p>
+		</main>
+		<script>
+			// A map that pans by itself: the script rewrites an SVG attribute, not a style.
+			const tiles = document.getElementById("tiles");
+			let x = 0;
+
+			setInterval(() => {
+				x = (x - 12) % 600;
+				tiles.setAttribute("transform", `translate(${x} 0)`);
+			}, 40);
+		</script>
+	</body>
+</html>
