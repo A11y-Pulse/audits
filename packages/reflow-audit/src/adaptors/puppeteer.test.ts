@@ -14,6 +14,53 @@ describe("PuppeteerAdaptor", () => {
 		});
 	});
 
+	it("getViewport reads the window's size when the page has no emulated viewport", async () => {
+		const page = {
+			viewport: () => null,
+			evaluate: vi.fn(async () => ({ width: 1400, height: 913 })),
+		} as unknown as Page;
+
+		await expect(new PuppeteerAdaptor(page).getViewport()).resolves.toEqual({
+			width: 1400,
+			height: 913,
+		});
+	});
+
+	it("clears the emulation when an unemulated page is set back to its window's size", async () => {
+		let viewport: { width: number; height: number } | null = null;
+		const setViewport = vi.fn(async (next: { width: number; height: number } | null) => {
+			viewport = next;
+		});
+		const page = {
+			viewport: () => viewport,
+			evaluate: async () => ({ width: 1400, height: 913 }),
+			waitForFunction: async () => undefined,
+			setViewport,
+		} as unknown as Page;
+		const adaptor = new PuppeteerAdaptor(page);
+
+		const original = await adaptor.getViewport();
+		await adaptor.setViewport({ width: 320, height: 1024 });
+		await adaptor.setViewport(original);
+
+		expect(setViewport.mock.calls).toEqual([[{ width: 320, height: 1024 }], [null]]);
+	});
+
+	it("keeps emulating a page that already had a viewport when it is restored", async () => {
+		let viewport = { width: 1280, height: 800 };
+		const setViewport = vi.fn(async (next: { width: number; height: number }) => {
+			viewport = next;
+		});
+		const page = { viewport: () => viewport, setViewport } as unknown as Page;
+		const adaptor = new PuppeteerAdaptor(page);
+
+		const original = await adaptor.getViewport();
+		await adaptor.setViewport({ width: 320, height: 1024 });
+		await adaptor.setViewport(original);
+
+		expect(setViewport).toHaveBeenLastCalledWith({ width: 1280, height: 800 });
+	});
+
 	it("setViewport delegates to page.setViewport()", async () => {
 		const setViewport = vi.fn(async () => {});
 		const page = {

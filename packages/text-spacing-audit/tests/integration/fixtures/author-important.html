@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Text spacing author !important</title>
+		<style>
+			body {
+				margin: 16px;
+				font: 16px/20px sans-serif;
+			}
+			.card {
+				width: 40rem;
+				height: 40px;
+				overflow: hidden;
+			}
+			/* A reset that pins spacing with !important. A user stylesheet still wins over it. */
+			.card p {
+				margin: 0;
+				line-height: 20px !important;
+				letter-spacing: 0 !important;
+				word-spacing: 0 !important;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="card" id="card">
+			<p id="copy">Members save ten percent.<br />Sign in to see your price.</p>
+		</div>
+	</body>
+</html>

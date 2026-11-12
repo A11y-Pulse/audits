@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Text spacing shadow DOM</title>
+		<style>
+			body {
+				margin: 16px;
+				font: 16px/20px sans-serif;
+			}
+		</style>
+	</head>
+	<body>
+		<promo-card id="host"></promo-card>
+		<script>
+			customElements.define(
+				"promo-card",
+				class extends HTMLElement {
+					constructor() {
+						super();
+						this.attachShadow({ mode: "open" }).innerHTML = `
+							<style>
+								.card { width: 40rem; height: 40px; overflow: hidden; }
+								/* Set inside the shadow tree, so nothing inherited from the page reaches it. */
+								p { margin: 0; line-height: 20px; letter-spacing: 0; word-spacing: 0; }
+							</style>
+							<div class="card" id="shadow-card">
+								<p id="shadow-copy">Members save ten percent.<br>Sign in to see your price.</p>
+							</div>`;
+					}
+				},
+			);
+		</script>
+	</body>
+</html>

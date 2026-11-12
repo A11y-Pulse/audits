@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Text spacing nested clippers</title>
+		<style>
+			body {
+				margin: 16px;
+				font: 16px/20px sans-serif;
+			}
+			.card {
+				width: 40rem;
+				height: 80px;
+				overflow: hidden;
+				border-radius: 8px;
+				background: #eef;
+			}
+			/* Auto height: it grows with its text, so it never overflows itself. */
+			.card-body {
+				overflow: hidden;
+			}
+			p {
+				margin: 0;
+			}
+		</style>
+	</head>
+	<body>
+		<section class="card" id="card">
+			<div class="card-body" id="body">
+				<p id="copy">
+					Rounded cards clip their corners.<br />
+					The wrapper inside clips too.<br />
+					Neither was written with larger text in mind.<br />
+					This last line is the first to go.
+				</p>
+			</div>
+		</section>
+	</body>
+</html>

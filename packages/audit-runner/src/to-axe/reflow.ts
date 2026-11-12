@@ -4,6 +4,7 @@ import {
 	type AuditNode,
 	type AuditOutput,
 	emptyOutput,
+	evidenceCheck,
 	toResult,
 } from "./audit-output";
 
@@ -22,37 +23,63 @@ const METADATA: AuditMetadata = {
 };
 
 function failureSummary(offender: ReflowOffender): string {
-	if (offender.reason === "fixed-width-container") {
-		return "Element has a fixed width that exceeds the 320px reflow viewport. Use fluid widths or max-width so content fits without requiring horizontal scrolling.";
-	}
+	switch (offender.reason) {
+		case "fixed-width-container":
+			return "Element has a fixed width that exceeds the 320px reflow viewport. Use fluid widths or max-width so content fits without requiring horizontal scrolling.";
+		case "text-overflow":
+			return `Text in this element runs ${offender.overflowPx}px past the viewport without wrapping. Allow it to wrap (for example with overflow-wrap) or give it its own scrolling container, so that users do not have to scroll horizontally to read it.`;
+		case "media-overflow":
+			return `Media is ${offender.overflowPx}px wider than the 320px reflow viewport. Check whether it needs two-dimensional layout to be understood; if not, let it scale down (for example with max-width: 100%).`;
+		case "clipped-content":
+			return `Element extends ${offender.overflowPx}px past the viewport where it cannot be scrolled into view. Check that no content or functionality is cut off at 320px.`;
+		case "scrolling-container": {
+			const overflowing = offender.overflowing ?? [];
+			const culprits =
+				overflowing.length > 0
+					? ` Too wide inside it: ${overflowing
+							.map((content) => `${content.selector} (by ${content.overflowPx}px)`)
+							.join(", ")}.`
+					: "";
 
-	return `Element is overflowing the viewport by ${offender.overflowPx}px. Ensure elements are resized and text is wrapped so that users do not have to scroll horizontally to view content.`;
+			return `Most of the page sits in a container that scrolls horizontally by ${offender.overflowPx}px.${culprits} Check that its content can be read at 320px without scrolling in two directions.`;
+		}
+		default:
+			return `Element is overflowing the viewport by ${offender.overflowPx}px. Ensure elements are resized and text is wrapped so that users do not have to scroll horizontally to view content.`;
+	}
 }
 
-function toAuditNode(offender: ReflowOffender, failed: boolean): AuditNode {
+function toAuditNode(offender: ReflowOffender, result: ReflowResult): AuditNode {
+	const failed = result.bucket !== "pass";
 	const node: AuditNode = { selector: offender.selector, html: offender.html };
 
 	if (failed) {
 		node.failureSummary = failureSummary(offender);
 	}
 
-	if (offender.screenshot) {
-		node.evidence = {
-			id: REFLOW_EVIDENCE_CHECK_ID,
-			impact: "serious",
-			message: "Element overflows the 320px reflow viewport",
-			data: { screenshot: offender.screenshot },
-		};
-	}
+	node.evidence = evidenceCheck(
+		REFLOW_EVIDENCE_CHECK_ID,
+		"serious",
+		failed
+			? `Element overflows the ${result.viewport.width}px reflow viewport`
+			: `Element measured at the ${result.viewport.width}px reflow viewport`,
+		{
+			reason: offender.reason,
+			overflowPx: offender.overflowPx,
+			rect: offender.rect,
+			overflowing: offender.overflowing,
+			viewport: result.viewport,
+			documentOverflowPx: result.documentOverflowPx,
+			screenshot: offender.screenshot,
+		},
+	);
 
 	return node;
 }
 
 export function reflowToAxe(result: ReflowResult): AuditOutput {
-	const failed = result.bucket !== "pass";
 	const audit = toResult(
 		METADATA,
-		result.offenders.map((offender) => toAuditNode(offender, failed)),
+		result.offenders.map((offender) => toAuditNode(offender, result)),
 	);
 
 	switch (result.bucket) {

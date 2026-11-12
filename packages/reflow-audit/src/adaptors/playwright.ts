@@ -7,8 +7,6 @@ import type { Rect, ReflowAuditAdaptor } from "../adaptor";
 
 export type { PlaywrightAdaptorOptions } from "@a11y-pulse/browser-adaptor/playwright";
 
-const DEFAULT_VIEWPORT = { width: 800, height: 600 };
-
 /** A ReflowAuditAdaptor backed by a Playwright Page. */
 export class PlaywrightAdaptor implements ReflowAuditAdaptor {
 	readonly screenshotClipScale: number;
@@ -38,9 +36,16 @@ export class PlaywrightAdaptor implements ReflowAuditAdaptor {
 	}
 
 	async getViewport(): Promise<{ width: number; height: number }> {
-		// Null when the context was created with `viewport: null`, in which case the page fills the
-		// window and Playwright cannot report its size.
-		return this.page.viewportSize() ?? DEFAULT_VIEWPORT;
+		// Null when the context was created with `viewport: null`: the page fills its window, whose
+		// size only the page can report. Playwright has no way to hand the viewport back to the
+		// window afterwards, so restoring sets this same size.
+		return (
+			this.page.viewportSize() ??
+			(await this.browser.evaluate(() => ({
+				width: window.innerWidth,
+				height: window.innerHeight,
+			})))
+		);
 	}
 
 	async setViewport(viewport: { width: number; height: number }): Promise<void> {

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>wide fixed header</title>
+	<style>
+		html, body { margin: 0; }
+		header { position: fixed; top: 0; left: 0; width: 1000px; height: 56px; background: #223; }
+		nav { display: flex; justify-content: space-between; }
+		nav a { color: #fff; padding: 1rem; white-space: nowrap; }
+		main { padding: 72px 1rem 1rem; }
+	</style>
+</head>
+<body>
+	<header id="masthead">
+		<nav>
+			<a href="/">Home</a><a href="/products">Products</a><a href="/pricing">Pricing</a>
+			<a href="/support">Support</a><a href="/account">My account</a>
+		</nav>
+	</header>
+	<main><h1>Pricing</h1><p>The header never scrolls, so links past 320px cannot be reached.</p></main>
+</body>
+</html>

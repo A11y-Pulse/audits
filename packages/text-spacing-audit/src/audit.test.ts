@@ -2,792 +2,715 @@ import { describe, expect, it } from "vitest";
 import type { TextSpacingAuditAdaptor } from "./adaptor";
 import {
 	type CandidateSnapshot,
+	classifyCandidates,
 	classifyTextSpacing,
-	DEFAULT_CANDIDATE_LIMIT,
 	DEFAULT_SCREENSHOT_LIMIT,
 	runTextSpacingAudit,
 } from "./audit";
+import type {
+	BaselineConfig,
+	DescribePayload,
+	DescribeRequest,
+	ElementDescription,
+} from "./browser-scripts";
 
 const TOLERANCE = 2;
 
-function rect(x: number, y: number, width: number, height: number): CandidateSnapshot["rect"] {
+type Rect = CandidateSnapshot["rect"];
+
+function rect(x: number, y: number, width: number, height: number): Rect {
 	return { x, y, width, height };
 }
 
 function snapshot(
-	overrides: Partial<CandidateSnapshot> & Pick<CandidateSnapshot, "index" | "selector">,
+	overrides: Partial<CandidateSnapshot> & Pick<CandidateSnapshot, "index">,
 ): CandidateSnapshot {
+	const box = overrides.rect ?? rect(0, overrides.index * 100, 100, 20);
+
 	return {
-		html: overrides.html ?? "<p>",
-		scrollWidth: overrides.scrollWidth ?? 100,
-		scrollHeight: overrides.scrollHeight ?? 20,
-		clientWidth: overrides.clientWidth ?? 100,
-		clientHeight: overrides.clientHeight ?? 20,
-		rect: overrides.rect ?? rect(0, 0, 100, 20),
-		overflowX: overrides.overflowX ?? "visible",
-		overflowY: overrides.overflowY ?? "visible",
-		clipScrollWidth: overrides.clipScrollWidth ?? overrides.scrollWidth ?? 100,
-		clipScrollHeight: overrides.clipScrollHeight ?? overrides.scrollHeight ?? 20,
-		clipClientWidth: overrides.clipClientWidth ?? overrides.clientWidth ?? 100,
-		clipClientHeight: overrides.clipClientHeight ?? overrides.clientHeight ?? 20,
-		clipOverflowX: overrides.clipOverflowX ?? overrides.overflowX ?? "visible",
-		clipOverflowY: overrides.clipOverflowY ?? overrides.overflowY ?? "visible",
-		truncated: overrides.truncated ?? false,
-		unstable: overrides.unstable ?? false,
-		fontSize: overrides.fontSize ?? 16,
-		position: overrides.position ?? "static",
+		selector: "",
+		html: "",
+		scrollWidth: 100,
+		scrollHeight: 20,
+		clientWidth: 100,
+		clientHeight: 20,
+		rect: box,
+		overflowX: "visible",
+		overflowY: "visible",
+		clipScrollWidth: 100,
+		clipScrollHeight: 20,
+		clipClientWidth: 100,
+		clipClientHeight: 20,
+		clipOverflowX: "visible",
+		clipOverflowY: "visible",
+		truncated: false,
+		unstable: false,
+		fontSize: 16,
+		position: "static",
+		textRects: [box],
+		clippedXPx: 0,
+		clippedYPx: 0,
+		clipperXIndex: null,
+		clipperYIndex: null,
+		truncatorIndex: null,
+		truncationOverflowPx: 0,
 		...overrides,
 	};
 }
 
-describe("classifyTextSpacing", () => {
-	it("returns no findings when metrics are unchanged", () => {
-		const before = [
-			snapshot({
-				index: 0,
-				selector: "#card",
-				clipOverflowY: "hidden",
-			}),
-		];
+/** The same candidate before and after, differing only in what `after` overrides. */
+function pair(
+	before: Partial<CandidateSnapshot> & Pick<CandidateSnapshot, "index">,
+	after: Partial<CandidateSnapshot>,
+): { before: CandidateSnapshot; after: CandidateSnapshot } {
+	const first = snapshot(before);
 
-		expect(classifyTextSpacing(before, before, { clipTolerancePx: TOLERANCE })).toEqual([]);
+	return { before: first, after: { ...first, ...after } };
+}
+
+function classify(pairs: Array<{ before: CandidateSnapshot; after: CandidateSnapshot }>) {
+	return classifyCandidates(
+		pairs.map((entry) => entry.before),
+		pairs.map((entry) => entry.after),
+		{ clipTolerancePx: TOLERANCE },
+	);
+}
+
+describe("classifyCandidates: clipped", () => {
+	it("returns no findings when nothing changed", () => {
+		expect(classify([pair({ index: 0, clipperYIndex: 0 }, {})])).toEqual([]);
 	});
 
-	it("ignores growth without a clipping context", () => {
-		const before = [
-			snapshot({
-				index: 0,
-				selector: "#flow",
-				scrollHeight: 20,
-				clientHeight: 20,
-				clipScrollHeight: 20,
-				clipClientHeight: 20,
-			}),
-		];
-		const after = [
-			snapshot({
-				index: 0,
-				selector: "#flow",
-				scrollHeight: 80,
-				clientHeight: 80,
-				clipScrollHeight: 80,
-				clipClientHeight: 80,
-				rect: rect(0, 0, 100, 80),
-			}),
-		];
-
-		expect(classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE })).toEqual([]);
+	it("ignores growth that no ancestor cuts off", () => {
+		expect(classify([pair({ index: 0 }, { rect: rect(0, 0, 100, 80) })])).toEqual([]);
 	});
 
-	it("flags clipped when overflow appears inside overflow hidden beyond tolerance", () => {
-		const before = [
-			snapshot({
-				index: 0,
-				selector: "#card",
-				html: '<div id="card">',
-				scrollHeight: 40,
-				clientHeight: 40,
-				clipScrollHeight: 40,
-				clipClientHeight: 40,
-				clipOverflowY: "hidden",
-				overflowY: "hidden",
-			}),
-		];
-		const after = [
-			snapshot({
-				index: 0,
-				selector: "#card",
-				html: '<div id="card">',
-				scrollHeight: 54,
-				clientHeight: 40,
-				clipScrollHeight: 54,
-				clipClientHeight: 40,
-				clipOverflowY: "hidden",
-				overflowY: "hidden",
-			}),
-		];
-
-		expect(classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE })).toEqual([
+	it("flags text that newly extends past its clipping box, with the axis and the clipper", () => {
+		expect(
+			classify([pair({ index: 3, clipperYIndex: 7 }, { clippedYPx: 14, clipperYIndex: 7 })]),
+		).toEqual([
 			{
-				selector: "#card",
-				html: '<div id="card">',
 				kind: "clipped",
+				index: 3,
+				clipperIndex: 7,
+				otherIndex: null,
+				axis: "vertical",
+				affectedCount: 1,
 				metrics: { beforeOverflowPx: 0, afterOverflowPx: 14 },
 			},
 		]);
 	});
 
 	it("does not flag overflow within the clip tolerance", () => {
-		const before = [
-			snapshot({
-				index: 0,
-				selector: "#card",
-				clipOverflowY: "hidden",
-				overflowY: "hidden",
-				scrollHeight: 40,
-				clientHeight: 40,
-				clipScrollHeight: 40,
-				clipClientHeight: 40,
-			}),
-		];
-		const after = [
-			snapshot({
-				index: 0,
-				selector: "#card",
-				clipOverflowY: "hidden",
-				overflowY: "hidden",
-				scrollHeight: 42,
-				clientHeight: 40,
-				clipScrollHeight: 42,
-				clipClientHeight: 40,
-			}),
-		];
-
-		expect(classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE })).toEqual([]);
+		expect(classify([pair({ index: 0, clipperYIndex: 0 }, { clippedYPx: 2 })])).toEqual([]);
 	});
 
-	it("flags overflow clip the same way as overflow hidden", () => {
-		const before = [
-			snapshot({
-				index: 0,
-				selector: "#clip",
-				clipOverflowX: "clip",
-				overflowX: "clip",
-			}),
-		];
-		const after = [
-			snapshot({
-				index: 0,
-				selector: "#clip",
-				clipOverflowX: "clip",
-				overflowX: "clip",
-				scrollWidth: 140,
-				clientWidth: 100,
-				clipScrollWidth: 140,
-				clipClientWidth: 100,
-			}),
-		];
+	it("reports horizontal clipping against the element clipping that axis", () => {
+		const [finding] = classify([
+			pair({ index: 0, clipperXIndex: 1, clipperYIndex: 2 }, { clippedXPx: 40 }),
+		]);
 
-		expect(classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE })[0]).toMatchObject({
-			kind: "clipped",
+		expect(finding).toMatchObject({
+			axis: "horizontal",
+			clipperIndex: 1,
 			metrics: { beforeOverflowPx: 0, afterOverflowPx: 40 },
 		});
 	});
 
-	it("does not flag clipped when the clip box already overflowed at baseline", () => {
-		const before = [
-			snapshot({
-				index: 0,
-				selector: "#card",
-				clipOverflowY: "hidden",
-				overflowY: "hidden",
-				scrollHeight: 50,
-				clientHeight: 40,
-				clipScrollHeight: 50,
-				clipClientHeight: 40,
-			}),
-		];
-		const after = [
-			snapshot({
-				index: 0,
-				selector: "#card",
-				clipOverflowY: "hidden",
-				overflowY: "hidden",
-				scrollHeight: 80,
-				clientHeight: 40,
-				clipScrollHeight: 80,
-				clipClientHeight: 40,
-			}),
-		];
+	it("reports both axes, measured on the one that loses more", () => {
+		const [finding] = classify([
+			pair({ index: 0, clipperXIndex: 1, clipperYIndex: 2 }, { clippedXPx: 10, clippedYPx: 30 }),
+		]);
 
-		expect(classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE })).toEqual([]);
+		expect(finding).toMatchObject({
+			axis: "both",
+			clipperIndex: 2,
+			metrics: { beforeOverflowPx: 0, afterOverflowPx: 30 },
+		});
 	});
 
-	it("routes baseline-truncated growth to truncation-increased, never clipped", () => {
-		const before = [
-			snapshot({
-				index: 0,
-				selector: "#title",
-				html: '<p id="title">',
-				truncated: true,
-				overflowX: "hidden",
-				clipOverflowX: "hidden",
-				scrollWidth: 120,
-				clientWidth: 100,
-				clipScrollWidth: 120,
-				clipClientWidth: 100,
-			}),
-		];
-		const after = [
-			snapshot({
-				index: 0,
-				selector: "#title",
-				html: '<p id="title">',
-				truncated: true,
-				overflowX: "hidden",
-				clipOverflowX: "hidden",
-				scrollWidth: 160,
-				clientWidth: 100,
-				clipScrollWidth: 160,
-				clipClientWidth: 100,
-			}),
-		];
+	it("does not flag text that was already cut off at baseline", () => {
+		expect(
+			classify([pair({ index: 0, clipperYIndex: 0, clippedYPx: 10 }, { clippedYPx: 40 })]),
+		).toEqual([]);
+	});
 
-		expect(classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE })).toEqual([
+	it("reports text cut off by the same element once, against the text that loses the most", () => {
+		const findings = classify([
+			// Still fully visible: not part of the finding.
+			pair({ index: 0, clipperYIndex: 5 }, {}),
+			pair({ index: 1, clipperYIndex: 5 }, { clippedYPx: 20 }),
+			pair({ index: 2, clipperYIndex: 5 }, { clippedYPx: 76 }),
+			pair({ index: 3, clipperYIndex: 5 }, { clippedYPx: 48 }),
+		]);
+
+		expect(findings).toEqual([
 			{
-				selector: "#title",
-				html: '<p id="title">',
+				kind: "clipped",
+				index: 2,
+				clipperIndex: 5,
+				otherIndex: null,
+				axis: "vertical",
+				affectedCount: 3,
+				metrics: { beforeOverflowPx: 0, afterOverflowPx: 76 },
+			},
+		]);
+	});
+
+	it("keeps findings from different clipping elements apart, in document order", () => {
+		const findings = classify([
+			pair({ index: 0, clipperYIndex: 9 }, { clippedYPx: 10 }),
+			pair({ index: 1, clipperXIndex: 4 }, { clippedXPx: 10 }),
+			pair({ index: 2, clipperYIndex: 9 }, { clippedYPx: 5 }),
+		]);
+
+		expect(findings.map((finding) => [finding.index, finding.clipperIndex])).toEqual([
+			[0, 9],
+			[1, 4],
+		]);
+		expect(findings[0]?.affectedCount).toBe(2);
+	});
+
+	it("excludes candidates that were moving at baseline", () => {
+		expect(
+			classify([pair({ index: 0, clipperYIndex: 0, unstable: true }, { clippedYPx: 60 })]),
+		).toEqual([]);
+	});
+});
+
+describe("classifyCandidates: truncation-increased", () => {
+	it("routes text that was already truncated to truncation-increased, never clipped", () => {
+		expect(
+			classify([
+				pair(
+					{ index: 0, truncated: true, truncatorIndex: 3, truncationOverflowPx: 20 },
+					// Truncated text also extends further past its box, which must not count as clipping.
+					{ truncationOverflowPx: 60, clippedXPx: 60 },
+				),
+			]),
+		).toEqual([
+			{
 				kind: "truncation-increased",
+				index: 0,
+				clipperIndex: 3,
+				otherIndex: null,
+				affectedCount: 1,
 				metrics: { beforeOverflowPx: 20, afterOverflowPx: 60 },
 			},
 		]);
 	});
 
 	it("does not flag truncation that stays within tolerance", () => {
-		const before = [
-			snapshot({
-				index: 0,
-				selector: "#title",
-				truncated: true,
-				overflowX: "hidden",
-				clipOverflowX: "hidden",
-				scrollWidth: 120,
-				clientWidth: 100,
-				clipScrollWidth: 120,
-				clipClientWidth: 100,
-			}),
-		];
-		const after = [
-			snapshot({
-				index: 0,
-				selector: "#title",
-				truncated: true,
-				overflowX: "hidden",
-				clipOverflowX: "hidden",
-				scrollWidth: 122,
-				clientWidth: 100,
-				clipScrollWidth: 122,
-				clipClientWidth: 100,
-			}),
-		];
-
-		expect(classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE })).toEqual([]);
+		expect(
+			classify([
+				pair(
+					{ index: 0, truncated: true, truncatorIndex: 3, truncationOverflowPx: 20 },
+					{ truncationOverflowPx: 22 },
+				),
+			]),
+		).toEqual([]);
 	});
 
-	it("flags overlap with the counterpart selector when nearby rects newly intersect", () => {
-		const before = [
-			snapshot({
-				index: 0,
-				selector: "#a",
-				html: '<p id="a">',
-				rect: rect(0, 0, 100, 20),
-				fontSize: 16,
-			}),
-			snapshot({
-				index: 1,
-				selector: "#b",
-				html: '<p id="b">',
-				rect: rect(0, 24, 100, 20),
-				fontSize: 16,
-			}),
-		];
-		const after = [
-			snapshot({
-				index: 0,
-				selector: "#a",
-				html: '<p id="a">',
-				rect: rect(0, 0, 100, 28),
-				fontSize: 16,
-			}),
-			snapshot({
-				index: 1,
-				selector: "#b",
-				html: '<p id="b">',
-				rect: rect(0, 20, 100, 28),
-				fontSize: 16,
-			}),
-		];
+	it("reports several pieces of text behind one ellipsis once", () => {
+		const truncatedBy = { truncated: true, truncatorIndex: 3, truncationOverflowPx: 20 };
+		const findings = classify([
+			pair({ index: 0, ...truncatedBy }, { truncationOverflowPx: 60 }),
+			pair({ index: 1, ...truncatedBy }, { truncationOverflowPx: 60 }),
+		]);
 
-		expect(classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE })).toEqual([
+		expect(findings).toHaveLength(1);
+		expect(findings[0]).toMatchObject({ index: 0, affectedCount: 2 });
+	});
+});
+
+describe("classifyCandidates: overlap", () => {
+	it("flags text that newly shares space with its neighbour, with the shared region", () => {
+		const findings = classify([
+			pair({ index: 0, rect: rect(0, 0, 100, 20) }, { textRects: [rect(0, 0, 100, 28)] }),
+			pair({ index: 1, rect: rect(0, 24, 100, 20) }, { textRects: [rect(0, 20, 100, 28)] }),
+		]);
+
+		expect(findings).toEqual([
 			{
-				selector: "#a",
-				html: '<p id="a">',
 				kind: "overlap",
-				metrics: { beforeOverflowPx: 0, afterOverflowPx: 0 },
-				overlapsWith: "#b",
+				index: 0,
+				clipperIndex: null,
+				otherIndex: 1,
+				affectedCount: 1,
+				metrics: {
+					beforeOverflowPx: 0,
+					afterOverflowPx: 0,
+					beforeOverlapAreaPx2: 0,
+					afterOverlapAreaPx2: 800,
+				},
+				overlapRect: rect(0, 20, 100, 8),
 			},
 		]);
 	});
 
+	it("compares lines of text, not the box around a wrapped inline element", () => {
+		// "Note:" sits at the start of the first line. The link after it wraps, so the box around
+		// the link spans both lines at full width and covers "Note:", but none of its lines do.
+		const note = pair({ index: 0, rect: rect(0, 0, 40, 20) }, { textRects: [rect(0, 0, 44, 20)] });
+		const link = pair(
+			{ index: 1, rect: rect(44, 0, 150, 20) },
+			{
+				rect: rect(0, 0, 200, 44),
+				textRects: [rect(48, 0, 152, 20), rect(0, 24, 60, 20)],
+			},
+		);
+
+		expect(classify([note, link])).toEqual([]);
+	});
+
+	it("does not treat lines that only touch as overlapping", () => {
+		const findings = classify([
+			pair({ index: 0, rect: rect(0, 0, 300, 20) }, { textRects: [rect(0, 0, 300, 20.6)] }),
+			pair({ index: 1, rect: rect(0, 22, 300, 20) }, { textRects: [rect(0, 20, 300, 20)] }),
+		]);
+
+		expect(findings).toEqual([]);
+	});
+
+	it("does not flag text that already overlapped at baseline", () => {
+		const findings = classify([
+			pair({ index: 0, rect: rect(0, 0, 100, 24) }, { textRects: [rect(0, 0, 100, 30)] }),
+			pair({ index: 1, rect: rect(0, 16, 100, 24) }, {}),
+		]);
+
+		expect(findings).toEqual([]);
+	});
+
 	it("does not flag overlap for sticky or fixed elements", () => {
-		const before = [
-			snapshot({
-				index: 0,
-				selector: "#header",
-				position: "fixed",
-				rect: rect(0, 0, 200, 40),
-			}),
-			snapshot({
-				index: 1,
-				selector: "#body",
-				rect: rect(0, 48, 200, 40),
-			}),
-		];
-		const after = [
-			snapshot({
-				index: 0,
-				selector: "#header",
-				position: "fixed",
-				rect: rect(0, 0, 200, 40),
-			}),
-			snapshot({
-				index: 1,
-				selector: "#body",
-				rect: rect(0, 20, 200, 40),
-			}),
-		];
+		const findings = classify([
+			pair({ index: 0, position: "fixed", rect: rect(0, 0, 200, 40) }, {}),
+			pair({ index: 1, rect: rect(0, 48, 200, 40) }, { textRects: [rect(0, 20, 200, 40)] }),
+		]);
 
-		expect(classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE })).toEqual([]);
+		expect(findings).toEqual([]);
 	});
 
-	it("does not compare pairs whose baseline vertical gap exceeds one line box", () => {
-		const before = [
-			snapshot({
-				index: 0,
-				selector: "#a",
-				rect: rect(0, 0, 100, 20),
-				fontSize: 16,
-			}),
-			snapshot({
-				index: 1,
-				selector: "#b",
-				rect: rect(0, 80, 100, 20),
-				fontSize: 16,
-			}),
-		];
-		const after = [
-			snapshot({
-				index: 0,
-				selector: "#a",
-				rect: rect(0, 0, 100, 90),
-				fontSize: 16,
-			}),
-			snapshot({
-				index: 1,
-				selector: "#b",
-				rect: rect(0, 80, 100, 20),
-				fontSize: 16,
-			}),
-		];
+	it("does not compare pairs that started more than a line box apart", () => {
+		const findings = classify([
+			pair({ index: 0, rect: rect(0, 0, 100, 20) }, { textRects: [rect(0, 0, 100, 90)] }),
+			pair({ index: 1, rect: rect(0, 80, 100, 20) }, {}),
+		]);
 
-		expect(classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE })).toEqual([]);
+		expect(findings).toEqual([]);
 	});
 
-	it("excludes unstable candidates from every finding kind", () => {
-		const before = [
-			snapshot({
-				index: 0,
-				selector: "#marquee",
-				unstable: true,
-				clipOverflowY: "hidden",
-				overflowY: "hidden",
-			}),
-			snapshot({
-				index: 1,
-				selector: "#stable",
-				rect: rect(0, 0, 100, 20),
-			}),
-		];
-		const after = [
-			snapshot({
-				index: 0,
-				selector: "#marquee",
-				unstable: true,
-				clipOverflowY: "hidden",
-				overflowY: "hidden",
-				scrollHeight: 80,
-				clientHeight: 20,
-				clipScrollHeight: 80,
-				clipClientHeight: 20,
-			}),
-			snapshot({
-				index: 1,
-				selector: "#stable",
-				rect: rect(0, 10, 100, 20),
-			}),
-		];
+	it("excludes candidates that were moving at baseline", () => {
+		const findings = classify([
+			pair({ index: 0, unstable: true, rect: rect(0, 0, 100, 20) }, {}),
+			pair({ index: 1, rect: rect(0, 24, 100, 20) }, { textRects: [rect(0, 10, 100, 20)] }),
+		]);
 
-		expect(classifyTextSpacing(before, after, { clipTolerancePx: TOLERANCE })).toEqual([]);
+		expect(findings).toEqual([]);
+	});
+});
+
+describe("classifyTextSpacing", () => {
+	it("takes each selector and html from the snapshots it is given", () => {
+		const clipped = pair(
+			{ index: 0, selector: "#promo", html: '<p id="promo">', clipperYIndex: 0 },
+			{ clippedYPx: 14 },
+		);
+		const above = pair(
+			{ index: 1, selector: "#a", html: '<p id="a">', rect: rect(0, 200, 100, 20) },
+			{ textRects: [rect(0, 200, 100, 28)] },
+		);
+		const below = pair(
+			{ index: 2, selector: "#b", html: '<p id="b">', rect: rect(0, 224, 100, 20) },
+			{ textRects: [rect(0, 220, 100, 28)] },
+		);
+		const all = [clipped, above, below];
+
+		expect(
+			classifyTextSpacing(
+				all.map((entry) => entry.before),
+				all.map((entry) => entry.after),
+			),
+		).toEqual([
+			{
+				selector: "#promo",
+				html: '<p id="promo">',
+				kind: "clipped",
+				metrics: { beforeOverflowPx: 0, afterOverflowPx: 14 },
+				axis: "vertical",
+				affectedCount: 1,
+			},
+			{
+				selector: "#a",
+				html: '<p id="a">',
+				kind: "overlap",
+				metrics: {
+					beforeOverflowPx: 0,
+					afterOverflowPx: 0,
+					beforeOverlapAreaPx2: 0,
+					afterOverlapAreaPx2: 800,
+				},
+				overlapsWith: "#b",
+				overlapRect: rect(0, 220, 100, 8),
+			},
+		]);
 	});
 });
 
 type ScriptedPage = {
-	baseline: { candidates: CandidateSnapshot[] };
-	after: { candidates: CandidateSnapshot[] };
-	restore: { restored: boolean };
-	throwOnRestore?: Error;
+	baseline?: CandidateSnapshot[];
+	after?: CandidateSnapshot[];
+	limitReached?: boolean;
+	elements?: ElementDescription[];
+	clippers?: ElementDescription[];
+	restored?: boolean;
+	throwOn?: string;
 };
 
-function scriptedAdaptor(page: ScriptedPage): TextSpacingAuditAdaptor & {
+type Clip = { x: number; y: number; width: number; height: number };
+
+function scriptedAdaptor(page: ScriptedPage = {}): TextSpacingAuditAdaptor & {
 	calls: string[];
-	screenshotCalls: Array<{
-		x: number;
-		y: number;
-		width: number;
-		height: number;
-	}>;
+	args: Record<string, unknown[]>;
+	screenshotCalls: Clip[];
 } {
 	const calls: string[] = [];
-	const screenshotCalls: Array<{
-		x: number;
-		y: number;
-		width: number;
-		height: number;
-	}> = [];
+	const args: Record<string, unknown[]> = {};
+	const screenshotCalls: Clip[] = [];
 
 	return {
 		calls,
+		args,
 		screenshotCalls,
 		evaluate: async <T>(
-			fn: (...args: never[]) => T | Promise<T>,
-			..._args: unknown[]
+			fn: (...fnArgs: never[]) => T | Promise<T>,
+			...fnArgs: unknown[]
 		): Promise<T> => {
 			calls.push(fn.name);
+			args[fn.name] = fnArgs;
 
-			if (fn.name === "collectBaselineScript") {
-				return page.baseline as T;
+			if (fn.name === page.throwOn) {
+				throw new Error(`${fn.name} failed`);
 			}
 
-			if (fn.name === "injectOverrideScript") {
-				return undefined as T;
-			}
+			switch (fn.name) {
+				case "collectBaselineScript":
+					return {
+						candidates: page.baseline ?? [],
+						limitReached: page.limitReached ?? false,
+					} as T;
+				case "applyOverrideScript":
+					return { candidates: page.after ?? page.baseline ?? [] } as T;
+				case "describeFindingsScript": {
+					const request = fnArgs[0] as DescribeRequest;
+					const payload: DescribePayload = {
+						page: { width: 1280, height: 4000 },
+						elements: (page.elements ?? []).filter((el) => request.elements.includes(el.index)),
+						clippers: (page.clippers ?? []).filter((el) => request.clippers.includes(el.index)),
+					};
 
-			if (fn.name === "waitTwoFramesScript") {
-				return undefined as T;
-			}
-
-			if (fn.name === "remeasureScript") {
-				return page.after as T;
-			}
-
-			if (fn.name === "pageDimensionsScript") {
-				return { width: 1280, height: 800 } as T;
-			}
-
-			if (fn.name === "restoreAndVerifyScript") {
-				if (page.throwOnRestore) {
-					throw page.throwOnRestore;
+					return payload as T;
 				}
-
-				return page.restore as T;
+				case "restoreAndVerifyScript":
+					return { restored: page.restored ?? true } as T;
+				default:
+					throw new Error(`unexpected evaluate: ${fn.name}`);
 			}
-
-			throw new Error(`unexpected evaluate: ${fn.name}`);
 		},
 		screenshotClip: async (clip) => {
 			calls.push("screenshotClip");
 			screenshotCalls.push(clip);
 
-			return new Uint8Array([1, 2, 3]);
+			return new Uint8Array([screenshotCalls.length]);
 		},
 	};
 }
 
+function described(index: number, selector: string, box: Rect): ElementDescription {
+	return {
+		index,
+		selector,
+		html: `<p data-index="${index}"></p>`,
+		rect: box,
+		overflowX: "visible",
+		overflowY: "visible",
+		truncates: false,
+		visible: true,
+	};
+}
+
 describe("runTextSpacingAudit", () => {
-	it("defaults candidateLimit to 500", () => {
-		expect(DEFAULT_CANDIDATE_LIMIT).toBe(500);
-	});
-
 	it("reports restored true when restore verification succeeds", async () => {
-		const adaptor = scriptedAdaptor({
-			baseline: { candidates: [] },
-			after: { candidates: [] },
-			restore: { restored: true },
+		const adaptor = scriptedAdaptor();
+		const result = await runTextSpacingAudit(adaptor);
+
+		expect(result).toEqual({
+			findings: [],
+			candidateCount: 0,
+			truncated: false,
+			restored: true,
+			summary: { clipped: 0, truncationIncreased: 0, overlaps: 0 },
 		});
-
-		const result = await runTextSpacingAudit(adaptor, { settleMs: 0 });
-
-		expect(result.restored).toBe(true);
-		expect(result.candidateCount).toBe(0);
-		expect(result.findings).toEqual([]);
-		expect(adaptor.calls).toContain("restoreAndVerifyScript");
+		expect(adaptor.calls).toEqual([
+			"collectBaselineScript",
+			"applyOverrideScript",
+			"restoreAndVerifyScript",
+		]);
 	});
 
 	it("reports restored false without throwing when restore verification fails", async () => {
-		const adaptor = scriptedAdaptor({
-			baseline: { candidates: [] },
-			after: { candidates: [] },
-			restore: { restored: false },
-		});
-
-		await expect(runTextSpacingAudit(adaptor, { settleMs: 0 })).resolves.toMatchObject({
+		await expect(runTextSpacingAudit(scriptedAdaptor({ restored: false }))).resolves.toMatchObject({
 			restored: false,
 		});
 	});
 
 	it("reports restored false without throwing when restore itself throws", async () => {
-		const adaptor = scriptedAdaptor({
-			baseline: { candidates: [] },
-			after: { candidates: [] },
-			restore: { restored: true },
-			throwOnRestore: new Error("boom"),
-		});
-
-		await expect(runTextSpacingAudit(adaptor, { settleMs: 0 })).resolves.toMatchObject({
-			restored: false,
-		});
+		await expect(
+			runTextSpacingAudit(scriptedAdaptor({ throwOn: "restoreAndVerifyScript" })),
+		).resolves.toMatchObject({ restored: false });
 	});
 
-	it("restores injected styles even when remeasure throws", async () => {
-		const calls: string[] = [];
-		const adaptor: TextSpacingAuditAdaptor = {
-			evaluate: async <T>(fn: (...args: never[]) => T | Promise<T>): Promise<T> => {
-				calls.push(fn.name);
+	it("restores injected styles even when measuring under the override throws", async () => {
+		const adaptor = scriptedAdaptor({ throwOn: "applyOverrideScript" });
 
-				if (fn.name === "collectBaselineScript") {
-					return { candidates: [] } as T;
-				}
-
-				if (fn.name === "remeasureScript") {
-					throw new Error("remeasure failed");
-				}
-
-				if (fn.name === "restoreAndVerifyScript") {
-					return { restored: true } as T;
-				}
-
-				return undefined as T;
-			},
-			screenshotClip: async () => new Uint8Array([1, 2, 3]),
-		};
-
-		await expect(runTextSpacingAudit(adaptor, { settleMs: 0 })).rejects.toThrow("remeasure failed");
-		expect(calls).toContain("restoreAndVerifyScript");
+		await expect(runTextSpacingAudit(adaptor)).rejects.toThrow("applyOverrideScript failed");
+		expect(adaptor.calls).toContain("restoreAndVerifyScript");
 	});
 
 	it("counts only stable candidates toward candidateCount", async () => {
-		const candidates = [
-			snapshot({ index: 0, selector: "#a", unstable: true }),
-			snapshot({ index: 1, selector: "#b" }),
-			snapshot({ index: 2, selector: "#c" }),
-		];
 		const adaptor = scriptedAdaptor({
-			baseline: { candidates },
-			after: { candidates },
-			restore: { restored: true },
+			baseline: [
+				snapshot({ index: 0, unstable: true }),
+				snapshot({ index: 1 }),
+				snapshot({ index: 2 }),
+			],
 		});
 
-		const result = await runTextSpacingAudit(adaptor, { settleMs: 0 });
-
-		expect(result.candidateCount).toBe(2);
+		expect((await runTextSpacingAudit(adaptor)).candidateCount).toBe(2);
 	});
 
-	it("passes candidateLimit through to the baseline script", async () => {
-		let received: unknown;
-		const adaptor: TextSpacingAuditAdaptor = {
-			evaluate: async <T>(
-				fn: (...args: never[]) => T | Promise<T>,
-				...args: unknown[]
-			): Promise<T> => {
-				if (fn.name === "collectBaselineScript") {
-					received = args[0];
+	it("hands the candidate limit and both stylesheets to the page", async () => {
+		const adaptor = scriptedAdaptor();
 
-					return { candidates: [] } as T;
-				}
+		await runTextSpacingAudit(adaptor, { candidateLimit: 7, settleMs: 25 });
 
-				if (fn.name === "remeasureScript") {
-					return { candidates: [] } as T;
-				}
+		const config = adaptor.args.collectBaselineScript?.[0] as BaselineConfig;
 
-				if (fn.name === "restoreAndVerifyScript") {
-					return { restored: true } as T;
-				}
+		expect(config.limit).toBe(7);
+		expect(config.freezeCss).toContain("transition: none !important");
+		expect(config.overrideCss).toContain("line-height: 1.5 !important");
+		expect(config.overrideCss).toContain("letter-spacing: 0.12em !important");
+		expect(config.overrideCss).toContain("word-spacing: 0.16em !important");
+		expect(config.overrideCss).toContain("p { margin-bottom: 2em !important; }");
+		// Layered, so that it outranks unlayered author `!important` declarations.
+		expect(config.overrideCss).toMatch(/^@layer [\w-]+ \{/);
+		expect(adaptor.args.applyOverrideScript).toEqual([25]);
+	});
 
-				return undefined as T;
+	it("says when the candidate limit left text unmeasured", async () => {
+		const result = await runTextSpacingAudit(scriptedAdaptor({ limitReached: true }));
+
+		expect(result.truncated).toBe(true);
+	});
+
+	it("describes only the elements behind findings, and names the clipping element", async () => {
+		const promo = pair({ index: 4, clipperYIndex: 2 }, { clippedYPx: 14 });
+		const quiet = pair({ index: 5, clipperYIndex: 2 }, {});
+		const adaptor = scriptedAdaptor({
+			baseline: [promo.before, quiet.before],
+			after: [promo.after, quiet.after],
+			elements: [described(4, "#promo-text", rect(20, 100, 300, 60))],
+			clippers: [described(2, "#promo", rect(10, 90, 320, 50))],
+		});
+
+		const result = await runTextSpacingAudit(adaptor);
+
+		expect(adaptor.args.describeFindingsScript).toEqual([{ elements: [4], clippers: [2] }]);
+		expect(result.findings).toEqual([
+			{
+				selector: "#promo-text",
+				html: '<p data-index="4">',
+				kind: "clipped",
+				metrics: { beforeOverflowPx: 0, afterOverflowPx: 14 },
+				rect: rect(20, 100, 300, 60),
+				axis: "vertical",
+				affectedCount: 1,
+				clippedBy: "#promo",
+				clippedByHtml: '<p data-index="2">',
+				screenshot: new Uint8Array([1]),
 			},
-			screenshotClip: async () => new Uint8Array([1, 2, 3]),
-		};
-
-		await runTextSpacingAudit(adaptor, { candidateLimit: 7, settleMs: 0 });
-
-		expect(received).toBe(7);
+		]);
+		expect(result.summary).toEqual({ clipped: 1, truncationIncreased: 0, overlaps: 0 });
 	});
 
 	it("summarises clipped, truncation-increased, and overlap findings", async () => {
-		const before = [
-			snapshot({
-				index: 0,
-				selector: "#clip",
-				html: "<div>",
-				overflowY: "hidden",
-				clipOverflowY: "hidden",
-				rect: rect(400, 0, 100, 20),
-			}),
-			snapshot({
-				index: 1,
-				selector: "#ellip",
-				html: "<p>",
-				truncated: true,
-				overflowX: "hidden",
-				clipOverflowX: "hidden",
-				scrollWidth: 120,
-				clientWidth: 100,
-				clipScrollWidth: 120,
-				clipClientWidth: 100,
-				rect: rect(400, 80, 100, 20),
-			}),
-			snapshot({
-				index: 2,
-				selector: "#a",
-				html: "<span>",
-				rect: rect(0, 0, 50, 16),
-			}),
-			snapshot({
-				index: 3,
-				selector: "#b",
-				html: "<span>",
-				rect: rect(0, 20, 50, 16),
-			}),
-		];
-		const after = [
-			snapshot({
-				index: 0,
-				selector: "#clip",
-				html: "<div>",
-				overflowY: "hidden",
-				clipOverflowY: "hidden",
-				scrollHeight: 40,
-				clientHeight: 20,
-				clipScrollHeight: 40,
-				clipClientHeight: 20,
-				rect: rect(400, 0, 100, 20),
-			}),
-			snapshot({
-				index: 1,
-				selector: "#ellip",
-				html: "<p>",
-				truncated: true,
-				overflowX: "hidden",
-				clipOverflowX: "hidden",
-				scrollWidth: 150,
-				clientWidth: 100,
-				clipScrollWidth: 150,
-				clipClientWidth: 100,
-				rect: rect(400, 80, 100, 20),
-			}),
-			snapshot({
-				index: 2,
-				selector: "#a",
-				html: "<span>",
-				rect: rect(0, 0, 50, 24),
-			}),
-			snapshot({
-				index: 3,
-				selector: "#b",
-				html: "<span>",
-				rect: rect(0, 16, 50, 24),
-			}),
+		const pairs = [
+			pair({ index: 0, clipperYIndex: 0, rect: rect(400, 0, 100, 20) }, { clippedYPx: 20 }),
+			pair(
+				{
+					index: 1,
+					truncated: true,
+					truncatorIndex: 1,
+					truncationOverflowPx: 20,
+					rect: rect(400, 80, 100, 20),
+				},
+				{ truncationOverflowPx: 50 },
+			),
+			pair({ index: 2, rect: rect(0, 0, 50, 16) }, { textRects: [rect(0, 0, 50, 24)] }),
+			pair({ index: 3, rect: rect(0, 20, 50, 16) }, { textRects: [rect(0, 16, 50, 24)] }),
 		];
 		const adaptor = scriptedAdaptor({
-			baseline: { candidates: before },
-			after: { candidates: after },
-			restore: { restored: true },
+			baseline: pairs.map((entry) => entry.before),
+			after: pairs.map((entry) => entry.after),
+			elements: pairs.map((entry) =>
+				described(entry.before.index, `#el-${entry.before.index}`, entry.before.rect),
+			),
 		});
 
-		const result = await runTextSpacingAudit(adaptor, { settleMs: 0 });
+		const result = await runTextSpacingAudit(adaptor);
 
-		expect(result.summary).toEqual({
-			clipped: 1,
-			truncationIncreased: 1,
-			overlaps: 1,
-		});
-		expect(result.findings.map((finding) => finding.kind)).toEqual([
-			"clipped",
-			"truncation-increased",
-			"overlap",
+		expect(result.summary).toEqual({ clipped: 1, truncationIncreased: 1, overlaps: 1 });
+		expect(result.findings.map((finding) => [finding.kind, finding.selector])).toEqual([
+			["clipped", "#el-0"],
+			["truncation-increased", "#el-1"],
+			["overlap", "#el-2"],
 		]);
+		expect(result.findings[2]).toMatchObject({
+			overlapsWith: "#el-3",
+			overlapsWithHtml: '<p data-index="3">',
+			overlapRect: rect(0, 16, 50, 8),
+		});
 	});
 });
 
-function truncationFinding(selector: string) {
-	const before = snapshot({
-		index: 0,
-		selector,
-		truncated: true,
-		scrollWidth: 100,
-		clientWidth: 100,
-		rect: rect(0, 0, 100, 20),
-	});
-	const after = snapshot({
-		index: 0,
-		selector,
-		truncated: true,
-		scrollWidth: 150,
-		clientWidth: 100,
-		rect: rect(0, 0, 150, 20),
-	});
-
-	return { before, after };
-}
-
 describe("runTextSpacingAudit screenshots", () => {
-	it("captures a clipped screenshot of each finding while overrides are still applied", async () => {
-		const { before, after } = truncationFinding("#t");
-		const adaptor = scriptedAdaptor({
-			baseline: { candidates: [before] },
-			after: { candidates: [after] },
-			restore: { restored: true },
-		});
+	function clippedPage(count: number, selector: (index: number) => string): ScriptedPage {
+		const pairs = Array.from({ length: count }, (_, index) =>
+			pair({ index, clipperYIndex: index }, { clippedYPx: 30 }),
+		);
 
-		const result = await runTextSpacingAudit(adaptor, { settleMs: 0 });
+		return {
+			baseline: pairs.map((entry) => entry.before),
+			after: pairs.map((entry) => entry.after),
+			elements: pairs.map((_, index) =>
+				described(index, selector(index), rect(100, 500 + index * 200, 300, 80)),
+			),
+			clippers: pairs.map((_, index) =>
+				described(index, `#card-${index}`, rect(90, 490 + index * 200, 320, 60)),
+			),
+		};
+	}
 
-		expect(result.findings).toHaveLength(1);
-		expect(result.findings[0]?.screenshot).toEqual(new Uint8Array([1, 2, 3]));
-		expect(adaptor.screenshotCalls).toHaveLength(1);
-		// Buffered by the default 10px clip around the `after` (150x20) rect.
-		expect(adaptor.screenshotCalls[0]).toEqual({
-			x: 0,
-			y: 0,
-			width: 160,
-			height: 30,
-		});
-		// Captured before the override was restored.
+	it("frames a clipped element where it is cut off, while overrides are still applied", async () => {
+		const adaptor = scriptedAdaptor(clippedPage(1, () => "#copy"));
+		const result = await runTextSpacingAudit(adaptor);
+
+		expect(result.findings[0]?.screenshot).toEqual(new Uint8Array([1]));
+		// The element (y 500-580) where its clipper (y 490-550) still shows it, plus the 10px buffer.
+		expect(adaptor.screenshotCalls).toEqual([{ x: 90, y: 490, width: 320, height: 70 }]);
 		expect(adaptor.calls.indexOf("screenshotClip")).toBeLessThan(
 			adaptor.calls.indexOf("restoreAndVerifyScript"),
 		);
 	});
 
-	it(`omits screenshots past screenshotLimit (${DEFAULT_SCREENSHOT_LIMIT}) but keeps every finding`, async () => {
-		const pairs = Array.from({ length: DEFAULT_SCREENSHOT_LIMIT + 2 }, (_, i) =>
-			truncationFinding(`#t-${i}`),
-		);
+	it("falls back to the clipping element when the text has left it altogether", async () => {
+		const gone = pair({ index: 0, clipperYIndex: 0 }, { clippedYPx: 90 });
 		const adaptor = scriptedAdaptor({
-			baseline: { candidates: pairs.map((p) => p.before) },
-			after: { candidates: pairs.map((p) => p.after) },
-			restore: { restored: true },
+			baseline: [gone.before],
+			after: [gone.after],
+			elements: [described(0, "#copy", rect(100, 700, 300, 20))],
+			clippers: [described(0, "#card", rect(100, 500, 300, 60))],
 		});
 
-		const result = await runTextSpacingAudit(adaptor, { settleMs: 0 });
+		await runTextSpacingAudit(adaptor, { screenshotClipBuffer: 0 });
+
+		expect(adaptor.screenshotCalls).toEqual([{ x: 100, y: 500, width: 300, height: 60 }]);
+	});
+
+	it("frames both elements of an overlap", async () => {
+		const above = pair(
+			{ index: 0, rect: rect(0, 100, 200, 20) },
+			{ textRects: [rect(0, 100, 200, 28)] },
+		);
+		const below = pair(
+			{ index: 1, rect: rect(0, 124, 260, 20) },
+			{ textRects: [rect(0, 120, 260, 28)] },
+		);
+		const adaptor = scriptedAdaptor({
+			baseline: [above.before, below.before],
+			after: [above.after, below.after],
+			elements: [
+				described(0, "#above", rect(0, 100, 200, 28)),
+				described(1, "#below", rect(0, 120, 260, 28)),
+			],
+		});
+
+		await runTextSpacingAudit(adaptor, { screenshotClipBuffer: 0 });
+
+		expect(adaptor.screenshotCalls).toEqual([{ x: 0, y: 100, width: 260, height: 48 }]);
+	});
+
+	it("drops an overlap when either element cannot be seen", async () => {
+		const above = pair(
+			{ index: 0, rect: rect(0, 100, 200, 20) },
+			{ textRects: [rect(0, 100, 200, 28)] },
+		);
+		const below = pair(
+			{ index: 1, rect: rect(0, 124, 260, 20) },
+			{ textRects: [rect(0, 120, 260, 28)] },
+		);
+
+		// A closed menu faded out with `opacity`, laid over whatever is under it.
+		for (const hidden of [0, 1]) {
+			const adaptor = scriptedAdaptor({
+				baseline: [above.before, below.before],
+				after: [above.after, below.after],
+				elements: [
+					{ ...described(0, "#above", rect(0, 100, 200, 28)), visible: hidden !== 0 },
+					{ ...described(1, "#below", rect(0, 120, 260, 28)), visible: hidden !== 1 },
+				],
+			});
+			const result = await runTextSpacingAudit(adaptor);
+
+			expect(result.findings).toEqual([]);
+			expect(result.summary.overlaps).toBe(0);
+			expect(adaptor.screenshotCalls).toEqual([]);
+		}
+	});
+
+	it("matches each finding to its own element, even when two share a selector", async () => {
+		const adaptor = scriptedAdaptor(clippedPage(2, () => "li>p"));
+		const result = await runTextSpacingAudit(adaptor, { screenshotClipBuffer: 0 });
+
+		expect(result.findings.map((finding) => finding.selector)).toEqual(["li>p", "li>p"]);
+		expect(result.findings.map((finding) => finding.rect?.y)).toEqual([500, 700]);
+		expect(adaptor.screenshotCalls.map((clip) => clip.y)).toEqual([500, 700]);
+		expect(result.findings.map((finding) => finding.screenshot)).toEqual([
+			new Uint8Array([1]),
+			new Uint8Array([2]),
+		]);
+	});
+
+	it(`omits screenshots past screenshotLimit (${DEFAULT_SCREENSHOT_LIMIT}) but keeps every finding`, async () => {
+		const adaptor = scriptedAdaptor(
+			clippedPage(DEFAULT_SCREENSHOT_LIMIT + 2, (index) => `#copy-${index}`),
+		);
+		const result = await runTextSpacingAudit(adaptor);
 
 		expect(result.findings).toHaveLength(DEFAULT_SCREENSHOT_LIMIT + 2);
 		expect(adaptor.screenshotCalls).toHaveLength(DEFAULT_SCREENSHOT_LIMIT);
-		expect(result.findings.slice(0, DEFAULT_SCREENSHOT_LIMIT).every((f) => f.screenshot)).toBe(
-			true,
-		);
-		expect(
-			result.findings.slice(DEFAULT_SCREENSHOT_LIMIT).every((f) => f.screenshot === undefined),
-		).toBe(true);
+		expect(result.findings.map((finding) => finding.screenshot !== undefined)).toEqual([
+			...Array.from({ length: DEFAULT_SCREENSHOT_LIMIT }, () => true),
+			false,
+			false,
+		]);
 	});
 
-	it("takes no screenshots when there are no findings", async () => {
-		const adaptor = scriptedAdaptor({
-			baseline: { candidates: [] },
-			after: { candidates: [] },
-			restore: { restored: true },
-		});
+	it("neither describes nor screenshots anything when there are no findings", async () => {
+		const adaptor = scriptedAdaptor({ baseline: [snapshot({ index: 0 })] });
 
-		await runTextSpacingAudit(adaptor, { settleMs: 0 });
+		await runTextSpacingAudit(adaptor);
 
+		expect(adaptor.calls).not.toContain("describeFindingsScript");
 		expect(adaptor.screenshotCalls).toHaveLength(0);
 	});
 });

@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>overflow clipped on the root element only</title>
+	<style>
+		html, body { margin: 0; }
+		html { overflow-x: hidden; }
+		.wide { width: 1200px; height: 40px; background: #fcc; }
+	</style>
+</head>
+<body>
+	<div class="wide">Cut off by overflow-x: hidden on the root element alone.</div>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Text spacing: clipped text under a scaled ancestor</title>
+		<style>
+			body {
+				margin: 24px;
+				font: 16px/20px sans-serif;
+			}
+			/* A scaled wrapper: everything inside is drawn 1.5 times its layout size. */
+			#scaled {
+				transform: scale(1.5);
+				transform-origin: 0 0;
+				width: 400px;
+			}
+			/* Two 20px lines fit the 40px box; two 24px lines do not. */
+			#box {
+				width: 300px;
+				height: 40px;
+				overflow: hidden;
+				background: #eef;
+			}
+			#text {
+				margin: 0;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="scaled">
+			<div id="box">
+				<p id="text">Delivery<br />Thursday</p>
+			</div>
+		</div>
+	</body>
+</html>

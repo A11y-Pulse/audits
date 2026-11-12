@@ -13,6 +13,13 @@ export class PuppeteerAdaptor implements ReflowAuditAdaptor {
 
 	private readonly browser: BrowserPuppeteerAdaptor;
 
+	/**
+	 * The window's own size, read while the page had no emulated viewport (a browser launched with
+	 * `defaultViewport: null`). Setting the viewport back to this size clears the emulation instead
+	 * of pinning the page to it.
+	 */
+	private unemulated: { width: number; height: number } | null = null;
+
 	constructor(
 		private readonly page: Page,
 		options: PuppeteerAdaptorOptions = {},
@@ -40,13 +47,40 @@ export class PuppeteerAdaptor implements ReflowAuditAdaptor {
 		const viewport = this.page.viewport();
 
 		if (!viewport) {
-			return { width: 800, height: 600 };
+			// No emulation: the page fills its window, whose size only the page can report.
+			this.unemulated = await this.browser.evaluate(() => ({
+				width: window.innerWidth,
+				height: window.innerHeight,
+			}));
+
+			return { ...this.unemulated };
 		}
 
 		return { width: viewport.width, height: viewport.height };
 	}
 
 	async setViewport(v: { width: number; height: number }): Promise<void> {
+		if (
+			this.unemulated &&
+			v.width === this.unemulated.width &&
+			v.height === this.unemulated.height
+		) {
+			await this.page.setViewport(null);
+			this.unemulated = null;
+			// Dropping the emulation resizes the page a moment later, not before this returns.
+			await this.page
+				.waitForFunction(
+					(width: number, height: number) =>
+						window.innerWidth === width && window.innerHeight === height,
+					{ timeout: 1000 },
+					v.width,
+					v.height,
+				)
+				.catch(() => {});
+
+			return;
+		}
+
 		const current = this.page.viewport();
 		const next: Viewport = current
 			? { ...current, width: v.width, height: v.height }

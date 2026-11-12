@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>layout swapped by a debounced resize handler</title>
+	<style>
+		html, body { margin: 0; }
+		#page { width: 1000px; display: flex; }
+		#page.mobile { width: auto; display: block; }
+		aside { flex: 0 0 300px; }
+	</style>
+</head>
+<body>
+	<div id="page">
+		<aside><a href="/docs">Docs</a> <a href="/blog">Blog</a></aside>
+		<main>
+			<h1>Welcome</h1>
+			<p>This layout is switched to its narrow form by script, 250ms after the last resize event.</p>
+		</main>
+	</div>
+	<script>
+		const page = document.getElementById("page");
+		let timer;
+		const apply = () => page.classList.toggle("mobile", window.innerWidth < 600);
+		window.addEventListener("resize", () => {
+			clearTimeout(timer);
+			timer = setTimeout(apply, 250);
+		});
+		apply();
+	</script>
+</body>
+</html>

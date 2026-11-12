@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>text that will not wrap</title>
+	<style>
+		html, body { margin: 0; }
+		main { padding: 1rem; }
+		h1 { white-space: nowrap; font-size: 2rem; }
+	</style>
+</head>
+<body>
+	<main>
+		<h1 id="headline">Accessibility conformance statement for the customer portal</h1>
+		<p id="url">https://example.com/a/very/long/path/that/has/no/break/opportunities_anywhere_in_it_at_all_and_keeps_going_past_the_edge</p>
+		<pre id="code">const response = await fetch("https://api.example.com/v2/accounts/1234/statements?from=2024-01-01&amp;to=2024-12-31");</pre>
+		<p id="fine">Ordinary prose wraps at the viewport edge and is never reported.</p>
+	</main>
+</body>
+</html>
