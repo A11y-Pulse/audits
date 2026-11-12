@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>hidden slider beside a data table</title>
+	<style>
+		html, body { margin: 0; }
+		main { padding: 1rem; }
+		.slider { overflow: hidden; width: 100%; }
+		.track { display: flex; width: 1500px; transition: transform 0.3s; }
+		.slide { flex: 0 0 300px; height: 120px; background: #dde; }
+		td, th { white-space: nowrap; padding: 0.5rem; }
+	</style>
+</head>
+<body>
+	<main>
+		<h1>Quarterly results</h1>
+		<div class="slider" id="slider">
+			<div class="track" id="track">
+				<div class="slide">Slide one</div>
+				<div class="slide">Slide two</div>
+				<div class="slide">Slide three</div>
+				<div class="slide">Slide four</div>
+				<div class="slide">Slide five</div>
+			</div>
+		</div>
+		<table id="stats">
+			<thead>
+				<tr><th>Region</th><th>Q1 revenue</th><th>Q2 revenue</th><th>Q3 revenue</th><th>Q4 revenue</th><th>Year on year</th></tr>
+			</thead>
+			<tbody>
+				<tr><td>Northern district office</td><td>1,234,567</td><td>1,345,678</td><td>1,456,789</td><td>1,567,890</td><td>+12.4%</td></tr>
+			</tbody>
+		</table>
+	</main>
+</body>
+</html>

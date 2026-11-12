@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>content in its own scrolling containers</title>
+	<style>
+		html, body { margin: 0; }
+		main { padding: 1rem; }
+		.scroll { overflow-x: auto; max-width: 100%; }
+		pre { margin: 0; }
+		td, th { white-space: nowrap; padding: 0.5rem; }
+		.cards { display: flex; gap: 8px; width: max-content; }
+		.card { width: 240px; height: 100px; background: #eee; }
+	</style>
+</head>
+<body>
+	<main>
+		<h1>Installing the command line tool</h1>
+		<p>Run the installer, then confirm the version. Long commands scroll inside their own box so the page itself never scrolls sideways.</p>
+		<div class="scroll" id="sample"><pre><code>curl --proto '=https' --tlsv1.2 -sSf https://downloads.example.com/install.sh | sh -s -- --channel stable --prefix /usr/local</code></pre></div>
+		<p>The supported platforms are listed below, followed by a few related guides you may want to read next.</p>
+		<div class="scroll" id="platforms">
+			<table>
+				<thead><tr><th>Platform</th><th>Architecture</th><th>Minimum version</th><th>Support ends</th></tr></thead>
+				<tbody><tr><td>Linux</td><td>x86_64, arm64</td><td>Kernel 5.10</td><td>December 2030</td></tr></tbody>
+			</table>
+		</div>
+		<div class="scroll" id="guides">
+			<div class="cards">
+				<a class="card" href="/a">Guide A</a><a class="card" href="/b">Guide B</a><a class="card" href="/c">Guide C</a>
+			</div>
+		</div>
+	</main>
+</body>
+</html>

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>fixed dialog that scrolls its own content</title>
+	<style>
+		html, body { margin: 0; }
+		main { padding: 1rem; }
+		#dialog { position: fixed; inset: 0; overflow: auto; background: #fff; padding: 1rem; box-sizing: border-box; }
+		#sizes { width: 520px; height: 80px; background: #dde; }
+	</style>
+</head>
+<body>
+	<main>
+		<h1>Trail running shoes</h1>
+		<p>Lightweight shoes with a grippy outsole for wet rock and loose gravel. Available in half sizes and three widths, with free returns within thirty days of delivery.</p>
+		<p>Pair them with our gaiters for muddy conditions, and see the care guide for how to wash and dry them without damaging the upper.</p>
+		<p>Delivery is free on orders over fifty dollars. Orders placed before two in the afternoon are sent the same day.</p>
+	</main>
+	<div id="dialog" role="dialog" aria-modal="true" aria-label="Size guide">
+		<h2>Size guide</h2>
+		<div id="sizes">Chart</div>
+	</div>
+</body>
+</html>

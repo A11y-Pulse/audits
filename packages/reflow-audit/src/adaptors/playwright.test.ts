@@ -19,12 +19,15 @@ describe("PlaywrightAdaptor", () => {
 		});
 	});
 
-	it("getViewport falls back when the context was created without a viewport", async () => {
-		const page = cdpPage({ viewportSize: () => null });
+	it("getViewport reads the window's size when the context was created without a viewport", async () => {
+		const page = cdpPage({
+			viewportSize: () => null,
+			evaluate: vi.fn(async () => ({ width: 1400, height: 913 })),
+		});
 
 		await expect(new PlaywrightAdaptor(page).getViewport()).resolves.toEqual({
-			width: 800,
-			height: 600,
+			width: 1400,
+			height: 913,
 		});
 	});
 

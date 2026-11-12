@@ -14,5 +14,7 @@ export {
 export type {
 	ReflowBucket,
 	ReflowOffender,
+	ReflowOffenderReason,
+	ReflowOverflowingContent,
 	ReflowResult,
 } from "./result";

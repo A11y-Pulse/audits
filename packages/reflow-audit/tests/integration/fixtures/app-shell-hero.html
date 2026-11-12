@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>single-page app shell with a hero that does not reflow</title>
+	<style>
+		html, body { margin: 0; }
+		#root { height: 100vh; overflow-y: auto; }
+		#hero { width: 600px; padding: 2rem 0; background: #dde; }
+		main { padding: 1rem; }
+	</style>
+</head>
+<body>
+	<div id="root">
+		<header><a href="/">Home</a> <a href="/plans">Plans</a></header>
+		<div id="hero"><h1>Broadband that keeps up</h1></div>
+		<main>
+			<p>The application renders everything inside one element that scrolls vertically, which also makes it scroll sideways when something inside is too wide.</p>
+			<p>Compare plans, check coverage at your address and book an installation.</p>
+		</main>
+	</div>
+</body>
+</html>

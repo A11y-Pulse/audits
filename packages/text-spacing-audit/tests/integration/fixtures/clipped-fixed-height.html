@@ -4,16 +4,22 @@
 		<meta charset="utf-8" />
 		<title>Text spacing clipped</title>
 		<style>
+			body {
+				margin: 16px;
+				font: 16px/20px sans-serif;
+			}
 			.card {
 				box-sizing: border-box;
 				width: 40rem;
-				height: 20px;
+				height: 40px;
 				overflow: hidden;
-				font: 16px/1.2 sans-serif;
 			}
 		</style>
 	</head>
 	<body>
-		<div class="card" id="card">Hello there, a single line of copy.</div>
+		<div class="card" id="card">
+			Free delivery on every order this week.<br />
+			Offer ends on Sunday at midnight.
+		</div>
 	</body>
 </html>

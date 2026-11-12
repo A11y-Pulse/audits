@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>unscaled media inside picture and link wrappers</title>
+	<style>html, body { margin: 0; }</style>
+</head>
+<body>
+	<h1>Harbour walks</h1>
+	<picture id="hero-wrap">
+		<source media="(min-width: 5000px)" srcset="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1'/%3E">
+		<img id="hero" width="1200" height="300" alt="Panorama of the harbour at dusk"
+			src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='300'%3E%3Crect width='1200' height='300' fill='%23468'/%3E%3C/svg%3E">
+	</picture>
+	<p>Three routes around the inner harbour, each under an hour.</p>
+	<a id="promo-link" href="/map"><img id="promo" width="900" height="200" alt="Map of the three routes"
+		src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='200'%3E%3Crect width='900' height='200' fill='%23864'/%3E%3C/svg%3E"></a>
+</body>
+</html>

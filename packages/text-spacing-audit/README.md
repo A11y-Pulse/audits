@@ -53,24 +53,27 @@ The audit does not require authors to *use* those values. It checks that the pag
 
 Static tools such as axe-core's `avoid-inline-spacing` only flag inline `!important` spacing declarations that would *block* a user override. This audit applies the override and looks at the outcome. Leave axe's rule enabled: the two checks are complementary, and inline `!important` spacing is left to axe because a stylesheet `!important` cannot override it.
 
+Spacing that an author *stylesheet* pins with `!important` is overridden, as a user stylesheet would override it. The injected rules sit in a cascade layer declared ahead of the page's own styles, which outranks every unlayered `!important` declaration whatever its specificity.
+
 ## Bookmarklet methodology
 
 The procedure matches the bookmarklet used by the WCAG community:
 
 1. Wait for `document.fonts.ready` and freeze CSS animations/transitions so motion does not look like clipping.
-2. Collect visible text containers (elements with a non-whitespace direct text node), capped at `candidateLimit`.
-3. Inject:
+2. Collect visible text containers (elements with a non-whitespace direct text node), capped at `candidateLimit`, and measure each line of their text.
+3. Inject, into the document and every open shadow root:
 
 ```css
 * { line-height: 1.5 !important; letter-spacing: 0.12em !important; word-spacing: 0.16em !important; }
 p { margin-bottom: 2em !important; }
 ```
 
-4. Re-measure the same elements and classify:
-   - **clipped** (the only violation class): overflow `hidden`/`clip`, content fitted at baseline, then exceeded the clip box by more than `clipTolerancePx`.
+4. Wait for the layout to stop changing, re-measure the same elements and classify:
+   - **clipped** (the only violation class): the element's lines of text fitted inside every ancestor with overflow `hidden`/`clip` at baseline, and now extend past one of them by more than `clipTolerancePx`. Text that can still be scrolled to inside an `auto`/`scroll` ancestor does not count. Everything cut off by the same element is one finding, reported against the text that loses the most.
    - **truncation-increased** (incomplete): already truncated (ellipsis / line-clamp) and overflow grew.
-   - **overlap** (incomplete): nearby text rects that did not intersect at baseline and now do. Sticky and fixed elements are skipped.
-5. Remove the injected styles and verify a sample of rects match the baseline. A mismatch sets `restored: false` but never throws.
+   - **overlap** (incomplete): lines of text in two nearby elements that did not share any space at baseline and now do, counting each line only as far as its clipping and scrolling ancestors leave it showing. Sticky and fixed elements are skipped.
+5. Look up the selector, markup and box of the elements behind each finding, and screenshot them while the spacing is still applied.
+6. Remove the injected styles and verify a sample of rects match the baseline. A mismatch sets `restored: false` but never throws.
 
 Growth and reflow without clipping are not findings. That is the correct response to a spacing override.
 
@@ -93,7 +96,9 @@ The following options can be passed to `runTextSpacingAudit` as `TextSpacingOpti
 | ------------------ | -------- | ------- | ---------------------------------------------------------------------------------------------------- |
 | `candidateLimit`   | `number` | `500`   | Max visible text containers to measure, in document order.                                           |
 | `clipTolerancePx`  | `number` | `2`     | Overflow in px that must be exceeded before a clip or truncation increase counts.                    |
-| `settleMs`         | `number` | `200`   | Extra wait after two animation frames for layout to settle after injecting or removing styles.       |
+| `settleMs`         | `number` | `0`     | Extra wait once the layout has stopped changing after the override, for pages that react late.       |
+| `screenshotClipBuffer` | `number` | `10` | Padding in px around a finding when clipping its screenshot.                                         |
+| `screenshotLimit`  | `number` | `10`    | Max findings to screenshot. Findings past the limit are still reported, without a `screenshot`.      |
 
 ## Result shape
 
@@ -105,10 +110,24 @@ type TextSpacingResult = {
     selector: string;
     html: string;
     kind: "clipped" | "truncation-increased" | "overlap";
-    metrics: { beforeOverflowPx: number; afterOverflowPx: number };
+    metrics: {
+      beforeOverflowPx: number;
+      afterOverflowPx: number;
+      beforeOverlapAreaPx2?: number;
+      afterOverlapAreaPx2?: number;
+    };
+    rect?: { x: number; y: number; width: number; height: number };
+    axis?: "horizontal" | "vertical" | "both";
+    clippedBy?: string;
+    clippedByHtml?: string;
+    affectedCount?: number;
     overlapsWith?: string;
+    overlapsWithHtml?: string;
+    overlapRect?: { x: number; y: number; width: number; height: number };
+    screenshot?: Uint8Array;
   }>;
   candidateCount: number;
+  truncated: boolean;
   restored: boolean;
   summary: {
     clipped: number;
@@ -118,7 +137,24 @@ type TextSpacingResult = {
 };
 ```
 
-`candidateCount` is the number of stable (non-moving) text containers that were measured. `clipped` findings are the confident loss-of-content signal. `truncation-increased` and `overlap` are heuristic and should be treated as incomplete, not violations.
+`candidateCount` is the number of stable (non-moving) text containers that were measured. `truncated` is `true` when the page has more text containers than `candidateLimit`, so some of it was not measured. `clipped` findings are the confident loss-of-content signal. `truncation-increased` and `overlap` are heuristic and should be treated as incomplete, not violations.
+
+Each finding carries the evidence needed to locate it:
+
+| Field | Kinds | Description |
+| --- | --- | --- |
+| `metrics.beforeOverflowPx` / `afterOverflowPx` | `clipped` | How far the text extends past its clipping box, before and after the override. |
+| | `truncation-increased` | Scroll overflow of the truncating element, before and after. |
+| `metrics.beforeOverlapAreaPx2` / `afterOverlapAreaPx2` | `overlap` | Area the two elements' text shares, before and after. |
+| `rect` | all | The element's box with spacing applied. |
+| `axis` | `clipped` | The direction in which text is cut off. |
+| `clippedBy` / `clippedByHtml` | `clipped`, `truncation-increased` | The element doing the clipping. It is the finding's own element when that clips its own text. |
+| `affectedCount` | `clipped`, `truncation-increased` | How many text containers that element cuts off. They are reported once, against the worst affected. |
+| `overlapsWith` / `overlapsWithHtml` | `overlap` | The other element. |
+| `overlapRect` | `overlap` | The largest region the two elements' text shares. |
+| `screenshot` | all | PNG of the finding with spacing applied: a clipped element where it is cut off, or both overlapping elements. Omitted past `screenshotLimit`. |
+
+Every rect is in document coordinates: CSS px from the top left of the page, not of the viewport.
 
 ## Adaptors
 
@@ -130,7 +166,9 @@ The package ships two implementations: `PuppeteerAdaptor` from the `./puppeteer`
 
 | Method                  | Description                                                                                               |
 | ----------------------- | --------------------------------------------------------------------------------------------------------- |
-| `evaluate(fn, ...args)` | Runs `fn` in the page context, passing in any serialisable `args`, and returns its result.               |
+| `evaluate(fn, ...args)` | Runs `fn` in the page context, passing in any serialisable `args`, and returns its result. `fn` may be async. |
+| `screenshotClip(clip, scale?)` | Returns PNG bytes of the region `clip` (`{ x, y, width, height }` in document coordinates, which may lie outside the viewport). `scale` is the device scale factor. |
+| `screenshotClipScale` | Optional property: the device scale factor the audit passes to `screenshotClip`. Defaults to `1`. |
 
 ### Writing a new adaptor
 
@@ -140,17 +178,21 @@ Implement `TextSpacingAuditAdaptor` from `@a11y-pulse/text-spacing-audit` (or it
 import type { TextSpacingAuditAdaptor } from "@a11y-pulse/text-spacing-audit";
 
 class MyFrameworkAdaptor implements TextSpacingAuditAdaptor {
-  // ...implement evaluate for your framework
+  // ...implement evaluate and screenshotClip for your framework
 }
 ```
 
-Use [`src/adaptors/puppeteer.ts`](./src/adaptors/puppeteer.ts) or [`src/adaptors/playwright.ts`](./src/adaptors/playwright.ts) as a reference implementation. Each is a thin `page.evaluate` wrapper.
+Use [`src/adaptors/puppeteer.ts`](./src/adaptors/puppeteer.ts) or [`src/adaptors/playwright.ts`](./src/adaptors/playwright.ts) as a reference implementation. Each is a thin wrapper around the page's evaluate and screenshot calls.
 
 ## Limitations
 
 - **Overlap is incomplete, never a violation.** Overlap detection is heuristic: nearby pairs only, with sticky and fixed elements skipped. See [Known false positives](#known-false-positives).
+- **Invisible text is not reported as overlapping.** An overlap is dropped when either element cannot be seen (a closed menu faded out with `opacity: 0`). Clipping inside such an element is still reported, since it is there when the element is shown.
 - **Inline `!important` spacing is left to axe.** A user stylesheet cannot beat an inline `!important` declaration. axe-core `avoid-inline-spacing` covers that blocker; this audit cannot restyle those elements.
-- **Already-clipped content is not attributed to the override.** Only new overflow inside a clipping box is reported as `clipped`.
+- **Layered author `!important` in shadow roots.** The override outranks unlayered author `!important` declarations everywhere. Inside a shadow root it cannot be declared ahead of the component's own cascade layers, so an `!important` declaration in one of those still wins.
+- **Already-clipped content is not attributed to the override.** Only text that fitted inside its clipping boxes at baseline is reported as `clipped`.
+- **Clipping is measured on lines of text.** A line box that outgrows a fixed height by less than the space above and below its glyphs cuts nothing off, and is not reported.
+- **Transforms.** A clipping box under a scaling transform is measured at the size it is drawn. Rotation and skew are not accounted for, so text inside a rotated clipping ancestor can be misjudged.
 - **Intentional truncation.** Single-line ellipsis and line-clamp that were already truncating route to `truncation-increased` (incomplete), not `clipped`.
 - **Motion.** CSS animations are frozen before the baseline. Elements whose rects move between two samples (JS-driven motion) are excluded.
 - **Main frame only.** Text in canvas, images, or cross-origin iframes is invisible to the audit. Closed shadow roots are opaque; open shadow roots are walked.
@@ -162,9 +204,12 @@ Use [`src/adaptors/puppeteer.ts`](./src/adaptors/puppeteer.ts) or [`src/adaptors
 
 Cases where the audit reports a problem that is not one. Each says which bucket it lands in: `incomplete` asks for a human to check, `violations` claims a failure.
 
-- **Overlap with content clipped by a scrolling ancestor** (`incomplete`). Overlap is measured between raw element boxes. Content that grows past the edge of a horizontally scrolling wrapper (cells of a wide table, say) is reported as overlapping its neighbours, although the wrapper clips it and it never paints over them.
 - **Deliberate overlaps** (`incomplete`). Decorative or absolutely positioned text that overlaps nearby text by design is reported for review.
 - **Text that was already truncated** (`incomplete`). An ellipsis or line clamp that truncates a little more under the extra spacing is reported for review, never as a violation.
+
+## Reusing the measurement
+
+The page scripts behind the audit are exported from `@a11y-pulse/text-spacing-audit/measure` for audits that measure the same thing under a different change to the page: [`@a11y-pulse/resize-text-audit`](../resize-text-audit) takes the baseline, resizes the viewport instead of applying the spacing override, and re-measures with `remeasureScript`. Passing `true` as its second argument collects the candidates again first, for a change that alters which styles apply: text that is only rendered now is measured too, with indexes after the baseline's, and each candidate's clipping and truncating ancestors are read afresh. The subpath exports `collectBaselineScript`, `remeasureScript`, `describeFindingsScript`, `restoreAndVerifyScript`, `findOverlapPairs`, `FREEZE_CSS`, `MAX_TEXT_RECTS` and their types. `describeFindingsScript` also reports how each element is styled when it is called (`overflowX`, `overflowY`, `truncates`, `visible`).
 
 ## Releasing
 

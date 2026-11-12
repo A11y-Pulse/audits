@@ -7,6 +7,7 @@ export type { TextSpacingOptions } from "./audit";
 export { classifyTextSpacing, runTextSpacingAudit } from "./audit";
 export type {
 	CandidateSnapshot,
+	TextSpacingAxis,
 	TextSpacingElementResult,
 	TextSpacingFindingKind,
 	TextSpacingRect,

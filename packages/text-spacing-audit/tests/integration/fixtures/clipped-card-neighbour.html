@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Text spacing: clipped card with a paragraph straight after it</title>
+		<style>
+			body {
+				margin: 24px;
+				font: 16px/20px sans-serif;
+			}
+			/* Four 20px lines fit the 84px card; four 24px lines run 12px past it, into the space the
+			   next paragraph occupies. That part is cut off, so nobody sees the two overlap. */
+			#card {
+				width: 320px;
+				height: 84px;
+				overflow: hidden;
+				background: #eef;
+			}
+			#text,
+			#next {
+				margin: 0;
+				width: 320px;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="card">
+			<p id="text">Standard<br />Express<br />Next day<br />Collection</p>
+		</div>
+		<p id="next">Prices include tax<br />and packaging</p>
+	</body>
+</html>

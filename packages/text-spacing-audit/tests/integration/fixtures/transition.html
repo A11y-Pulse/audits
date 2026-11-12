@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Text spacing with transitions</title>
+		<style>
+			body {
+				margin: 16px;
+				font: 16px/1.2 sans-serif;
+				max-width: 30rem;
+			}
+			a,
+			p,
+			li {
+				transition: all 0.3s;
+			}
+		</style>
+	</head>
+	<body>
+		<p id="intro">
+			Every element on this page animates any property that changes, which is a common way to get
+			smooth hover states without listing the properties.
+		</p>
+		<ul>
+			<li><a href="/one">First link in a list</a></li>
+			<li><a href="/two">Second link in a list</a></li>
+		</ul>
+		<p id="outro">Removing the spacing must not leave the page mid-animation when it is checked.</p>
+	</body>
+</html>

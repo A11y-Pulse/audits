@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Text spacing line clamp</title>
+		<style>
+			body {
+				margin: 16px;
+				font: 16px/1.2 sans-serif;
+			}
+			.teaser {
+				display: -webkit-box;
+				-webkit-box-orient: vertical;
+				-webkit-line-clamp: 2;
+				width: 12rem;
+				overflow: hidden;
+				margin: 0;
+			}
+		</style>
+	</head>
+	<body>
+		<p class="teaser" id="teaser">
+			A long teaser that is clamped to two lines before any spacing is applied, so most of its
+			words are already hidden behind the clamp and stay hidden afterwards.
+		</p>
+	</body>
+</html>

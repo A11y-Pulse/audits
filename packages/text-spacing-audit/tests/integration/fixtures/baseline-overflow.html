@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Text spacing hero with a decorative overflow</title>
+		<style>
+			body {
+				margin: 0;
+				font: 16px/20px sans-serif;
+			}
+			.hero {
+				position: relative;
+				height: 60px;
+				overflow: hidden;
+				background: #123;
+				color: #fff;
+			}
+			/* Decoration that already spills out of the hero before any spacing is applied. */
+			.blob {
+				position: absolute;
+				top: 20px;
+				right: -80px;
+				width: 240px;
+				height: 240px;
+				border-radius: 50%;
+				background: #345;
+			}
+			.hero p {
+				position: relative;
+				margin: 0;
+			}
+		</style>
+	</head>
+	<body>
+		<header class="hero" id="hero">
+			<div class="blob"></div>
+			<p id="tagline">
+				Accessibility monitoring for teams.<br />
+				Real browsers, real interactions.<br />
+				Start a free trial today.
+			</p>
+		</header>
+	</body>
+</html>

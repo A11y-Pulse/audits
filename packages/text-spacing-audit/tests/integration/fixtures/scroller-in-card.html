@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Text spacing scrolling region inside a clipped card</title>
+		<style>
+			body {
+				margin: 16px;
+				font: 16px/20px sans-serif;
+			}
+			.card {
+				width: 40rem;
+				height: 80px;
+				overflow: hidden;
+				border-radius: 8px;
+			}
+			/* Everything that does not fit can still be scrolled to. */
+			.log {
+				height: 100%;
+				overflow: auto;
+			}
+			p {
+				margin: 0;
+			}
+		</style>
+	</head>
+	<body>
+		<section class="card" id="card">
+			<div class="log" id="log" tabindex="0">
+				<p>Order received.</p>
+				<p>Payment confirmed.</p>
+				<p>Parcel packed.</p>
+				<p>Parcel handed to the courier.</p>
+			</div>
+		</section>
+	</body>
+</html>

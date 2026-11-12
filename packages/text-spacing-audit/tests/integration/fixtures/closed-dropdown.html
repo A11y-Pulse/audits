@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Text spacing: closed dropdown over a heading</title>
+		<style>
+			body {
+				margin: 0;
+				font: 14px/16px sans-serif;
+			}
+			#nav {
+				position: relative;
+				height: 30px;
+			}
+			#toggle {
+				font: inherit;
+				height: 30px;
+			}
+			/* Closed: laid out, but invisible and out of reach of the pointer. With extra spacing its
+			   items grow down over the heading, where there is nothing to see. */
+			#menu {
+				position: absolute;
+				top: 30px;
+				left: 0;
+				margin: 0;
+				padding: 0;
+				list-style: none;
+				opacity: 0;
+				pointer-events: none;
+			}
+			#heading {
+				margin: 34px 0 0;
+				font: bold 14px/16px sans-serif;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="nav">
+			<button id="toggle" type="button" aria-expanded="false" aria-controls="menu">Account</button>
+			<ul id="menu">
+				<li id="item-orders">Orders and returns</li>
+				<li id="item-settings">Settings and privacy</li>
+			</ul>
+		</div>
+		<h1 id="heading">Welcome back to your account</h1>
+	</body>
+</html>

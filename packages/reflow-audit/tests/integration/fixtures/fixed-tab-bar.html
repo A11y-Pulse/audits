@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>fixed tab bar that scrolls sideways</title>
+	<style>
+		html, body { margin: 0; }
+		nav { position: fixed; bottom: 0; left: 0; right: 0; overflow-x: auto; white-space: nowrap; background: #223; }
+		nav a { display: inline-block; padding: 1rem 1.5rem; color: #fff; }
+		main { padding: 1rem 1rem 5rem; }
+	</style>
+</head>
+<body>
+	<main>
+		<h1>Your account</h1>
+		<p>The tab bar is fixed to the bottom of the screen and scrolls sideways within itself, so every tab can be reached at 320px without scrolling the page in two directions.</p>
+		<p>Orders, returns, saved addresses and payment methods are all managed from the tabs below.</p>
+	</main>
+	<nav aria-label="Account">
+		<a href="/a">Overview</a><a href="/b">Orders</a><a href="/c">Returns</a><a href="/d">Addresses</a><a href="/e">Payments</a><a href="/f">Settings</a>
+	</nav>
+</body>
+</html>
