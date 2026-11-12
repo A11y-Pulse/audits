@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Fixed image</title><style>
+  body { margin: 0; background: #fff; font: 16px/1.5 system-ui, sans-serif; }
+  main { padding: 0 16px; }
+  a { display: block; padding: 8px; }
+  a:focus { outline: 3px solid #0050ff; }
+  .spacer { height: 120vh; }
+  #promo { position: fixed; left: 0; bottom: 0; width: 100%; height: 90px; z-index: 10; }
+</style></head><body>
+  <main>
+    <a href="#a" id="first">First</a>
+    <div class="spacer"></div>
+    <a href="#b" id="under-image">Under the image</a>
+  </main>
+  <img id="promo" alt="Sale now on" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Crect width='10' height='10' fill='%23a00'/%3E%3C/svg%3E">
+</body></html>

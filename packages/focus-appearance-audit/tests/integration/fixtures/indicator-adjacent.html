@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Checkout</title><style>
+  body { background: #fff; color: #1a1a1a; font: 16px/1.5 system-ui, sans-serif; margin: 40px; }
+  section { margin: 0 0 28px; }
+  a, button, input { font: inherit; }
+  a:focus-visible, button:focus-visible, input:focus-visible { outline: none; }
+
+  /* A border that is always there turns from grey to blue, with a faint tint behind the text. */
+  .field { padding: 8px 12px; border: 2px solid #767676; border-radius: 4px; background: #fff; }
+  #recolour:focus-visible { border-color: #0000ff; background: #f7f7ff; }
+
+  /* Outlines drawn inside a filled button by a negative offset. */
+  .solid { padding: 14px 24px; border: 0; border-radius: 4px; background: #14213d; color: #fff; }
+  #inset-outline:focus-visible { outline: 2px solid #fff; outline-offset: -5px; }
+  #faint-inset:focus-visible { outline: 2px solid #1d2d50; outline-offset: -5px; }
+
+  /* A link placed over a dark layer that is its sibling, not its ancestor. */
+  .hero { position: relative; height: 120px; }
+  .hero-layer { position: absolute; inset: 0; background: #14213d; }
+  #over-layer { position: absolute; left: 24px; top: 44px; color: #fff; }
+  #over-layer:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+  /* A border that appears on an element with its own fill. */
+  .pill { display: inline-block; padding: 8px 14px; border: 2px solid transparent; border-radius: 20px; background: #14213d; color: #fff; text-decoration: none; }
+  #filled-border:focus-visible { border-color: #fff; }
+
+  /* A background that appears where there was none. */
+  #appearing-bg { color: #1a1a1a; }
+  #appearing-bg:focus-visible { background: #ffdd00; }
+</style></head><body>
+  <h1>Checkout</h1>
+  <section>
+    <label for="recolour">Discount code</label>
+    <input id="recolour" class="field" type="text" value="SPRING">
+  </section>
+  <section>
+    <button id="inset-outline" class="solid" type="button">Pay now</button>
+    <button id="faint-inset" class="solid" type="button">Save for later</button>
+  </section>
+  <section class="hero">
+    <div class="hero-layer"></div>
+    <a id="over-layer" href="/delivery">Delivery options</a>
+  </section>
+  <section>
+    <a id="filled-border" class="pill" href="/gift">Add gift wrap</a>
+  </section>
+  <section>
+    <a id="appearing-bg" href="/terms">Terms of sale</a>
+  </section>
+</body></html>

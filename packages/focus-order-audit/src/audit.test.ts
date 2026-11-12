@@ -6,7 +6,7 @@ import type {
 } from "@a11y-pulse/tab-orchestrator";
 import { describe, expect, it, vi } from "vitest";
 import { createFocusOrderAudit } from "./audit";
-import { type PageContext, pageContextScript } from "./browser-scripts";
+import { type PageContext, pageContextScript, tabindexValuesScript } from "./browser-scripts";
 
 const PAGE_URL = "https://example.test/";
 
@@ -40,7 +40,10 @@ function stop(index: number, y: number, extra: Partial<ActiveElementInfo> = {}):
 	};
 }
 
-function fakeAdaptor(context: PageContext | Error = CONTEXT): BrowserAdaptor {
+function fakeAdaptor(
+	context: PageContext | Error = CONTEXT,
+	tabindexValues: Array<number | null> | Error = new Error("no longer readable"),
+): BrowserAdaptor {
 	return {
 		evaluate: (async (fn: unknown) => {
 			if (fn === pageContextScript) {
@@ -49,6 +52,14 @@ function fakeAdaptor(context: PageContext | Error = CONTEXT): BrowserAdaptor {
 				}
 
 				return context;
+			}
+
+			if (fn === tabindexValuesScript) {
+				if (tabindexValues instanceof Error) {
+					throw tabindexValues;
+				}
+
+				return tabindexValues;
 			}
 
 			return undefined;
@@ -84,6 +95,57 @@ describe("createFocusOrderAudit", () => {
 
 		expect(result.outcome).toBe("disordered");
 		expect(result.transitions).toHaveLength(3);
+		expect(result.transitions[0]).toEqual({
+			kind: "backwards-jump",
+			from: {
+				selector: "#s0",
+				html: '<a id="s0">',
+				tabIndex: 1,
+				rect: { x: 0, y: 3000, width: 100, height: 20 },
+			},
+			to: {
+				selector: "#s1",
+				html: '<a id="s1">',
+				tabIndex: 2,
+				rect: { x: 0, y: 2000, width: 100, height: 20 },
+			},
+			distance: { block: -1000, inline: 0 },
+			direction: "up",
+			steps: 1,
+		});
+	});
+
+	it("reports one jump when the page says an element on it has a positive tabindex", async () => {
+		const stops = [stop(0, 3000), stop(1, 3050), stop(2, 0), stop(3, 1500)];
+		const audit = runSession(stops);
+		const result = await audit.analyse(fakeAdaptor(CONTEXT, [0, 2, 0, 0]), PAGE_URL);
+
+		expect(result.outcome).toBe("disordered");
+		expect(result.positiveTabindex).toBe(true);
+		expect(result.transitions).toHaveLength(1);
+		expect(result.transitions[0]?.from).toMatchObject({ selector: "#s1", positiveTabindex: 2 });
+		expect(result.transitions[0]?.to).not.toHaveProperty("positiveTabindex");
+
+		const without = await runSession(stops).analyse(fakeAdaptor(CONTEXT, [0, 0, 0, 0]), PAGE_URL);
+
+		expect(without.outcome).toBe("unremarkable");
+	});
+
+	it("reads a positive tabindex from the recorded HTML when the element has gone", async () => {
+		const stops = [
+			stop(0, 3000),
+			stop(1, 3050, { html: '<input id="s1" data-tabindex="9" tabindex="2">' }),
+			stop(2, 0, { html: '<a id="s2" tabindex="-1">' }),
+			stop(3, 1500),
+		];
+		const result = await runSession(stops).analyse(
+			fakeAdaptor(CONTEXT, [null, null, null, null]),
+			PAGE_URL,
+		);
+
+		expect(result.outcome).toBe("disordered");
+		expect(result.transitions[0]?.from.positiveTabindex).toBe(2);
+		expect(result.transitions[0]?.to).not.toHaveProperty("positiveTabindex");
 	});
 
 	it("leaves out elements the probe saw on a fixed, sticky or dialog ancestor", async () => {

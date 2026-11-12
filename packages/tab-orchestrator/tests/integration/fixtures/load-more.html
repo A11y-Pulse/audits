@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Latest articles</title>
+<style>
+	ul { list-style: none; margin: 0; padding: 0; }
+	li { height: 40px; }
+</style>
+</head><body>
+<ul id="list"></ul>
+<button id="end" type="button">Back to top</button>
+<script>
+	// A list that shows three articles at a time and swaps in the next three when the last one on
+	// show takes focus. The new links stand exactly where the old ones did, but are other articles.
+	const list = document.getElementById("list");
+	const TOTAL = 12;
+	const PAGE = 3;
+	let from = 0;
+
+	const render = (focusFirst) => {
+		list.innerHTML = "";
+
+		for (let n = from; n < from + PAGE; n++) {
+			const item = document.createElement("li");
+			const link = document.createElement("a");
+			link.href = "/articles/" + n;
+			link.textContent = "Article " + n;
+			item.append(link);
+			list.append(item);
+		}
+
+		if (focusFirst) {
+			list.querySelector("a").focus();
+		}
+	};
+
+	render(false);
+
+	list.addEventListener("keydown", (event) => {
+		const links = list.querySelectorAll("a");
+
+		if (event.key !== "Tab" || event.shiftKey || document.activeElement !== links[PAGE - 1]) {
+			return;
+		}
+
+		if (from + PAGE >= TOTAL) {
+			return;
+		}
+
+		event.preventDefault();
+		from += PAGE;
+		render(true);
+	});
+</script>
+</body></html>

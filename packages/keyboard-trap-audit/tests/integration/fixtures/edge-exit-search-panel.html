@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>edge-exit-search-panel</title></head><body>
+<div id="toolbar" role="toolbar" aria-label="Formatting">
+	<button id="bold">Bold</button>
+	<button id="italic">Italic</button>
+</div>
+<p>Some content between the toolbar and the search.</p>
+<input id="search" type="search" aria-label="Search the site">
+<ul id="suggestions" hidden>
+	<li>Recent: running shoes</li>
+	<li>Recent: rain jacket</li>
+</ul>
+<script>
+	// Wraps Tab from its last button back to its first, but leaves Shift+Tab alone, so Shift+Tab goes
+	// out to the browser's own interface and back in at the end of the page: the search field.
+	document.getElementById("italic").addEventListener("keydown", (event) => {
+		if (event.key !== "Tab" || event.shiftKey) return;
+		event.preventDefault();
+		document.getElementById("bold").focus();
+	});
+	// The search shows recent searches as soon as it takes focus. Escape or a click elsewhere hides
+	// them; losing focus does not, so that a suggestion can be clicked.
+	const search = document.getElementById("search");
+	const suggestions = document.getElementById("suggestions");
+	search.addEventListener("focus", () => { suggestions.hidden = false; });
+	search.addEventListener("keydown", (event) => {
+		if (event.key === "Escape") suggestions.hidden = true;
+	});
+	document.addEventListener("click", (event) => {
+		if (event.target !== search) suggestions.hidden = true;
+	});
+</script>
+</body></html>

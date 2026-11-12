@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Sign up</title><style>
+  body { background: #fff; font: 16px/1.5 system-ui, sans-serif; margin: 40px; }
+  label { display: block; margin: 16px 0 4px; }
+  input, textarea { font: inherit; padding: 6px 8px; border: 1px solid #555; outline: none; width: 280px; }
+  #no-caret { caret-color: transparent; }
+  #outlined:focus { outline: 3px solid #0050ff; }
+</style></head><body>
+  <h1>Sign up</h1>
+  <form>
+    <label for="caret-only">Name</label><input id="caret-only" type="text">
+    <label for="caret-textarea">About you</label><textarea id="caret-textarea" rows="2"></textarea>
+    <label for="no-caret">Email</label><input id="no-caret" type="email">
+    <label for="outlined">Phone</label><input id="outlined" type="tel">
+    <label for="readonly">Plan</label><input id="readonly" type="text" readonly value="Free">
+  </form>
+</body></html>

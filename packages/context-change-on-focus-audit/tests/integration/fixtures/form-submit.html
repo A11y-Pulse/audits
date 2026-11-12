@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Newsletter</title><style>
+  body { background: #fff; font: 16px/1.5 system-ui, sans-serif; }
+  :focus { outline: 3px solid #0050ff; }
+</style></head><body>
+  <!-- form.submit() fires no submit event, unlike requestSubmit() or a click on a submit button. -->
+  <form id="signup" action="/subscribe" method="post">
+    <label>Email <input id="email" type="email" name="email"></label>
+    <label>Postcode <input id="postcode" name="postcode" onfocus="this.form.submit()"></label>
+  </form>
+  <a id="terms" href="#terms">Terms</a>
+</body></html>

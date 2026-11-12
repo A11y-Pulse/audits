@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>large-ring</title></head><body>
+<a id="before" href="#a">Before</a>
+<div id="palette" role="group" aria-label="Colour"></div>
+<a id="after" href="#b">After</a>
+<script>
+	// A colour picker with 150 swatches that wraps Tab round at both ends and ignores Escape.
+	const palette = document.getElementById("palette");
+	for (let i = 0; i < 150; i++) {
+		const swatch = document.createElement("button");
+		swatch.id = `swatch-${i}`;
+		swatch.textContent = `Colour ${i + 1}`;
+		palette.append(swatch);
+	}
+	const swatches = [...palette.children];
+	palette.addEventListener("keydown", (event) => {
+		if (event.key !== "Tab") return;
+		const index = swatches.indexOf(document.activeElement);
+		if (!event.shiftKey && index === swatches.length - 1) {
+			event.preventDefault();
+			swatches[0].focus();
+		} else if (event.shiftKey && index === 0) {
+			event.preventDefault();
+			swatches[swatches.length - 1].focus();
+		}
+	});
+</script>
+</body></html>

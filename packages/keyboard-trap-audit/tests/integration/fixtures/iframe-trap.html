@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>iframe-trap</title></head><body>
+<a id="before" href="#a">Before</a>
+<iframe id="frame" title="Booking form" srcdoc="
+	<button id='one'>One</button><button id='two'>Two</button>
+	<script>
+		// Cycles Tab and Shift+Tab between the frame's own buttons.
+		const buttons = [...document.querySelectorAll('button')];
+		document.addEventListener('keydown', (event) => {
+			if (event.key !== 'Tab') return;
+			event.preventDefault();
+			const index = buttons.indexOf(document.activeElement);
+			buttons[(index + 1) % buttons.length].focus();
+		});
+	</script>
+"></iframe>
+<a id="after" href="#b">After</a>
+</body></html>

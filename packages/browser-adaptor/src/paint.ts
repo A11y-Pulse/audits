@@ -6,5 +6,7 @@ export function nextPaintScript(): Promise<void> {
 		requestAnimationFrame(() => {
 			requestAnimationFrame(() => resolve());
 		});
+		// A page that is not being rendered (a background tab) never gets its frames.
+		setTimeout(() => resolve(), 200);
 	});
 }

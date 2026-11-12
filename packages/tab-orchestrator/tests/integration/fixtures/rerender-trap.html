@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Subscribe</title></head><body>
+<a id="before" href="#before">Before</a>
+<div id="modal" role="dialog" aria-label="Subscribe"></div>
+<a id="after" href="#after">After</a>
+<script>
+	// A focus trap that re-renders its controls on every lap, the way a framework re-creating a
+	// component does: the nodes focus cycles through are never the same ones twice.
+	const modal = document.getElementById("modal");
+	const render = () => {
+		modal.innerHTML = '<button class="ok" type="button">Subscribe</button><button class="no" type="button">No thanks</button>';
+	};
+
+	render();
+
+	modal.addEventListener("keydown", (event) => {
+		if (event.key !== "Tab") {
+			return;
+		}
+
+		event.preventDefault();
+		const next = document.activeElement.className === "ok" ? "no" : "ok";
+		render();
+		modal.querySelector("." + next).focus();
+	});
+</script>
+</body></html>

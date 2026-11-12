@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Cover in a shadow root</title><style>
+  body { margin: 0; background: #fff; font: 16px/1.5 system-ui, sans-serif; }
+  main { padding: 0 16px; }
+  a { display: block; padding: 8px; }
+  a:focus { outline: 3px solid #0050ff; }
+  .spacer { height: 120vh; }
+</style></head><body>
+  <main>
+    <a href="#a" id="first">First</a>
+    <div class="spacer"></div>
+    <a href="#b" id="under-shadow">Under the footer</a>
+  </main>
+  <site-footer>
+    <template shadowrootmode="open">
+      <style>
+        .bar { position: fixed; left: 0; right: 0; bottom: 0; height: 80px; background: #222; color: #fff; z-index: 10; }
+        p { margin: 0; padding: 24px; }
+      </style>
+      <div class="bar"><p>&copy; Example Ltd</p></div>
+    </template>
+  </site-footer>
+</body></html>

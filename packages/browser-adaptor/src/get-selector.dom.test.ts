@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from "vitest";
-import { getSelector } from "./get-selector";
+import { getSelector, resolveSelector } from "./get-selector";
 
 /**
  * These tests exercise getSelector against a real DOM, where the property that matters is
@@ -252,5 +252,89 @@ describe("getSelector length budget", () => {
 
 		expect(selector.length).toBeLessThanOrEqual(128);
 		expect(selector).toContain("button:nth-of-type(2)");
+	});
+});
+
+describe("getSelector inside shadow roots", () => {
+	function card(id: string, inner: string): ShadowRoot {
+		const host = document.createElement("x-card");
+		host.id = id;
+		document.body.append(host);
+		const shadow = host.attachShadow({ mode: "open" });
+		shadow.innerHTML = inner;
+
+		return shadow;
+	}
+
+	it("prefixes the host, so the selector cannot resolve to a look-alike in the light DOM", () => {
+		document.body.innerHTML = '<button class="buy">Light</button>';
+		const shadow = card("basket", '<button class="buy">Shadow</button>');
+		const inner = shadow.querySelector("button") as Element;
+
+		const selector = getSelector(inner);
+
+		expect(selector).toBe("#basket >>> button.buy");
+		expect(resolveSelector(selector)).toBe(inner);
+		// On its own the inner part names the wrong element, which is what the prefix prevents.
+		expect(document.querySelector("button.buy")?.textContent).toBe("Light");
+	});
+
+	it("leaves a light-DOM selector exactly as it was", () => {
+		document.body.innerHTML =
+			'<nav><a class="link" href="/a">A</a><a class="link" href="/b">B</a></nav>';
+		const link = document.querySelectorAll("a")[1] as Element;
+
+		const selector = getSelector(link);
+
+		expect(selector).not.toContain(">>>");
+		expect(document.querySelector(selector)).toBe(link);
+		expect(resolveSelector(selector)).toBe(link);
+	});
+
+	it("lists every host for nested shadow roots, outermost first", () => {
+		document.body.innerHTML = "";
+		const outer = card("outer", '<x-inner class="slot"></x-inner><a href="/decoy">decoy</a>');
+		const innerHost = outer.querySelector("x-inner") as Element;
+		const innerShadow = innerHost.attachShadow({ mode: "open" });
+		innerShadow.innerHTML = '<a href="/deep">deep</a>';
+		const deep = innerShadow.querySelector("a") as Element;
+
+		const selector = getSelector(deep);
+
+		expect(selector.split(" >>> ")).toHaveLength(3);
+		expect(selector.startsWith("#outer >>> ")).toBe(true);
+		expect(resolveSelector(selector)).toBe(deep);
+	});
+
+	it("tells apart identical elements in two instances of the same component", () => {
+		document.body.innerHTML = "";
+		const first = card("", '<button class="buy">One</button>');
+		const second = card("", '<button class="buy">Two</button>');
+		const selectors = [first, second].map((shadow) =>
+			getSelector(shadow.querySelector("button") as Element),
+		);
+
+		expect(new Set(selectors).size).toBe(2);
+		expect(selectors.map((selector) => resolveSelector(selector)?.textContent)).toEqual([
+			"One",
+			"Two",
+		]);
+	});
+});
+
+describe("resolveSelector", () => {
+	it("returns null when a host or the element inside it is missing", () => {
+		document.body.innerHTML = '<x-card id="basket"></x-card>';
+		(document.querySelector("x-card") as Element).attachShadow({ mode: "open" }).innerHTML =
+			"<button>Buy</button>";
+
+		expect(resolveSelector("#basket >>> a")).toBeNull();
+		expect(resolveSelector("#missing >>> button")).toBeNull();
+	});
+
+	it("returns null for a selector that does not parse, rather than throwing", () => {
+		document.body.innerHTML = "<button>Buy</button>";
+
+		expect(resolveSelector("button[")).toBeNull();
 	});
 });

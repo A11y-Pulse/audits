@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>native-modal-cycling</title></head><body>
+<a id="behind" href="#a">Behind the dialog</a>
+<dialog id="dialog" aria-label="Trail alerts">
+	<p>Sign up for trail alerts?</p>
+	<button id="yes">Yes</button>
+	<button id="no">No</button>
+</dialog>
+<script>
+	// A native modal dialog whose script also wraps Tab round its buttons, as focus-trap libraries
+	// do on top of showModal(). Escape still closes it, natively.
+	const dialog = document.getElementById("dialog");
+	const buttons = [...dialog.querySelectorAll("button")];
+	dialog.showModal();
+	dialog.addEventListener("keydown", (event) => {
+		if (event.key !== "Tab") return;
+		event.preventDefault();
+		const index = buttons.indexOf(document.activeElement);
+		buttons[(index + (event.shiftKey ? -1 : 1) + buttons.length) % buttons.length].focus();
+	});
+</script>
+</body></html>

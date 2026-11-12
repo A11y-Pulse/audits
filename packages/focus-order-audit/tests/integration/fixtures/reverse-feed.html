@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>reverse-feed</title>
+<style>
+body { margin: 0; font: 16px/1.5 sans-serif; }
+header, footer { padding: 16px; }
+ol { display: flex; flex-direction: column-reverse; gap: 16px; margin: 0; padding: 16px; list-style: none; }
+li { border: 1px solid #767676; padding: 12px; }
+li p { margin: 8px 0 40px; }
+li a, li button { font: inherit; padding: 8px; }
+li a { display: block; }
+</style></head><body>
+<header><a id="home" href="#home">Community</a></header>
+<main>
+<!-- 20 posts, newest first on screen and oldest first in the source. Each holds a title link and,
+     about 100px below it, a reply button, so focus steps down within a post between climbs. -->
+<ol id="posts"></ol>
+</main>
+<footer><a id="rules" href="#rules">House rules</a></footer>
+<script>
+const list = document.getElementById("posts");
+for (let i = 1; i <= 20; i++) {
+	const item = document.createElement("li");
+	const title = document.createElement("a");
+	title.id = `post${i}`;
+	title.href = `#post${i}`;
+	title.textContent = `Trip report ${i}`;
+	const body = document.createElement("p");
+	body.textContent = "Clear skies on the tops and a cold night at the bivvy.";
+	const reply = document.createElement("button");
+	reply.id = `reply${i}`;
+	reply.type = "button";
+	reply.textContent = "Reply";
+	item.append(title, body, reply);
+	list.append(item);
+}
+</script>
+</body></html>

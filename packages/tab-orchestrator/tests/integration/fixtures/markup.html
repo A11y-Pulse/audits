@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Markup</title></head><body>
+<a id="next" href="/next" title="Next > Step" class="btn primary">Next</a>
+<input id="email" type="email" value="jane.doe@example.com">
+<input id="card-pin" aria-label="Card type = submit" type="password" value="hunter2">
+<button class="x" type="button">Light</button>
+<x-card></x-card>
+<script>
+	customElements.define("x-card", class extends HTMLElement {
+		constructor() {
+			super();
+			this.attachShadow({ mode: "open" }).innerHTML = '<button class="x" type="button">Shadow</button>';
+		}
+	});
+</script>
+</body></html>

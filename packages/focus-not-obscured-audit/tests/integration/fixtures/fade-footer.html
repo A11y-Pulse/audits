@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Fading footer</title><style>
+  body { margin: 0; background: #fff; font: 16px/1.5 system-ui, sans-serif; }
+  main { padding: 0 16px; }
+  a { display: block; padding: 8px; }
+  a:focus { outline: 3px solid #0050ff; }
+  .spacer { height: 120vh; }
+  #fade-footer {
+    position: fixed; left: 0; right: 0; bottom: 0; height: 90px; z-index: 10;
+    background-image: linear-gradient(to top, #fff, transparent);
+  }
+  #offscreen { position: absolute; left: -9999px; top: 0; }
+</style></head><body>
+  <a href="#main" id="offscreen">Skip to content</a>
+  <main>
+    <a href="#a" id="first">First</a>
+    <div class="spacer"></div>
+    <a href="#b" id="under-fade">Under the fade</a>
+  </main>
+  <div id="fade-footer"></div>
+</body></html>

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Editor</title><style>
+  body { background: #fff; font: 16px/1.5 system-ui, sans-serif; margin: 40px; }
+  .group { display: inline-flex; gap: 8px; margin: 0 0 48px; padding: 8px; border: 1px solid #999; border-radius: 6px; }
+  .group button { padding: 6px 12px; border: 1px solid #767676; background: #f4f4f4; font: inherit; outline: none; }
+
+  /* An input group: the wrapper lights up whichever of its buttons has focus. */
+  #format:focus-within { box-shadow: 0 0 0 3px #0050ff; }
+
+  /* A wrapper that pulses all the time, whether or not anything inside has focus. */
+  #reactions { animation: pulse 0.4s infinite alternate; }
+  @keyframes pulse {
+    from { box-shadow: 0 0 0 0 rgba(0, 80, 255, 0.2); }
+    to { box-shadow: 0 0 0 6px rgba(0, 80, 255, 0.7); }
+  }
+
+  /* A wrapper with a single control: its highlight does say which element has focus. */
+  #publish { padding: 28px; }
+  #publish:focus-within { box-shadow: 0 0 0 3px #0050ff; }
+</style></head><body>
+  <h1>Editor</h1>
+  <div><div class="group" id="format" role="group" aria-label="Formatting">
+    <button id="bold" type="button">Bold</button>
+    <button id="italic" type="button">Italic</button>
+  </div></div>
+  <div><div class="group" id="reactions" role="group" aria-label="Reactions">
+    <button id="like" type="button">Like</button>
+    <button id="share" type="button">Share</button>
+  </div></div>
+  <div><div class="group" id="publish">
+    <button id="publish-now" type="button">Publish</button>
+  </div></div>
+</body></html>

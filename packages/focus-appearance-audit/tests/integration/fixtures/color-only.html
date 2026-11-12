@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Colour-only focus</title><style>
+  body { background: #fff; font: 16px/1.5 system-ui, sans-serif; margin: 40px; }
+  a, button, input { margin: 16px; outline: none; }
+  a { display: inline-block; color: #0000ee; text-decoration: none; }
+  #text-low:focus { color: #7a00cc; }
+  #text-high:focus { color: #9db8ff; }
+  #text-underline:focus { color: #7a00cc; text-decoration: underline; }
+  button { padding: 8px 12px; border: 2px solid #999999; background: #f4f4f4; color: #111; }
+  #border-low:focus { border-color: #8a8a8a; }
+  #border-high:focus { border-color: #000000; }
+  #background-low:focus { background-color: #ececec; }
+  .outlined { outline: 2px solid #999999; }
+  #outline-low:focus { outline-color: #8a8a8a; }
+</style></head><body>
+  <a id="text-low" href="#1">Blue to purple</a>
+  <a id="text-high" href="#2">Blue to pale blue</a>
+  <a id="text-underline" href="#3">Blue to purple, underlined</a>
+  <button id="border-low">Grey border to grey border</button>
+  <button id="border-high">Grey border to black border</button>
+  <button id="background-low">Pale grey to pale grey</button>
+  <button id="outline-low" class="outlined">Grey outline to grey outline</button>
+</body></html>

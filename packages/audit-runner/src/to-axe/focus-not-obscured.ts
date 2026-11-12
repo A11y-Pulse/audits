@@ -7,6 +7,7 @@ import {
 	type AuditNode,
 	type AuditOutput,
 	emptyOutput,
+	evidenceCheck,
 	toResult,
 } from "./audit-output";
 
@@ -29,8 +30,18 @@ function failureSummary(element: FocusNotObscuredElementResult): string {
 	const cover = element.measurement.obscuredBy?.selector;
 	const coverLabel = cover ? `\`${cover}\`` : "author-created content";
 
+	if (element.foundBy === "scrolled-to-top") {
+		return `Focused element is completely hidden behind ${coverLabel} once it is scrolled to the top of the viewport, which is where it lands when focus moves up the page to it (tab stop #${element.tabIndex}). Set scroll-padding-top to at least the height of the sticky header.`;
+	}
+
 	return `Focused element is completely hidden behind ${coverLabel} (tab stop #${element.tabIndex}). Ensure focused elements are not hidden behind sticky headers, footers, or other overlays.`;
 }
+
+const EVIDENCE_MESSAGES: Record<FocusNotObscuredElementResult["bucket"], string> = {
+	violation: "Focused element is hidden behind author-created content",
+	incomplete: "Focused element may be hidden behind author-created content",
+	pass: "Focused element is not entirely hidden",
+};
 
 function toAuditNode(element: FocusNotObscuredElementResult, failed: boolean): AuditNode {
 	const node: AuditNode = { selector: element.selector, html: element.html };
@@ -39,14 +50,17 @@ function toAuditNode(element: FocusNotObscuredElementResult, failed: boolean): A
 		node.failureSummary = failureSummary(element);
 	}
 
-	if (element.screenshot) {
-		node.evidence = {
-			id: FOCUS_NOT_OBSCURED_EVIDENCE_CHECK_ID,
-			impact: "serious",
-			message: "Focused element is hidden behind author-created content",
-			data: { screenshot: element.screenshot },
-		};
-	}
+	node.evidence = evidenceCheck(
+		FOCUS_NOT_OBSCURED_EVIDENCE_CHECK_ID,
+		"serious",
+		EVIDENCE_MESSAGES[element.bucket],
+		{
+			tabIndex: element.tabIndex,
+			foundBy: element.foundBy,
+			...element.measurement,
+			screenshot: element.screenshot,
+		},
+	);
 
 	return node;
 }
@@ -62,6 +76,10 @@ export function focusNotObscuredToAxe(result: FocusNotObscuredResult): AuditOutp
 	const violations = result.elements.filter((element) => element.bucket === "violation");
 	const incomplete = result.elements.filter((element) => element.bucket === "incomplete");
 	const passes = result.elements.filter((element) => element.bucket === "pass");
+
+	if (result.elements.length === 0) {
+		return { ...emptyOutput(), inapplicable: [toResult(METADATA, [])] };
+	}
 
 	return {
 		...emptyOutput(),

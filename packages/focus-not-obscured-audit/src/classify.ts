@@ -13,6 +13,12 @@ import type { ObscuredMeasurement } from "@a11y-pulse/tab-orchestrator";
 export type ObscuringBucket = "violation" | "incomplete" | "pass";
 
 export function classifyObscuring(m: ObscuredMeasurement): ObscuringBucket {
+	// The element is not painted at all (the transparent input of a custom control with no label
+	// to stand in for it), so there is nothing a cover could hide.
+	if (m.notPainted) {
+		return "pass";
+	}
+
 	if (m.offscreen) {
 		return "incomplete";
 	}

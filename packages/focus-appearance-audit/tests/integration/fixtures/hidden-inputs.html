@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Notification settings</title><style>
+  body { background: #fff; font: 16px/1.5 system-ui, sans-serif; margin: 40px; }
+  fieldset { border: 0; margin: 0 0 32px; padding: 0; }
+  label { display: flex; align-items: center; gap: 8px; margin: 12px 0; position: relative; width: 320px; }
+  .box { width: 18px; height: 18px; border: 2px solid #555; border-radius: 3px; background: #fff; }
+  input:checked + .box { background: #0050ff; border-color: #0050ff; }
+
+  /* Three common ways of hiding the real input. No focus rule is written for the first three
+     groups, so the browser's default outline lands on an input nobody can see. */
+  .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); border: 0; white-space: nowrap; }
+  .transparent { position: absolute; left: 0; top: 0; width: 22px; height: 22px; margin: 0; opacity: 0; }
+  .offscreen { position: absolute; left: -9999px; }
+
+  /* The same patterns done properly: the visible box shows the focus. */
+  .good:focus-visible + .box { outline: 3px solid #0050ff; outline-offset: 2px; }
+</style></head><body>
+  <h1>Notification settings</h1>
+  <form>
+    <fieldset>
+      <legend>Email me about</legend>
+      <label><input type="checkbox" id="bad-sr-only" class="sr-only"><span class="box"></span> Product updates</label>
+      <label><input type="checkbox" id="bad-opacity" class="transparent"><span class="box"></span> Security alerts</label>
+      <label><input type="checkbox" id="bad-offscreen" class="offscreen"><span class="box"></span> Weekly digest</label>
+    </fieldset>
+    <fieldset>
+      <legend>Text me about</legend>
+      <label><input type="checkbox" id="good-sr-only" class="sr-only good"><span class="box"></span> Product updates</label>
+      <label><input type="checkbox" id="good-opacity" class="transparent good"><span class="box"></span> Security alerts</label>
+      <label><input type="checkbox" id="good-offscreen" class="offscreen good"><span class="box"></span> Weekly digest</label>
+    </fieldset>
+  </form>
+</body></html>

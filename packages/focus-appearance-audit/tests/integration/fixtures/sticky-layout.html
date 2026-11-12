@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Sticky layout</title><style>
+  body { background: #fff; font: 16px/1.5 system-ui, sans-serif; margin: 0; }
+  a { outline: none; }
+  header { position: sticky; top: 0; background: #123; padding: 12px 24px; }
+  header a { color: #fff; margin-right: 16px; }
+  header a:focus { outline: 3px solid #ffd400; }
+  #header-bad:focus { outline: none; }
+  main { padding: 24px; }
+  main p { margin: 0 0 600px; }
+  main a:focus { outline: 3px solid #0050ff; }
+  .cookie { position: fixed; left: 0; right: 0; bottom: 0; height: 120px; background: #222; color: #fff; padding: 16px 24px; box-sizing: border-box; }
+  .cookie button { outline: none; }
+  .cookie button:focus { outline: 3px solid #ffd400; }
+  footer { padding: 0 24px 8px; }
+  /* The last link sits at the very end of the document, so it cannot be scrolled out from under
+     the cookie banner. */
+  footer a { display: block; }
+</style></head><body>
+  <header><a id="header-good" href="#header-good">Home</a><a id="header-bad" href="#header-bad">Pricing</a></header>
+  <main>
+    <p><a id="body-top" href="#body-top">Read the guide</a></p>
+    <p><a id="body-middle" href="#body-middle">Compare plans</a></p>
+  </main>
+  <footer><a id="pinned-under-banner" href="#pinned-under-banner">Privacy policy</a></footer>
+  <div class="cookie" role="region" aria-label="Cookies">We use cookies. <button id="accept">Accept</button></div>
+</body></html>

@@ -31,6 +31,41 @@ export type AuditNode = {
 	evidence?: AuditEvidence;
 };
 
+/** Tags an `incomplete` entry for an audit that ran but could not reach a conclusion. */
+export const AUDIT_INCONCLUSIVE_TAG = "a11y-pulse.audit-inconclusive";
+
+/**
+ * Build a node's evidence check. `data` carries the audit's structured measurements under the
+ * field names the audit itself uses; fields the audit left undefined are dropped.
+ */
+export function evidenceCheck(
+	id: string,
+	impact: AuditEvidence["impact"],
+	message: string,
+	data: Record<string, unknown>,
+): AuditEvidence {
+	const defined = Object.fromEntries(
+		Object.entries(data).filter(([, value]) => value !== undefined),
+	);
+
+	return { id, impact, message, data: defined };
+}
+
+/**
+ * Report an audit that ran but could not reach a conclusion as `incomplete`, with the reason in
+ * its description, so it is never mistaken for one that ran and found nothing.
+ */
+export function inconclusiveOutput(metadata: AuditMetadata, reason: string): AuditOutput {
+	const result: Result = {
+		...metadata,
+		description: `${metadata.description} This audit could not reach a conclusion on this page: ${reason}`,
+		tags: [...metadata.tags, AUDIT_INCONCLUSIVE_TAG],
+		nodes: [],
+	};
+
+	return { ...emptyOutput(), incomplete: [result] };
+}
+
 export function emptyOutput(): AuditOutput {
 	return { violations: [], incomplete: [], passes: [], inapplicable: [] };
 }

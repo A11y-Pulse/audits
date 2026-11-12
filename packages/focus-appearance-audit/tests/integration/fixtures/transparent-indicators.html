@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Transparent indicators</title><style>
+  body { background: #fff; font: 16px/1.5 system-ui, sans-serif; margin: 40px; }
+  a, button { display: inline-block; margin: 16px; padding: 8px 12px; outline: none; border: 1px solid #555; background: #fff; color: #111; }
+  /* The forced-colours idiom: invisible outside Windows High Contrast. */
+  #transparent-outline:focus { outline: 2px solid transparent; }
+  #transparent-shadow:focus { box-shadow: 0 0 0 3px rgba(0, 0, 0, 0); }
+  #transparent-border { border: 2px solid transparent; }
+  #transparent-border:focus { border-style: dashed; }
+  /* The idiom used properly: a visible ring, plus the transparent outline for forced colours. */
+  #ring:focus { outline: 2px solid transparent; box-shadow: 0 0 0 3px #0050ff; }
+  #outline:focus { outline: 3px solid #0050ff; }
+</style></head><body>
+  <button id="transparent-outline">Save</button>
+  <button id="transparent-shadow">Cancel</button>
+  <button id="transparent-border">Delete</button>
+  <button id="ring">Publish</button>
+  <a id="outline" href="#outline">Help</a>
+</body></html>

@@ -1,5 +1,11 @@
 export type { BrowserAdaptor, ElementRef, Rect } from "@a11y-pulse/browser-adaptor";
-export type { PageGeometry, SequenceStop, Transition, TransitionKind } from "./analyse";
+export type {
+	PageGeometry,
+	SequenceStop,
+	Transition,
+	TransitionDirection,
+	TransitionKind,
+} from "./analyse";
 export { findDisorder } from "./analyse";
 export type { FocusOrderOptions } from "./audit";
 export { createFocusOrderAudit, runFocusOrderAudit } from "./audit";

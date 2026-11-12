@@ -9,10 +9,18 @@ import {
 	createTabOrchestrator,
 	elementRectScript,
 	elementStylesScript,
+	endPairScript,
 	focusScript,
 	hasFocusScript,
+	hideCaretScript,
+	isCenterObscuredScript,
 	needsCentringScript,
+	type PairContextPayload,
+	type PairTarget,
 	pageDimensionsScript,
+	pairContextScript,
+	pairRectScript,
+	pairTargetScript,
 	probeActiveElementScript,
 	scrollToCenterScript,
 	type TabConsumer,
@@ -104,12 +112,20 @@ function loopAdaptor(script: {
 	active?: Array<Omit<ActiveElementInfo, "selector"> | null>;
 	baseline?: BaselinePayload;
 	pngs?: Uint8Array[];
+	/** What pairTargetScript answers at each pair. Defaults to the element itself, with no caret. */
+	pairTargets?: Array<Partial<PairTarget>>;
+	/** What pairContextScript answers, call by call: focused then blurred for each pair. */
+	contexts?: PairContextPayload[];
+	/** Whether something still covers the element once it has been centred. */
+	covered?: boolean;
 }): BrowserAdaptor & { clipCalls: number } {
 	let stopIndex = -1;
 	let tabbed = false;
 	let activeCall = 0;
 	let lastIndex: number | null = null;
 	let pngCall = 0;
+	let pairCall = 0;
+	let contextCall = 0;
 	const adaptor: BrowserAdaptor & { clipCalls: number } = {
 		clipCalls: 0,
 		evaluate: (async (fn, ..._args) => {
@@ -141,6 +157,27 @@ function loopAdaptor(script: {
 				return EMPTY_STYLES;
 			}
 
+			if (fn === pairTargetScript) {
+				return {
+					unpainted: false,
+					clipTarget: "element",
+					caret: false,
+					...script.pairTargets?.[pairCall++],
+				};
+			}
+
+			if (fn === pairContextScript) {
+				return script.contexts?.[contextCall++] ?? { entries: [], background: null };
+			}
+
+			if (fn === isCenterObscuredScript) {
+				return script.covered ?? false;
+			}
+
+			if (fn === hideCaretScript || fn === endPairScript) {
+				return undefined;
+			}
+
 			if (fn === pageDimensionsScript) {
 				return { width: 2000, height: 4000 };
 			}
@@ -149,7 +186,7 @@ function loopAdaptor(script: {
 				return false;
 			}
 
-			if (fn === elementRectScript) {
+			if (fn === elementRectScript || fn === pairRectScript) {
 				return { x: 100, y: 100, width: 40, height: 20 };
 			}
 
@@ -387,6 +424,384 @@ describe("createFocusAppearanceAudit", () => {
 		expect(audit.result.summary.failed).toBe(1);
 		expect(audit.result.summary.sessionEnd).toBe("completed");
 	});
+
+	it("lists the properties that changed on a style pass", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			active: [
+				info(0, {
+					styles: {
+						element: {
+							"outline-style": "solid",
+							"outline-width": "2px",
+							"outline-color": "rgb(0, 0, 255)",
+						},
+						before: { content: '""', "background-color": "rgb(0, 0, 255)" },
+						after: {},
+					},
+				}),
+			],
+			baseline: {
+				styles: [
+					{
+						element: {
+							"outline-style": "none",
+							"outline-width": "0px",
+							"outline-color": "rgb(0, 0, 0)",
+						},
+						before: { content: '""', "background-color": "rgba(0, 0, 0, 0)" },
+						after: {},
+					},
+				],
+				entries: [{ index: 0, styleIndex: 0, rect: RECT }],
+			},
+		});
+
+		const audit = await runWithOrchestrator(adaptor);
+
+		expect(audit.result.elements[0]?.changedProperties).toEqual([
+			"::before background-color",
+			"outline-color",
+			"outline-style",
+			"outline-width",
+		]);
+	});
+
+	it("does not trust the styles of an element clipped to a pixel", async () => {
+		// A visually hidden checkbox still gets the browser's default outline, where nobody sees it.
+		const hidden = { x: 0, y: 0, width: 1, height: 1 };
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			active: [info(0, { styles: FOCUSED_STYLES, rect: hidden })],
+			baseline: {
+				styles: [UNFOCUSED_STYLES],
+				entries: [{ index: 0, styleIndex: 0, rect: hidden }],
+			},
+			pairTargets: [{ unpainted: true, clipTarget: "label" }],
+		});
+
+		const audit = await runWithOrchestrator(adaptor);
+
+		expect(audit.result.elements[0]).toMatchObject({
+			passed: false,
+			detectionMethod: null,
+			measuredOn: "label",
+		});
+		expect(audit.result.elements[0]).not.toHaveProperty("changedProperties");
+		expect(adaptor.clipCalls).toBe(2);
+	});
+
+	it("does not trust the styles of a fully transparent element", async () => {
+		const styles = (outline: string): StyleSnapshot => ({
+			element: { "outline-style": outline, opacity: "0" },
+			before: {},
+			after: {},
+		});
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			active: [info(0, { styles: styles("auto") })],
+			baseline: { styles: [styles("none")], entries: [{ index: 0, styleIndex: 0, rect: RECT }] },
+			pairTargets: [{ unpainted: true, clipTarget: "parent" }],
+			pngs: [WHITE_PNG, BLACK_PNG],
+		});
+
+		const audit = await runWithOrchestrator(adaptor);
+
+		// The screenshots of its visible parent differ, so it passes on those.
+		expect(audit.result.elements[0]).toMatchObject({
+			passed: true,
+			detectionMethod: "pixel-diff",
+			measuredOn: "parent",
+		});
+	});
+
+	it("passes on a style change found on an ancestor or label", async () => {
+		const entry = (shadow: string): PairContextPayload => ({
+			entries: [
+				{
+					kind: "ancestor",
+					html: '<div class="search">',
+					styles: { element: { "box-shadow": shadow }, before: {}, after: {} },
+				},
+			],
+			background: null,
+		});
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			active: [info(0)],
+			contexts: [entry("rgb(0, 80, 255) 0px 0px 0px 4px"), entry("none")],
+		});
+
+		const audit = await runWithOrchestrator(adaptor);
+
+		expect(audit.result.elements[0]).toMatchObject({
+			passed: true,
+			detectionMethod: "style",
+			changedProperties: ["box-shadow"],
+			indicatorOn: { kind: "ancestor", html: '<div class="search">' },
+		});
+		expect(audit.result.elements[0]).not.toHaveProperty("failureEvidence");
+	});
+
+	describe("a change found only on an ancestor or label", () => {
+		const context = (
+			shadow: string,
+			flags: { shared?: boolean; animating?: boolean },
+		): PairContextPayload => ({
+			entries: [
+				{
+					kind: "ancestor",
+					html: '<div class="group">',
+					styles: { element: { "box-shadow": shadow }, before: {}, after: {} },
+					...flags,
+				},
+			],
+			background: null,
+		});
+		const RING = "rgb(0, 80, 255) 0px 0px 0px 4px";
+
+		async function run(
+			flags: { shared?: boolean; animating?: boolean },
+			pngs: Uint8Array[] = [WHITE_PNG, WHITE_PNG],
+			shadows: [string, string] = [RING, "none"],
+		) {
+			const adaptor = loopAdaptor({
+				hasFocus: [true, true],
+				active: [info(0)],
+				pngs,
+				contexts: [context(shadows[0], flags), context(shadows[1], flags)],
+			});
+
+			return (await runWithOrchestrator(adaptor)).result;
+		}
+
+		it("is sent for review when the ancestor holds other tab stops", async () => {
+			const result = await run({ shared: true });
+
+			expect(result.elements[0]).toMatchObject({
+				passed: false,
+				detectionMethod: null,
+				needsReview: "shared-indicator",
+			});
+			expect(result.elements[0]).not.toHaveProperty("indicatorOn");
+			expect(result.summary).toMatchObject({ passed: 0, failed: 0, needsReview: 1 });
+		});
+
+		it("is sent for review even when the screenshots differ, as they do for every tab stop inside", async () => {
+			const result = await run({ shared: true }, [WHITE_PNG, BLACK_PNG]);
+
+			expect(result.elements[0]).toMatchObject({ passed: false, needsReview: "shared-indicator" });
+		});
+
+		it("is sent for review when an animation is running on the ancestor", async () => {
+			const result = await run({ animating: true }, [WHITE_PNG, BLACK_PNG]);
+
+			expect(result.elements[0]).toMatchObject({
+				passed: false,
+				detectionMethod: null,
+				needsReview: "animating",
+			});
+		});
+
+		it("is sent for review under an animation whether or not the two reads happened to differ", async () => {
+			const result = await run({ animating: true }, [WHITE_PNG, WHITE_PNG], ["none", "none"]);
+
+			expect(result.elements[0]).toMatchObject({ passed: false, needsReview: "animating" });
+		});
+
+		it("still passes when the ancestor is the element's alone", async () => {
+			const result = await run({});
+
+			expect(result.elements[0]).toMatchObject({ passed: true, detectionMethod: "style" });
+			expect(result.elements[0]).not.toHaveProperty("needsReview");
+		});
+	});
+
+	it("does not measure the browser's default ring found from screenshots", async () => {
+		const ring = {
+			element: {
+				"outline-style": "auto",
+				"outline-width": "1px",
+				"outline-color": "rgb(16, 16, 16)",
+			},
+			before: {},
+			after: {},
+		};
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			// Not in the baseline (rendered later), so only the screenshots can find its indicator.
+			active: [info(0, { styles: ring })],
+			pngs: [WHITE_PNG, BLACK_PNG],
+		});
+
+		const audit = await runWithOrchestrator(adaptor);
+
+		expect(audit.result.elements[0]).toMatchObject({ passed: true, detectionMethod: "pixel-diff" });
+		expect(audit.result.elements[0]).not.toHaveProperty("indicatorContrast");
+	});
+
+	it("counts a low-contrast indicator once: not here when the colour-only check measured it", async () => {
+		const styles = (background: string) => ({
+			element: { ...UNFOCUSED_STYLES.element, "background-color": background },
+			before: {},
+			after: {},
+		});
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			active: [info(0, { styles: styles("rgb(255, 221, 0)"), backdrop: "rgb(255, 255, 255)" })],
+			baseline: {
+				styles: [styles("rgba(0, 0, 0, 0)")],
+				entries: [{ index: 0, styleIndex: 0, rect: RECT }],
+			},
+		});
+
+		const { result } = await runWithOrchestrator(adaptor);
+		const [element] = result.elements;
+
+		// The see-through unfocused background shows the white behind it, so the change can be measured.
+		expect(element?.colorOnly).toMatchObject({
+			property: "background-color",
+			backgroundColor: "rgb(255, 255, 255)",
+		});
+		expect(element?.colorOnly?.contrastRatio).toBeCloseTo(1.35, 1);
+		expect(element?.indicatorContrast?.ratio).toBeCloseTo(1.35, 1);
+		expect(result.summary.lowContrastIndicators).toBe(0);
+	});
+
+	it("ignores the surroundings when asked to compare pixels only", async () => {
+		const entry = (shadow: string): PairContextPayload => ({
+			entries: [
+				{
+					kind: "ancestor",
+					html: "<div>",
+					styles: { element: { "box-shadow": shadow }, before: {}, after: {} },
+				},
+			],
+			background: null,
+		});
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			active: [info(0)],
+			contexts: [entry("rgb(0, 80, 255) 0px 0px 0px 4px"), entry("none")],
+		});
+
+		const audit = await runWithOrchestrator(adaptor, { skipStyleCheck: true });
+
+		expect(audit.result.elements[0]?.passed).toBe(false);
+	});
+
+	it("sends a text field whose only sign of focus is its caret for review", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			active: [info(0)],
+			pairTargets: [{ caret: true }],
+		});
+
+		const audit = await runWithOrchestrator(adaptor, { failedElementLimit: 1 });
+
+		expect(audit.result.elements[0]).toMatchObject({
+			passed: true,
+			detectionMethod: "caret",
+			needsReview: "caret",
+		});
+		expect(audit.result.elements[0]).not.toHaveProperty("failureEvidence");
+		expect(audit.result.summary).toMatchObject({ passed: 0, failed: 0, needsReview: 1 });
+		expect(audit.result.summary.reachedFailedElementLimit).toBe(false);
+	});
+
+	it("prefers a real indicator over the caret", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			active: [info(0)],
+			pairTargets: [{ caret: true }],
+			pngs: [WHITE_PNG, BLACK_PNG],
+		});
+
+		const audit = await runWithOrchestrator(adaptor);
+
+		expect(audit.result.elements[0]).toMatchObject({ passed: true, detectionMethod: "pixel-diff" });
+		expect(audit.result.elements[0]).not.toHaveProperty("needsReview");
+	});
+
+	it("sends an element that stayed covered for review rather than failing it", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true, true],
+			active: [info(0), info(1)],
+			covered: true,
+		});
+
+		const audit = await runWithOrchestrator(adaptor, { failedElementLimit: 1 });
+
+		expect(audit.result.elements).toHaveLength(2);
+		expect(audit.result.elements[0]).toMatchObject({
+			passed: false,
+			detectionMethod: null,
+			needsReview: "obstructed",
+		});
+		expect(audit.result.elements[0]?.failureEvidence?.focusedScreenshot).toBeInstanceOf(Uint8Array);
+		expect(audit.result.summary).toMatchObject({ passed: 0, failed: 0, needsReview: 2 });
+		expect(audit.result.summary.reachedFailedElementLimit).toBe(false);
+	});
+
+	it("passes a covered element whose screenshots still differ", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			active: [info(0)],
+			covered: true,
+			pngs: [WHITE_PNG, BLACK_PNG],
+		});
+
+		const audit = await runWithOrchestrator(adaptor);
+
+		expect(audit.result.elements[0]).toMatchObject({ passed: true, detectionMethod: "pixel-diff" });
+		expect(audit.result.elements[0]).not.toHaveProperty("needsReview");
+	});
+
+	it("keeps screenshots for only the first screenshotLimit elements", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true, true, true],
+			active: [info(0), info(1), info(2)],
+		});
+
+		const audit = await runWithOrchestrator(adaptor, { screenshotLimit: 2 });
+
+		expect(audit.result.summary.failed).toBe(3);
+		expect(audit.result.elements.map((element) => element.failureEvidence !== undefined)).toEqual([
+			true,
+			true,
+			false,
+		]);
+		expect(audit.result.summary.reachedScreenshotLimit).toBe(true);
+	});
+
+	it("does not report the screenshot limit as reached when it was not needed", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true, true],
+			active: [info(0), info(1)],
+		});
+
+		const audit = await runWithOrchestrator(adaptor, { screenshotLimit: 2 });
+
+		expect(audit.result.summary.reachedScreenshotLimit).toBe(false);
+	});
+
+	it("says what a low-contrast colour change is seen against", async () => {
+		const unfocused = { ...EMPTY_STYLES, element: { color: "rgb(51, 51, 51)" } };
+		const focused = { ...EMPTY_STYLES, element: { color: "rgb(46, 93, 46)" } };
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			active: [info(0, { styles: focused })],
+			baseline: { styles: [unfocused], entries: [{ index: 0, styleIndex: 0, rect: RECT }] },
+			contexts: [{ entries: [], background: "rgb(250, 250, 250)" }],
+		});
+
+		const audit = await runWithOrchestrator(adaptor);
+
+		expect(audit.result.elements[0]?.colorOnly).toMatchObject({
+			property: "color",
+			backgroundColor: "rgb(250, 250, 250)",
+		});
+	});
 });
 
 describe("createFocusAppearanceAudit: failedElementLimit", () => {
@@ -559,7 +974,7 @@ function fakeAdaptor(script: AdaptorScript = {}): {
 				return undefined;
 			}
 
-			if (fn === elementRectScript) {
+			if (fn === elementRectScript || fn === pairRectScript) {
 				return (
 					script.rects?.[rectCalls++] ?? {
 						x: 100,
@@ -572,6 +987,18 @@ function fakeAdaptor(script: AdaptorScript = {}): {
 
 			if (fn === elementStylesScript) {
 				return EMPTY_STYLES;
+			}
+
+			if (fn === pairTargetScript) {
+				return { unpainted: false, clipTarget: "element", caret: false };
+			}
+
+			if (fn === pairContextScript) {
+				return { entries: [], background: null };
+			}
+
+			if (fn === isCenterObscuredScript) {
+				return false;
 			}
 
 			if (fn === blurScript || fn === focusScript || fn === clearMarkersScript) {
@@ -632,7 +1059,12 @@ describe("runFocusAppearanceAudit", () => {
 		// Identical snapshots so the style stage does not short-circuit; the white-on-white pixel diff
 		// then fails and surfaces the evidence.
 		const styles: StyleSnapshot = {
-			element: { "outline-style": "none" },
+			element: {
+				"outline-style": "none",
+				"outline-color": "rgb(0, 0, 255)",
+				"background-color": "rgb(1, 2, 3)",
+				opacity: "1",
+			},
 			before: {},
 			after: {},
 		};
@@ -663,13 +1095,10 @@ describe("runFocusAppearanceAudit", () => {
 		expect(failed?.failureEvidence?.unfocusedScreenshot).toBeInstanceOf(Uint8Array);
 		expect(failed?.failureEvidence?.focusedScreenshot.byteLength).toBeGreaterThan(0);
 		expect(failed?.failureEvidence?.unfocusedScreenshot.byteLength).toBeGreaterThan(0);
+		// Only what is painted is kept: the colour of an outline that is not drawn, and the opacity
+		// that is watched but never compared, are both dropped.
 		expect(failed?.failureEvidence?.focusedStyles).toEqual({
-			element: {},
-			before: {},
-			after: {},
-		});
-		expect(failed?.failureEvidence?.unfocusedStyles).toEqual({
-			element: {},
+			element: { "background-color": "rgb(1, 2, 3)" },
 			before: {},
 			after: {},
 		});

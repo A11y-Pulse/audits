@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Animated indicators</title><style>
+  body { background: #fff; font: 16px/1.5 system-ui, sans-serif; margin: 40px; }
+  button { margin: 16px; padding: 8px 12px; border: 1px solid #555; background: #fff; outline: none; }
+  #fade { transition: box-shadow 0.3s ease-in; }
+  #fade:focus { box-shadow: 0 0 0 4px #0050ff; }
+  /* filter is not a watched property, so this one is seen by the screenshots alone. */
+  #filter { transition: filter 0.2s linear; }
+  #filter:focus { filter: invert(1); }
+  #none { transition: box-shadow 0.3s ease-in; }
+</style></head><body>
+  <button id="fade">Fading ring</button>
+  <button id="filter">Fading invert</button>
+  <button id="none">No indicator</button>
+</body></html>

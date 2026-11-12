@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Search</title><style>
+  body { background: #fff; font: 16px/1.5 system-ui, sans-serif; margin: 40px; }
+  .search { display: flex; align-items: center; gap: 8px; width: 420px; padding: 16px 24px; border: 2px solid #999; border-radius: 28px; background: #fff; }
+  .search:focus-within { border-color: #0050ff; box-shadow: 0 0 0 4px rgba(0, 80, 255, 0.35); }
+  .search input { flex: 1; border: 0; outline: none; font: inherit; caret-color: transparent; background: transparent; }
+  .field { margin-top: 48px; }
+  .field label { display: inline-block; padding: 2px 6px; }
+  .field input { display: block; margin-top: 24px; border: 1px solid #555; outline: none; font: inherit; caret-color: transparent; }
+  .field:has(input:focus) label { background: #111; color: #fff; }
+  .plain { margin-top: 48px; padding: 16px 24px; border: 2px solid #999; width: 420px; }
+  .plain input { border: 0; outline: none; font: inherit; caret-color: transparent; }
+</style></head><body>
+  <div class="search" role="search"><span aria-hidden="true">&#128269;</span><input id="wrapped" type="search" aria-label="Search the site"></div>
+  <div class="field"><label for="labelled">Promo code</label><input id="labelled" type="text"></div>
+  <div class="plain"><input id="unstyled-wrapper" type="text" aria-label="Notes"></div>
+</body></html>

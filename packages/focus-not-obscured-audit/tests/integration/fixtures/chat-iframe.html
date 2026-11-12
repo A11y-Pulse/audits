@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Chat widget frame</title><style>
+  body { margin: 0; background: #fff; font: 16px/1.5 system-ui, sans-serif; }
+  main { padding: 0 16px; }
+  a { display: block; padding: 8px; }
+  a:focus { outline: 3px solid #0050ff; }
+  .spacer { height: 120vh; }
+  /* Chat widgets size their frame for the open panel and leave most of it transparent. */
+  #chat { position: fixed; left: 0; bottom: 0; width: 420px; height: 200px; border: 0; z-index: 1000; }
+</style></head><body>
+  <main>
+    <a href="#a" id="first">First</a>
+    <div class="spacer"></div>
+    <a href="#b" id="under-chat" style="width: 200px;">Under the chat frame</a>
+  </main>
+  <iframe id="chat" title="Chat" tabindex="-1" srcdoc="&lt;body style='margin:0;background:transparent'&gt;&lt;div style='position:fixed;right:12px;bottom:12px;padding:8px;background:#06c;color:#fff'&gt;Chat&lt;/div&gt;&lt;/body&gt;"></iframe>
+</body></html>

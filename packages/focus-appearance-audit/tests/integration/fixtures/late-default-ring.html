@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Notifications</title><style>
+  body { background: #1b1b1b; color: #f2f2f2; font: 16px/1.5 system-ui, sans-serif; margin: 40px; }
+  a { color: #9db8ff; }
+  button { margin: 24px 0; padding: 8px 14px; font: inherit; }
+</style></head><body>
+  <h1>Notifications</h1>
+  <p><a id="first" href="/inbox">Open inbox</a></p>
+  <div id="slot"></div>
+  <script>
+    // Rendered after the page's styles were first read, so it is judged from screenshots alone. It
+    // keeps the browser's own focus ring.
+    document.querySelector("#first").addEventListener(
+      "focus",
+      () => {
+        const button = document.createElement("button");
+        button.id = "late";
+        button.type = "button";
+        button.textContent = "Mark all as read";
+        document.querySelector("#slot").append(button);
+      },
+      { once: true },
+    );
+  </script>
+</body></html>

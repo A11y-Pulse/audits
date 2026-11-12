@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Shop</title><style>
+  body { background: #fff; font: 16px/1.5 system-ui, sans-serif; }
+  :focus { outline: 3px solid #0050ff; }
+  #catcher { width: 1px; height: 1px; overflow: hidden; }
+</style></head><body>
+  <!-- An empty, unnamed element in the tab order that throws focus back to the search field. It
+       looks like a dialog's focus guard, but there is no dialog: nothing after it can be reached
+       with the keyboard. -->
+  <header>
+    <label>Search <input id="search" type="search"></label>
+    <a id="deals" href="#deals">Deals</a>
+  </header>
+  <div id="catcher" tabindex="0"></div>
+  <main>
+    <a id="basket" href="#basket">Basket</a>
+  </main>
+  <script>
+    document.getElementById("catcher").addEventListener("focus", () => {
+      document.getElementById("search").focus();
+    });
+  </script>
+</body></html>

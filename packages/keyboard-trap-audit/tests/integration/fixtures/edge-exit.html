@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>edge-exit</title></head><body>
+<div id="toolbar" role="toolbar" aria-label="Formatting">
+	<button id="bold">Bold</button>
+	<button id="italic">Italic</button>
+</div>
+<a id="after" href="#a">After the toolbar</a>
+<script>
+	// Wraps Tab from its last button back to its first, but leaves Shift+Tab alone. It is first on
+	// the page, so Shift+Tab goes out to the browser's own interface, and from there back in at the
+	// end of the page, where nothing stops focus landing.
+	document.getElementById("italic").addEventListener("keydown", (event) => {
+		if (event.key !== "Tab" || event.shiftKey) return;
+		event.preventDefault();
+		document.getElementById("bold").focus();
+	});
+</script>
+</body></html>

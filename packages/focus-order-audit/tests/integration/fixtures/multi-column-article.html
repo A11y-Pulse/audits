@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>multi-column-article</title>
+<style>
+body { margin: 0; font: 16px/1.5 sans-serif; }
+header, footer { padding: 16px; }
+article { column-count: 4; column-gap: 32px; padding: 16px; }
+article p { margin: 0 0 12px; }
+</style></head><body>
+<header><a id="home" href="#home">The Trail Journal</a></header>
+<main>
+<!-- Running text in four columns, each well over a viewport tall, with links wherever they fall in
+     a sentence: at the start of a line, in the middle of one, sometimes two on a line. -->
+<article id="story"></article>
+</main>
+<footer><a id="contact" href="#contact">Contact us</a></footer>
+<script>
+const story = document.getElementById("story");
+const sentences = [
+	"We left the hut before dawn and followed the ridge north for most of the morning.",
+	"By the second saddle the cloud had lifted and the whole range was in view.",
+	"Nobody had expected the river to be this high so late in the season.",
+	"The track drops steeply through beech forest before it meets the old pack route.",
+];
+for (let i = 1; i <= 120; i++) {
+	const paragraph = document.createElement("p");
+	const link = document.createElement("a");
+	link.id = `ref${i}`;
+	link.href = `#ref${i}`;
+	link.textContent = i % 3 === 0 ? "the route notes" : `note ${i}`;
+	const before = sentences[i % sentences.length].slice(0, 12 + ((i * 17) % 60));
+	paragraph.append(`${before} `, link, ` ${sentences[(i + 1) % sentences.length]}`);
+	if (i % 5 === 0) {
+		const second = document.createElement("a");
+		second.id = `map${i}`;
+		second.href = `#map${i}`;
+		second.textContent = "map";
+		paragraph.append(" See the ", second, ".");
+	}
+	story.append(paragraph);
+}
+</script>
+</body></html>

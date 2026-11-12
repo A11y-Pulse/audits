@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Sign up</title>
+<style>
+	body { margin: 20px; }
+	#start { display: block; width: 80px; height: 40px; margin-bottom: 40px; }
+	#details { display: block; width: 400px; height: 200px; margin-bottom: 40px; }
+</style>
+</head><body>
+<!-- A small button that passes focus on to a much larger field a moment after taking it, later
+     than the session waits for a press to settle. -->
+<button id="start" type="button">Start</button>
+<textarea id="details" aria-label="Details"></textarea>
+<a id="terms" href="/terms">Terms</a>
+<script>
+	const details = document.getElementById("details");
+
+	document.getElementById("start").addEventListener("focus", () => {
+		setTimeout(() => details.focus(), 80);
+	});
+</script>
+</body></html>

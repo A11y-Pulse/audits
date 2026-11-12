@@ -10,7 +10,10 @@ const SUMMARY: FocusAppearanceResult["summary"] = {
 	checked: 1,
 	passed: 1,
 	failed: 0,
+	needsReview: 0,
+	lowContrastIndicators: 0,
 	reachedLimit: false,
+	reachedScreenshotLimit: false,
 	reachedFailedElementLimit: false,
 	timedOut: false,
 	sessionEnd: "completed",
@@ -30,6 +33,7 @@ function element(
 		...(contrastRatio !== undefined
 			? {
 					colorOnly: {
+						property: "color",
 						unfocusedColor: "rgb(51, 51, 51)",
 						focusedColor: "rgb(46, 93, 46)",
 						contrastRatio,
@@ -76,9 +80,28 @@ describe("focusColorOnlyToAxe", () => {
 		const output = convert(element("#low", 1.6391, 4));
 		const summary = output.violations[0]?.nodes[0]?.failureSummary;
 
-		expect(summary).toContain("rgb(51, 51, 51) to rgb(46, 93, 46)");
+		expect(summary).toContain("the text color changing from rgb(51, 51, 51) to rgb(46, 93, 46)");
 		expect(summary).toContain("1.63:1");
 		expect(summary).toContain("tab stop #4");
+	});
+
+	it("names the colour that changed and what it is seen against", () => {
+		const low = element("#low", 1.2);
+		low.colorOnly = {
+			...low.colorOnly!,
+			property: "border-color",
+			backgroundColor: "rgb(244, 244, 244)",
+			evidence: {
+				focusedScreenshot: new Uint8Array([1]),
+				unfocusedScreenshot: new Uint8Array([2]),
+			},
+		};
+
+		const node = convert(low).violations[0]?.nodes[0];
+
+		expect(node?.failureSummary).toContain("the border color changing from");
+		expect(node?.failureSummary).toContain("(against rgb(244, 244, 244))");
+		expect(node?.any[0]?.message).toBe("Focus is shown only by a change of border color");
 	});
 
 	it("explains an unmeasurable change and omits the summary on passes", () => {
@@ -101,6 +124,19 @@ describe("focusColorOnlyToAxe", () => {
 		expect(output.violations[0]?.nodes[0]?.any[0]).toMatchObject({
 			id: FOCUS_COLOR_ONLY_EVIDENCE_CHECK_ID,
 			data: evidence,
+		});
+	});
+
+	it("carries the colours and ratio as structured evidence without screenshots", () => {
+		const check = convert(element("#low", 1.2, 5)).violations[0]?.nodes[0]?.any[0];
+
+		expect(check?.id).toBe(FOCUS_COLOR_ONLY_EVIDENCE_CHECK_ID);
+		expect(check?.data).toEqual({
+			tabIndex: 5,
+			property: "color",
+			unfocusedColor: "rgb(51, 51, 51)",
+			focusedColor: "rgb(46, 93, 46)",
+			contrastRatio: 1.2,
 		});
 	});
 });

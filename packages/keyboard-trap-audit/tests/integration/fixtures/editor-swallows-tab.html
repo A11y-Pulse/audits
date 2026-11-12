@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>editor-swallows-tab</title></head><body>
+<a id="before" href="#a">Docs</a>
+<label for="editor">Snippet</label>
+<textarea id="editor" rows="4">const a = 1;</textarea>
+<a id="after" href="#b">Run</a>
+<script>
+	// A code editor that indents on Tab and outdents on Shift+Tab, and offers no other way out.
+	const editor = document.getElementById("editor");
+	editor.addEventListener("keydown", (event) => {
+		if (event.key !== "Tab") return;
+		event.preventDefault();
+		if (!event.shiftKey) editor.setRangeText("\t", editor.selectionStart, editor.selectionEnd, "end");
+	});
+</script>
+</body></html>

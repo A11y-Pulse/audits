@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>iframe-many-links</title></head><body>
+<a id="before" href="#a">Before</a>
+<iframe id="frame" title="Site map" srcdoc="
+	<body><script>
+		// An embedded site map with 70 links and nothing that holds focus.
+		for (let i = 0; i < 70; i++) {
+			const link = document.createElement('a');
+			link.href = '#' + i;
+			link.textContent = 'Page ' + (i + 1);
+			document.body.append(link, ' ');
+		}
+	</script>
+"></iframe>
+<a id="after" href="#b">After</a>
+</body></html>

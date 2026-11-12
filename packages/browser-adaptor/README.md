@@ -23,7 +23,7 @@ npm install @a11y-pulse/browser-adaptor
 | `@a11y-pulse/browser-adaptor` | `BrowserAdaptor`, `ElementRef`, `Rect`, `bufferedClip`, `captureElementScreenshot`, `contrastRatio`, `parseOpaqueRgb`, `relativeLuminance`, `stashedElementHandle`, `stashedElementSelectors`, `releaseStashedElements`, and the page scripts `captureElementScreenshot` is built on |
 | `@a11y-pulse/browser-adaptor/puppeteer` | `PuppeteerAdaptor` |
 | `@a11y-pulse/browser-adaptor/playwright` | `PlaywrightAdaptor` |
-| `@a11y-pulse/browser-adaptor/dom` | `getSelector`, `truncateHtml` |
+| `@a11y-pulse/browser-adaptor/dom` | `getSelector`, `resolveSelector`, `truncateHtml` |
 
 ## Quickstart
 
@@ -56,10 +56,24 @@ interface BrowserAdaptor {
   screenshotClip(clip: Rect, scale?: number): Promise<Uint8Array>;
   readonly screenshotClipScale?: number;
   ensureFocusReporting(): Promise<void>; // must not throw
+  takeDismissedDialogs?(): number; // optional
+  startDismissingDialogs?(): () => void; // optional
 }
 ```
 
 Consumers may ignore methods they do not need. `ensureFocusReporting` is best-effort and must not throw.
+
+**Native dialogs.** An `alert`, `confirm`, `prompt` or `beforeunload` dialog blocks the page's scripts until something answers it, so a page that raises one from a focus handler would hang every later call. An adaptor should dismiss the dialogs an audit raises, and can report how many it has dismissed since the last call through the optional `takeDismissedDialogs`.
+
+Both bundled adaptors take a `dismissDialogs` option:
+
+| Value | When dialogs are dismissed |
+| --- | --- |
+| `true` (default) | Only while something holds `startDismissingDialogs()`, which returns the function that stops it. A tab session holds it for as long as it runs. The rest of the time the adaptor answers nothing, so your own handler works as it would without the adaptor. A dialog that was already open when dismissing starts is closed too, so one raised earlier cannot hang a session: the Puppeteer adaptor keeps a `dialog` listener that only remembers the last dialog for this, and Playwright dismisses a dialog nothing listens for by itself. |
+| `"always"` | From construction, for the page's lifetime. Use it when you hand the whole page over and run audits that do not tab through it (the audit runner does). |
+| `false` | Never. You handle `dialog` events yourself. |
+
+While it is dismissing, the adaptor answers a dialog only after every other `dialog` listener has been called, so a listener of yours that accepts or dismisses the dialog as it is raised still gets to. One that answers later, after an `await`, will find the dialog already dismissed.
 
 ## Puppeteer adaptor
 
@@ -92,7 +106,7 @@ await browser.close();
 
 Two differences from the Puppeteer adaptor are worth knowing about.
 
-**`evaluate` needs `unsafe-eval`.** Playwright's `evaluate` takes a single argument, so the adaptor packs the page function's source and its arguments into one tuple and rebuilds the function in the page with `new Function`. A page whose Content-Security-Policy omits `unsafe-eval` from `script-src` will reject that; the adaptor throws a message naming CSP as the cause rather than letting it read as a page failure. Puppeteer is unaffected, because CDP serialises the function itself.
+**`evaluate` and Content-Security-Policy.** Playwright's `evaluate` takes a single argument, so the adaptor packs the page function's source and its arguments into one tuple and rebuilds the function in the page with `new Function`. Where a page's Content-Security-Policy or Trusted Types policy refuses that, the adaptor falls back to having Playwright build the function through the protocol and calling it by handle, at the cost of two more round trips per call. Only if that is refused as well does it throw, with a message naming CSP as the cause rather than letting it read as a page failure. Puppeteer is unaffected, because CDP serialises the function itself.
 
 **Screenshot scale depends on the engine.** On Chromium the adaptor screenshots over CDP, which honours `screenshotClipScale` per capture, so evidence images match Puppeteer's; it takes the same `captureBeyondViewport` option, off by default for the same reason. Firefox and WebKit expose no CDP, so the adaptor falls back to a full-page capture at the context's own `deviceScaleFactor`, which those engines take without resizing the viewport. There, create the context with a `deviceScaleFactor` matching `screenshotClipScale` (2 by default), or pass the scale you want:
 
@@ -106,7 +120,9 @@ new PlaywrightAdaptor(page, { screenshotClipScale: 1 });
 import { getSelector, truncateHtml } from "@a11y-pulse/browser-adaptor/dom";
 ```
 
-`getSelector` builds a compact selector for an element (intended to run in page context). `truncateHtml` shortens an element's opening tag for display in results.
+`getSelector` builds a compact selector for an element (intended to run in page context). For an element inside an open shadow root it lists each host first, joined by ` >>> `, as in `site-footer >>> a.link`. That is deliberately not valid CSS: `document.querySelector` throws on it rather than resolving the inner part to a look-alike in the light DOM. `resolveSelector` (also a page-context function) turns any `getSelector` result back into its element, or `null`.
+
+`truncateHtml` shortens an element's markup to its opening tag for display in results. It finds the end of the tag even when an attribute value contains a `>`, shortens long attribute values without cutting through a character reference or a surrogate pair, cuts `data:` URIs back to their media type, and replaces the `value` of a text-entry `<input>` with `[redacted]`, since that can hold whatever the page was pre-filled with for the person using it. Values that are labels or fixed choices (`submit`, `button`, `radio`, `checkbox` and the like) are kept.
 
 A page script that collects many elements in one evaluate can leave them on `window` under a key of its own, then fetch selectors (or, with `stashedElementHandle`, a handle) for only the ones it reports:
 
