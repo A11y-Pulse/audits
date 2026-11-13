@@ -7,6 +7,7 @@ import {
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { PlaywrightAdaptor } from "../../src/adaptors/playwright";
 import { PuppeteerAdaptor } from "../../src/adaptors/puppeteer";
+import { DEFAULT_CLIP_TOLERANCE_PX } from "../../src/audit";
 import {
 	runTextSpacingAudit,
 	type TextSpacingAuditAdaptor,
@@ -294,7 +295,10 @@ describeEachEngine<TextSpacingAuditAdaptor>(
 
 			expect(clipped.clippedBy).toBe("#box");
 			expect(clipped.axis).toBe("vertical");
-			expect(clipped.metrics.beforeOverflowPx).toBe(0);
+			// The baseline lines fit, but a font whose glyph box is taller than the 20px line (such as
+			// WenQuanYi Zen Hei, in the Playwright image) overhangs the box by a fraction of a pixel.
+			// The audit tolerates that, and so does this.
+			expect(clipped.metrics.beforeOverflowPx).toBeLessThanOrEqual(DEFAULT_CLIP_TOLERANCE_PX);
 			// The second 24px line ends a few px below the 40px box, drawn at 1.5 times that.
 			expect(clipped.metrics.afterOverflowPx).toBeGreaterThan(2);
 			expect(clipped.metrics.afterOverflowPx).toBeLessThan(12);
