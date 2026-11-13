@@ -1262,6 +1262,37 @@ describe("context observer evidence and attribution", () => {
 		]);
 	});
 
+	it("waits for an element's timer to run, not just come due, before a final drain", async () => {
+		// A browser under load runs a timer some way past its due time, while animation frames keep
+		// coming: the frames must not be taken to mean the timer has had its turn.
+		const realSetTimeout = window.setTimeout;
+
+		window.setTimeout = ((handler: TimerHandler, ms?: number, ...rest: unknown[]) =>
+			realSetTimeout(handler, (Number(ms) || 0) + 150, ...rest)) as typeof window.setTimeout;
+
+		try {
+			document.body.innerHTML = `<input id="last" ${MARKER}="5">`;
+			installTabObserverScript();
+			installContextObserverScript();
+
+			const last = document.querySelector("#last") as HTMLElement;
+
+			last.addEventListener("focus", () => {
+				setTimeout(() => window.open("/late-offer"), 30);
+			});
+
+			tabTo(last);
+			await awaitOwnedTimersScript(1000);
+
+			expect(drainContextObserverScript(MARKER, true).late).toEqual([
+				expect.objectContaining({ index: 5, openedWindow: true, openedWindowUrl: "/late-offer" }),
+			]);
+		} finally {
+			removeTabObserverScript();
+			window.setTimeout = realSetTimeout;
+		}
+	});
+
 	it("does not wait when no element has a timer pending, and gives up at its limit", async () => {
 		document.body.innerHTML = '<input id="last">';
 		installTabObserverScript();

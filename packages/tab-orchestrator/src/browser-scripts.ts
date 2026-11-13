@@ -311,6 +311,12 @@ export function installTabObserverScript(): void {
 							return (callback as (...values: unknown[]) => unknown).apply(this, rest);
 						} finally {
 							win.__a11yPulseTimerRan = Math.max(win.__a11yPulseTimerRan ?? 0, due);
+
+							const observer = owned ? window.__a11yContextObserver : undefined;
+
+							if (observer) {
+								observer.ownedRan = Math.max(observer.ownedRan, due);
+							}
 						}
 					} as (...values: unknown[]) => void;
 				}
@@ -1903,6 +1909,11 @@ type ContextObserverState = {
 	 */
 	ownedDue: number;
 	/**
+	 * The latest due time among the timers that belong to an element and have run. A timer can run
+	 * some way past its due time, so this, not the clock, says when they have all had their turn.
+	 */
+	ownedRan: number;
+	/**
 	 * Who asked for the same-document navigation whose `hashchange` or `popstate` is still to come.
 	 * Those events arrive in a later task, by which time the element's focus handling is over.
 	 */
@@ -1937,6 +1948,7 @@ export function installContextObserverScript(): void {
 		timerOwner: null,
 		dispatchOwner: null,
 		ownedDue: 0,
+		ownedRan: 0,
 		pendingUrlOwner: null,
 		lastForm: null,
 		installed: true,
@@ -2625,7 +2637,6 @@ export function awaitOwnedTimersScript(maxMs: number): Promise<void> {
 			requestAnimationFrame(frame);
 		};
 		const deadline = performance.now() + maxMs;
-		let confirmed = false;
 
 		// No element has set a timer all session: there is nothing to wait for.
 		if (state.ownedDue === 0) {
@@ -2643,22 +2654,18 @@ export function awaitOwnedTimersScript(maxMs: number): Promise<void> {
 				return;
 			}
 
-			if (state.ownedDue <= now) {
-				// A timer that has come due may still be waiting its turn. One more turn of the timer
-				// queue lets it run, and shows whether it set another.
-				if (confirmed) {
-					resolve();
-				} else {
-					confirmed = true;
-					later(check, 0);
-				}
+			// Every timer has run, and none of them set another: one that did has moved `ownedDue` on
+			// before its own run was counted.
+			if (state.ownedRan >= state.ownedDue) {
+				resolve();
 
 				return;
 			}
 
-			confirmed = false;
-			// Queued behind the timer it is waiting for, which is due no later.
-			later(check, Math.min(state.ownedDue, deadline) - now + 1);
+			// Queued behind the timer it is waiting for, which is due no later. A timer that has come
+			// due may still be waiting its turn, behind other work or a busy browser; until it has run,
+			// look again on the next turn.
+			later(check, Math.max(Math.min(state.ownedDue, deadline) - now, 0) + 1);
 		};
 
 		check();
