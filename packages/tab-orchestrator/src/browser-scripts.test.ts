@@ -12,6 +12,7 @@ import {
 	installContextObserverScript,
 	installTabObserverScript,
 	isCenterObscuredScript,
+	landedHrefScript,
 	markActiveElementScript,
 	measureObscuringScript,
 	probeActiveElementScript,
@@ -1434,6 +1435,21 @@ describe("tab observer", () => {
 
 		removeTabObserverScript();
 		expect(documentReplacedScript()).toBe(true);
+	});
+
+	it("counts a document that has started to leave as replaced, before the next one arrives", () => {
+		installTabObserverScript();
+		expect(landedHrefScript()).toEqual({ href: location.href, leaving: false });
+
+		// What a navigation to another document fires as it starts, while the old one stays alive.
+		window.dispatchEvent(new Event("beforeunload"));
+
+		expect(documentReplacedScript()).toBe(true);
+		expect(landedHrefScript()).toEqual({ href: location.href, leaving: true });
+
+		removeTabObserverScript();
+		expect(landedHrefScript().leaving).toBe(false);
+		expect(Object.keys(window).filter((key) => key.startsWith("__a11yPulse"))).toEqual([]);
 	});
 
 	it("reports an element that took focus on the last Tab and then blurred itself", () => {

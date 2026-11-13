@@ -11,7 +11,7 @@ import {
 	documentReplacedScript,
 	drainContextObserverScript,
 	hasFocusScript,
-	locationHrefScript,
+	landedHrefScript,
 	probeActiveElementScript,
 	TABBABLE_SELECTOR,
 } from "./browser-scripts";
@@ -244,6 +244,8 @@ const FINAL_TIMER_WAIT_MS = 1000;
 // destroyed whether it has come back on a new document.
 const NAVIGATION_PROBE_ATTEMPTS = 5;
 const NAVIGATION_PROBE_INTERVAL_MS = 50;
+/** Longest to wait for a navigation that has started to bring its new document in. */
+const NAVIGATION_LAND_LIMIT_MS = 5000;
 
 // Consecutive Tab presses that may each land on an element which gives focus straight back, before
 // the page counts as never letting focus settle.
@@ -730,19 +732,32 @@ export function createTabOrchestrator(
 			 * that is. A navigation consumers were already shown needs no such evidence.
 			 */
 			async function endOnNavigation(): Promise<void> {
-				for (let attempt = 0; !navigationShown && attempt < NAVIGATION_PROBE_ATTEMPTS; attempt++) {
-					try {
-						const href = await adaptor.evaluate(locationHrefScript);
+				const landBy = Date.now() + NAVIGATION_LAND_LIMIT_MS;
+				let destroyed = 0;
 
-						if (typeof href === "string") {
-							navigatedTo = href;
+				while (!navigationShown && destroyed < NAVIGATION_PROBE_ATTEMPTS) {
+					try {
+						const landed = await adaptor.evaluate(landedHrefScript);
+
+						if (!landed?.leaving) {
+							if (typeof landed?.href === "string") {
+								navigatedTo = landed.href;
+							}
+
+							break;
 						}
 
-						break;
+						// The page is still on the document it is leaving: where it is now is not where it
+						// went. Give the new one until the limit to arrive, then say nothing of where.
+						if (Date.now() >= landBy) {
+							break;
+						}
 					} catch (error) {
 						if (!isContextDestroyedError(error)) {
 							break;
 						}
+
+						destroyed++;
 					}
 
 					await new Promise((resolve) => setTimeout(resolve, NAVIGATION_PROBE_INTERVAL_MS));

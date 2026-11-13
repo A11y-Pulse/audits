@@ -211,6 +211,12 @@ type TabObserverWindow = Window & {
 	__a11yPulseTabListener?: (event: KeyboardEvent) => void;
 	__a11yPulseLastTab?: KeyboardEvent;
 	__a11yPulseFocusListener?: (event: FocusEvent) => void;
+	__a11yPulseUnloadListener?: () => void;
+	/**
+	 * The page has started to leave for another document. Until the new one arrives the old one stays
+	 * alive, and in some browsers (Firefox) goes on taking focus, for as long as the server takes.
+	 */
+	__a11yPulseLeaving?: boolean;
 	/** The first element to receive focus since the most recent Tab press. */
 	__a11yPulseFocusedSinceTab?: Element | null;
 	/**
@@ -353,8 +359,14 @@ export function installTabObserverScript(): void {
 			win.__a11yPulseFocusedSinceTab = target as Element;
 		}
 	};
+	// Fired as a navigation to another document starts, and not for one the page (or the context
+	// observer) cancelled.
+	win.__a11yPulseUnloadListener = () => {
+		win.__a11yPulseLeaving = true;
+	};
 	window.addEventListener("keydown", win.__a11yPulseTabListener, true);
 	window.addEventListener("focus", win.__a11yPulseFocusListener, true);
+	window.addEventListener("beforeunload", win.__a11yPulseUnloadListener);
 }
 
 /** Whether the page cancelled the most recent Tab key press, as seen by `installTabObserverScript`. */
@@ -371,6 +383,10 @@ export function removeTabObserverScript(): void {
 
 	if (win.__a11yPulseFocusListener) {
 		window.removeEventListener("focus", win.__a11yPulseFocusListener, true);
+	}
+
+	if (win.__a11yPulseUnloadListener) {
+		window.removeEventListener("beforeunload", win.__a11yPulseUnloadListener);
 	}
 
 	if (win.__a11yPulseTimers) {
@@ -390,6 +406,8 @@ export function removeTabObserverScript(): void {
 	delete win.__a11yPulseTabListener;
 	delete win.__a11yPulseLastTab;
 	delete win.__a11yPulseFocusListener;
+	delete win.__a11yPulseUnloadListener;
+	delete win.__a11yPulseLeaving;
 	delete win.__a11yPulseFocusedSinceTab;
 	delete win.__a11yPulseTimerDue;
 	delete win.__a11yPulseTimerRan;
@@ -397,11 +415,27 @@ export function removeTabObserverScript(): void {
 }
 
 /**
- * Whether the document the session started on has been replaced. The tab observer lives on the
- * window, so a full navigation takes it away while a hash or History API change leaves it alone.
+ * Whether the document the session started on has been replaced, or has started to leave for one
+ * that will replace it. The tab observer lives on the window, so a full navigation takes it away
+ * while a hash or History API change leaves it alone.
  */
 export function documentReplacedScript(): boolean {
-	return (window as TabObserverWindow).__a11yPulseTabListener === undefined;
+	const win = window as TabObserverWindow;
+
+	return win.__a11yPulseTabListener === undefined || win.__a11yPulseLeaving === true;
+}
+
+/**
+ * Where the page is, and whether that is still the document the session started on, waiting for the
+ * one it is leaving for.
+ */
+export function landedHrefScript(): { href: string; leaving: boolean } {
+	const win = window as TabObserverWindow;
+
+	return {
+		href: location.href,
+		leaving: win.__a11yPulseTabListener !== undefined && win.__a11yPulseLeaving === true,
+	};
 }
 
 export type BlurredStop = {
