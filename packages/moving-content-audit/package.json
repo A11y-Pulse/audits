@@ -1,6 +1,6 @@
 {
 	"name": "@a11y-pulse/moving-content-audit",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "WCAG 2.2.2 Pause, Stop, Hide audit that watches a page for content that keeps moving on its own for more than five seconds and looks for a way to pause it.",
 	"type": "module",
 	"license": "SEE LICENSE IN LICENSE.md",
