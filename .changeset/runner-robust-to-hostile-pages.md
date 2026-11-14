@@ -1,0 +1,5 @@
+---
+"@a11y-pulse/audit-runner": minor
+---
+
+Make the runner robust to hostile pages. An audit that throws or runs out of time is reported as `incomplete` under its own id (tagged `a11y-pulse.audit-failed`) instead of losing every other result. A page that navigates away while being tabbed through is reloaded before the remaining audits. HTTP errors and non-HTML responses are no longer audited as valid pages unless `--ignore-http-errors` is given, a network that never goes idle is a warning rather than a failure, and axe-core now runs inside same-origin iframes. Adds `--timeout`, `--max-duration`, the `maxDuration`, `tabSession`, `url` and `onWarning` options, and documented exit codes. The time limit holds on a page that has stopped responding, and when it falls inside the shared tab pass the keyboard-driven audits report on the stops reached. A browser or page that closes mid-run rejects with `BrowserClosedError` (CLI exit 1) rather than reporting every audit as incomplete, and an interrupted run (exit 130 for SIGINT, 143 for SIGTERM) never writes a report.

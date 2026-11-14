@@ -19,6 +19,12 @@ export const AXE_RULE_IDS: ReadonlySet<string> = new Set(
 		.map((rule) => rule.ruleId),
 );
 
+// Only Chromium can tell the unreachable controls audit which listeners an element has.
+export const LISTENER_INSPECTION_ENGINES: readonly EngineName[] = [
+	"puppeteer",
+	"playwright-chromium",
+];
+
 type Bucket = "violations" | "incomplete" | "passes" | "inapplicable";
 
 /**

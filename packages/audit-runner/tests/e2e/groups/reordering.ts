@@ -94,5 +94,17 @@ export const reordering: PageGroup = {
 			outcome: "passes",
 			variants: [GRID],
 		},
+		{
+			scenario: "200% zoom is not emulated from a phone-sized viewport",
+			audit: "resize-text",
+			outcome: "inapplicable",
+			viewports: [MOBILE.name],
+		},
+		{
+			scenario: "product page text at 200% zoom",
+			audit: "resize-text",
+			outcome: "clean",
+			viewports: [DESKTOP.name],
+		},
 	],
 };
