@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Transparent decorative image</title><style>
+  body { margin: 0; background: #fff; font: 16px/1.5 system-ui, sans-serif; }
+  main { padding: 0 16px; }
+  a { display: block; padding: 8px; }
+  a:focus { outline: 3px solid #0050ff; }
+  .spacer { height: 120vh; }
+  #deco { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 50; }
+  /* A watermark: mostly empty, with a mark in one corner. */
+  #mark { position: fixed; left: 0; bottom: 0; width: 100%; height: 90px; z-index: 60; }
+</style></head><body>
+  <main>
+    <a href="#a" id="first">First</a>
+    <a href="#b" id="second">Second</a>
+    <div class="spacer"></div>
+    <a href="#c" id="last">Last</a>
+  </main>
+  <img id="deco" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3C/svg%3E">
+  <img id="mark" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='10' preserveAspectRatio='none'%3E%3Crect x='90' width='10' height='10' fill='%23a00'/%3E%3C/svg%3E">
+</body></html>

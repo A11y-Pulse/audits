@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Email preferences</title><style>
+  body { background: #fff; font: 16px/1.5 system-ui, sans-serif; margin: 40px; }
+  .row { display: flex; align-items: center; gap: 60px; width: 460px; margin: 20px 0; }
+  .control { display: inline-flex; position: relative; }
+  .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); border: 0; }
+  .box { display: block; width: 20px; height: 20px; border: 2px solid #555; border-radius: 3px; background: #fff; }
+  .sr-only:checked + .box { background: #0a7d32; }
+  /* The indicator is drawn on the box beside the hidden input. The label sits further along the row. */
+  #receipts:focus-visible + .box { outline: 2px solid #0050ff; outline-offset: 2px; }
+</style></head><body>
+  <h1>Email preferences</h1>
+  <div class="row">
+    <span class="control"><input type="checkbox" id="receipts" class="sr-only"><span class="box"></span></span>
+    <label for="receipts">Receipts</label>
+  </div>
+  <div class="row">
+    <span class="control"><input type="checkbox" id="offers" class="sr-only"><span class="box"></span></span>
+    <label for="offers">Offers</label>
+  </div>
+</body></html>

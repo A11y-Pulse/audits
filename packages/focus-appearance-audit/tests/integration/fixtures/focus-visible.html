@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Focus-visible only</title><style>
+  body { background: #fff; font: 16px/1.5 system-ui, sans-serif; margin: 40px; }
+  a, button { margin: 16px; padding: 8px 12px; }
+  :focus { outline: none; }
+  #fv:focus-visible, #link:focus-visible { outline: 3px solid #0050ff; outline-offset: 2px; }
+  /* Shown to the mouse only, never to the keyboard. */
+  #mouse-only:focus:not(:focus-visible) { outline: 3px solid #0050ff; }
+</style></head><body>
+  <button id="fv">Keyboard ring</button>
+  <a id="link" href="#link">Keyboard ring link</a>
+  <button id="mouse-only">Mouse ring only</button>
+</body></html>

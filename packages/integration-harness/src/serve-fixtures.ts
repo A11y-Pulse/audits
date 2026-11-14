@@ -19,6 +19,16 @@ export type RecordedRequest = {
 	referrer: string | undefined;
 };
 
+/** Extra response headers, either the same for every file or chosen per request path. */
+export type FixtureHeaders =
+	| Record<string, string>
+	| ((pathname: string) => Record<string, string> | undefined);
+
+export type FixtureServerOptions = {
+	/** Sent with every file served, for fixtures that need a Content-Security-Policy and the like. */
+	headers?: FixtureHeaders;
+};
+
 export type FixtureServer = {
 	url: string;
 	/** Every request received, in order, including the ones that 404. */
@@ -29,7 +39,10 @@ export type FixtureServer = {
 /**
  * Serve the files under `dir` over HTTP on a free port, recording every request.
  */
-export async function startFixtureServer(dir: string | URL): Promise<FixtureServer> {
+export async function startFixtureServer(
+	dir: string | URL,
+	options: FixtureServerOptions = {},
+): Promise<FixtureServer> {
 	const root = path.resolve(dir instanceof URL ? fileURLToPath(dir) : dir);
 	const requests: RecordedRequest[] = [];
 
@@ -66,7 +79,9 @@ export async function startFixtureServer(dir: string | URL): Promise<FixtureServ
 		try {
 			const body = await readFile(target);
 			const contentType = CONTENT_TYPES[path.extname(target)] ?? "application/octet-stream";
-			res.writeHead(200, { "Content-Type": contentType });
+			const extra =
+				typeof options.headers === "function" ? options.headers(pathname) : options.headers;
+			res.writeHead(200, { "Content-Type": contentType, ...extra });
 			res.end(body);
 		} catch {
 			res.writeHead(404);

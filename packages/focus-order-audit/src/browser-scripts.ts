@@ -32,3 +32,32 @@ export function pageContextScript(): PageContext {
 		href: location.href,
 	};
 }
+
+/**
+ * The `tabindex` of each element named by a selector (see getSelector, whose ` >>> ` steps into a
+ * shadow root), or null where the selector no longer finds one.
+ */
+export function tabindexValuesScript(selectors: string[]): Array<number | null> {
+	return selectors.map((selector) => {
+		let scope: ParentNode = document;
+		let element: Element | null = null;
+
+		for (const part of selector.split(" >>> ")) {
+			try {
+				element = scope.querySelector(part);
+			} catch {
+				return null;
+			}
+
+			if (!element) {
+				return null;
+			}
+
+			scope = element.shadowRoot ?? element;
+		}
+
+		return element instanceof HTMLElement || element instanceof SVGElement
+			? element.tabIndex
+			: null;
+	});
+}

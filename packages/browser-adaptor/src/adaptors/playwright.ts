@@ -1,4 +1,4 @@
-import type { CDPSession, JSHandle, Page } from "playwright-core";
+import type { CDPSession, Dialog, JSHandle, Page } from "playwright-core";
 import type { BrowserAdaptor, ElementRef, KeyName, Rect } from "../adaptor";
 import { nextPaintScript } from "../paint";
 
@@ -12,9 +12,20 @@ const cdpSessions = new WeakMap<Page, Promise<CDPSession | null>>();
 // Pages that have had focus emulation enabled at least once.
 const focusEmulatedPages = new WeakSet<Page>();
 
+// Dialog dismissal per page, shared by every adaptor wrapping that page: how many dialogs were
+// dismissed and not yet reported, how many callers currently want dialogs dismissed, and the
+// listener doing it while any does.
+type DialogState = {
+	count: number;
+	holds: number;
+	listener: ((dialog: Dialog) => void) | null;
+};
+
+const dialogStates = new WeakMap<Page, DialogState>();
+
 const DEFAULT_SCREENSHOT_CLIP_SCALE = 2;
 
-const EVAL_BLOCKED = /EvalError|unsafe-eval|Content Security Policy/i;
+const EVAL_BLOCKED = /EvalError|unsafe-eval|Content Security Policy|Trusted ?Type|TrustedScript/i;
 
 function cdpSession(page: Page): Promise<CDPSession | null> {
 	const existing = cdpSessions.get(page);
@@ -58,7 +69,73 @@ export type PlaywrightAdaptorOptions = {
 	 * page without resizing the viewport, so they ignore this.
 	 */
 	captureBeyondViewport?: boolean;
+
+	/**
+	 * Whether to dismiss native dialogs (`alert`, `confirm`, `prompt`, `beforeunload`), and count
+	 * them. Playwright dismisses dialogs by itself only while nothing listens for them, and then
+	 * nothing records that one appeared.
+	 *
+	 * - `true`, the default: only while something has asked for it through `startDismissingDialogs`,
+	 *   which a tab session does for as long as it runs. Outside that the page's dialogs are the
+	 *   caller's to handle, and inside it a `dialog` listener of the caller's that answers a dialog
+	 *   as it is raised still gets to.
+	 * - `"always"`: from construction, for the page's lifetime. For a caller that hands the whole
+	 *   page over, such as the audit runner.
+	 * - `false`: never. The caller handles `dialog` events itself.
+	 */
+	dismissDialogs?: boolean | "always";
 };
+
+/**
+ * Dismiss the dialogs `page` raises, counting them, until the returned function is called. The
+ * listener is on the page only while at least one caller holds it, so a caller's own `dialog`
+ * handler has the page to itself the rest of the time.
+ */
+function dismissDialogsOn(page: Page): () => void {
+	if (typeof page.on !== "function") {
+		return () => {};
+	}
+
+	let state = dialogStates.get(page);
+
+	if (state === undefined) {
+		state = { count: 0, holds: 0, listener: null };
+		dialogStates.set(page, state);
+	}
+
+	const held = state;
+
+	if (held.holds++ === 0) {
+		const listener = (dialog: Dialog): void => {
+			held.count++;
+
+			// Not answered until every other listener has had the dialog: one of the caller's own that
+			// answers it as it is raised then gets to, instead of finding it already handled. The
+			// dismissal rejects when that happened, which is as good as dismissed.
+			setTimeout(() => {
+				dialog.dismiss().catch(() => {});
+			}, 0);
+		};
+
+		held.listener = listener;
+		page.on("dialog", listener);
+	}
+
+	let released = false;
+
+	return () => {
+		if (released) {
+			return;
+		}
+
+		released = true;
+
+		if (--held.holds === 0 && held.listener !== null) {
+			page.off("dialog", held.listener);
+			held.listener = null;
+		}
+	};
+}
 
 /** A BrowserAdaptor backed by a Playwright Page. */
 export class PlaywrightAdaptor implements BrowserAdaptor {
@@ -66,12 +143,34 @@ export class PlaywrightAdaptor implements BrowserAdaptor {
 
 	private readonly captureBeyondViewport: boolean;
 
+	private readonly dismissDialogs: boolean | "always";
+
 	constructor(
 		private readonly page: Page,
 		options: PlaywrightAdaptorOptions = {},
 	) {
 		this.screenshotClipScale = options.screenshotClipScale ?? DEFAULT_SCREENSHOT_CLIP_SCALE;
 		this.captureBeyondViewport = options.captureBeyondViewport ?? false;
+		this.dismissDialogs = options.dismissDialogs ?? true;
+
+		if (this.dismissDialogs === "always") {
+			dismissDialogsOn(page);
+		}
+	}
+
+	startDismissingDialogs(): () => void {
+		return this.dismissDialogs === false ? () => {} : dismissDialogsOn(this.page);
+	}
+
+	takeDismissedDialogs(): number {
+		const state = dialogStates.get(this.page);
+		const count = state?.count ?? 0;
+
+		if (state) {
+			state.count = 0;
+		}
+
+		return count;
 	}
 
 	async evaluate<T>(
@@ -89,14 +188,48 @@ export class PlaywrightAdaptor implements BrowserAdaptor {
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
 
-			if (EVAL_BLOCKED.test(message)) {
-				throw new Error(
-					"The Playwright adaptor rebuilds page functions with new Function(), which this page's Content-Security-Policy blocks. Allow 'unsafe-eval' in script-src, or use the Puppeteer adaptor.",
-					{ cause: error },
-				);
+			if (!EVAL_BLOCKED.test(message)) {
+				throw error;
 			}
 
-			throw error;
+			try {
+				return await this.evaluateWithoutEval<T>(fn, args);
+			} catch (fallbackError) {
+				const fallbackMessage =
+					fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+
+				if (!EVAL_BLOCKED.test(fallbackMessage)) {
+					throw fallbackError;
+				}
+
+				throw new Error(
+					"This page's Content-Security-Policy blocks the Playwright adaptor from building page functions. Allow 'unsafe-eval' in script-src, or use the Puppeteer adaptor.",
+					{ cause: fallbackError },
+				);
+			}
+		}
+	}
+
+	/**
+	 * The route for pages whose Content-Security-Policy forbids `new Function()`: Playwright itself
+	 * turns the source into a function, through the protocol rather than in page script, and the
+	 * function is then called by handle. It costs two more round trips than the packed call, so it
+	 * is only taken once that one has been refused.
+	 */
+	private async evaluateWithoutEval<T>(
+		// biome-ignore lint/suspicious/noExplicitAny: the page-evaluated fn accepts arbitrary serialised args and element handles.
+		fn: (...args: any[]) => T | Promise<T>,
+		args: unknown[],
+	): Promise<T> {
+		const handle = await this.page.evaluateHandle(`(${fn.toString()})`);
+
+		try {
+			return (await handle.evaluate(
+				(pageFn, packed) => (pageFn as (...values: unknown[]) => unknown)(...(packed as unknown[])),
+				args,
+			)) as T;
+		} finally {
+			await handle.dispose().catch(() => {});
 		}
 	}
 
@@ -121,11 +254,12 @@ export class PlaywrightAdaptor implements BrowserAdaptor {
 	}
 
 	async screenshotClip(clip: Rect, scale = 1): Promise<Uint8Array> {
-		await this.page.evaluate(nextPaintScript);
-
 		const session = await cdpSession(this.page);
 
 		if (session) {
+			// No wait for a paint first: Chromium renders a frame of the page as it stands for every
+			// capture it is asked for through CDP.
+			//
 			// The public API cannot scale one capture, and its `clip` is only honoured inside the
 			// viewport. CDP is what Puppeteer drives too, so evidence images stay pixel-comparable.
 			//
@@ -140,6 +274,8 @@ export class PlaywrightAdaptor implements BrowserAdaptor {
 
 			return Buffer.from(data, "base64");
 		}
+
+		await this.page.evaluate(nextPaintScript);
 
 		// Clips are document coordinates, and Playwright renders anything outside the viewport blank
 		// unless the capture is full-page. Firefox and WebKit capture a full page without resizing

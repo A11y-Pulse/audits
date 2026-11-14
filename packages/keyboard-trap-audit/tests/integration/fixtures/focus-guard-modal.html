@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>focus-guard-modal</title>
+<style>[data-focus-guard] { width: 1px; height: 0; padding: 0; overflow: hidden; position: fixed; top: 1px; left: 1px; }</style>
+</head><body>
+<a id="behind" href="#a">Behind the dialog</a>
+<div data-focus-guard tabindex="0" id="guard-start"></div>
+<div id="consent" role="dialog" aria-modal="true" aria-label="Cookies">
+	<p>We use cookies to improve the site.</p>
+	<button id="accept">Accept all</button>
+	<button id="reject">Reject</button>
+</div>
+<div data-focus-guard tabindex="0" id="guard-end"></div>
+<a id="after" href="#b">After the dialog</a>
+<script>
+	// The focus-lock pattern: zero-size sentinels either side of the dialog send focus back into
+	// it. A consent dialog, so Escape does nothing and only its buttons dismiss it.
+	document.getElementById("guard-start").addEventListener("focus", () =>
+		document.getElementById("reject").focus(),
+	);
+	document.getElementById("guard-end").addEventListener("focus", () =>
+		document.getElementById("accept").focus(),
+	);
+	document.getElementById("accept").focus();
+</script>
+</body></html>

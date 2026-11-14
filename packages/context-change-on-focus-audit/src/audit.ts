@@ -7,10 +7,12 @@ import {
 	DEFAULT_FAILED_ELEMENT_LIMIT,
 	DEFAULT_SCREENSHOT_SETTLE_DELAY,
 	DEFAULT_TIMEOUT,
+	type LateContextChange,
 	type TabConsumer,
+	type UnattributedContextChange,
 } from "@a11y-pulse/tab-orchestrator";
-import { classifyContextSignals } from "./classify";
-import type { ContextChangeOnFocusResult } from "./result";
+import { type ContextChangeFinding, classifyContextSignals } from "./classify";
+import type { ContextChangeOnFocusElementResult, ContextChangeOnFocusResult } from "./result";
 
 export const DEFAULT_SCREENSHOT_LIMIT = 10;
 
@@ -59,7 +61,7 @@ function recount(result: ContextChangeOnFocusResult): void {
 /**
  * Tab through focusable elements and report whether focusing any of them triggers a context change
  * (WCAG 3.2.1 On Focus): a new window, an auto-submitted form, focus being removed or redirected
- * outside the intended element's subtree, or a navigation. Attach to a `createTabOrchestrator`
+ * outside the intended element's subtree, a native dialog, or a navigation. Attach to a `createTabOrchestrator`
  * session, or use `runContextChangeOnFocusAudit` to run as the sole consumer.
  */
 export function createContextChangeOnFocusAudit(
@@ -68,9 +70,68 @@ export function createContextChangeOnFocusAudit(
 	const resolved = resolveOptions(options);
 	const result = emptyResult();
 	let checked = 0;
-	let failures = 0;
 	let screenshotsTaken = 0;
 	const selfDisconnect = createAuditSelfDisconnect();
+	// Elements already reported, so that a change a timer makes after focus has moved on is added to
+	// the element that set the timer rather than to whichever one happens to be focused.
+	const byIndex = new Map<number, ContextChangeOnFocusElementResult>();
+	const seenUnattributed = new Set<string>();
+	const byHtml = new Map<string, ContextChangeOnFocusElementResult>();
+	let lastTabIndex = 0;
+
+	/** Add what a timer did to the element that set it, which focus has since left. */
+	const absorbLate = (changes: LateContextChange[] | undefined, tabIndex: number): void => {
+		for (const change of changes ?? []) {
+			const delayed = classifyContextSignals(change.signals, change.details).map((finding) => ({
+				...finding,
+				delayed: true,
+			}));
+
+			if (delayed.length === 0) {
+				continue;
+			}
+
+			let owner =
+				(change.index === null ? undefined : byIndex.get(change.index)) ?? byHtml.get(change.html);
+
+			if (owner === undefined) {
+				owner = {
+					selector: "",
+					html: change.html,
+					tabIndex,
+					findings: [],
+					failed: false,
+				};
+				result.elements.push(owner);
+				byHtml.set(change.html, owner);
+			}
+
+			owner.findings.push(...delayed);
+			owner.failed = owner.findings.some((finding) => finding.bucket === "violation");
+		}
+	};
+
+	/**
+	 * Keep what the page did that no focused element can be shown to have caused. It is evidence
+	 * that something changed context during the pass, not that focusing anything did, so it is for
+	 * review and is reported once however often the page repeated it.
+	 */
+	const absorbUnattributed = (changes: UnattributedContextChange[] | undefined): void => {
+		for (const change of changes ?? []) {
+			for (const finding of classifyContextSignals(change.signals, change.details)) {
+				const unattributed: ContextChangeFinding = { ...finding, bucket: "incomplete" };
+				const key = JSON.stringify([finding.kind, finding.url, finding.from, finding.to]);
+
+				if (seenUnattributed.has(key)) {
+					continue;
+				}
+
+				seenUnattributed.add(key);
+				result.unattributed ??= [];
+				result.unattributed.push(unattributed);
+			}
+		}
+	};
 
 	return {
 		result,
@@ -91,37 +152,78 @@ export function createContextChangeOnFocusAudit(
 				return;
 			}
 
-			const findings = classifyContextSignals(drain.signals);
+			lastTabIndex = snapshot.tabIndex;
+			absorbLate(drain.late, snapshot.tabIndex);
+			absorbUnattributed(drain.unattributed);
+
+			const findings = classifyContextSignals(drain.signals, drain.details);
 			const failed = findings.some((finding) => finding.bucket === "violation");
 
-			// A navigation leaves nothing of the original page to capture.
-			const screenshot =
+			// Focus that was dropped or passed on is the doing of the element that received it, which
+			// is no longer the focused one when it was passed on.
+			const attributed = drain.details?.attributed;
+			const focused = snapshot.activeElement;
+			const gaveFocusAway =
+				attributed !== undefined &&
+				(drain.signals.focusRemoved || drain.signals.redirect !== null) &&
+				attributed.selector !== focused.selector;
+
+			if (gaveFocusAway) {
+				for (const finding of findings) {
+					if (
+						finding.kind === "focus-redirected-outside" ||
+						finding.kind === "focus-redirected-same-subtree"
+					) {
+						finding.redirectedTo = { selector: focused.selector, html: focused.html };
+					}
+				}
+			}
+
+			// A navigation that went ahead leaves nothing of the original page to capture.
+			let screenshot: Uint8Array | undefined;
+
+			if (
 				findings.length > 0 &&
 				!drain.signals.navigation &&
 				screenshotsTaken < resolved.screenshotLimit
-					? await session.screenshotClip()
-					: undefined;
+			) {
+				try {
+					screenshot = await session.screenshotClip(gaveFocusAway ? "attributed" : "focused");
+				} catch (error) {
+					// The element that gave focus away may have left the page since; the one focus went
+					// to is still worth showing. Any other capture failure is the session's to report.
+					if (!gaveFocusAway) {
+						throw error;
+					}
+
+					screenshot = await session.screenshotClip();
+				}
+			}
 
 			if (screenshot) {
 				screenshotsTaken++;
 			}
 
-			result.elements.push({
-				selector: snapshot.activeElement.selector,
-				html: snapshot.activeElement.html,
+			const element: ContextChangeOnFocusElementResult = {
+				selector: gaveFocusAway ? attributed.selector : focused.selector,
+				html: gaveFocusAway ? attributed.html : focused.html,
 				tabIndex: snapshot.tabIndex,
 				findings,
 				failed,
 				screenshot,
-			});
+			};
 
-			if (failed) {
-				failures++;
+			result.elements.push(element);
+
+			if (!gaveFocusAway && focused.index !== null) {
+				byIndex.set(focused.index, element);
 			}
+
+			byHtml.set(element.html, element);
 
 			recount(result);
 
-			if (resolved.failedElementLimit > 0 && failures >= resolved.failedElementLimit) {
+			if (resolved.failedElementLimit > 0 && result.summary.failed >= resolved.failedElementLimit) {
 				result.summary.reachedFailedElementLimit = true;
 				selfDisconnect.disconnect(session);
 
@@ -133,11 +235,23 @@ export function createContextChangeOnFocusAudit(
 				selfDisconnect.disconnect(session);
 			}
 		},
-		onSessionEnd(reason) {
+		onSessionEnd(reason, detail) {
 			selfDisconnect.clear();
+
+			// What the last elements of the tab order deferred to a timer, which the session waited
+			// for, and anything else the observer still had to report.
+			absorbLate(detail?.contextSignals?.late, lastTabIndex);
+			absorbUnattributed(detail?.contextSignals?.unattributed);
+			recount(result);
 
 			if (!selfDisconnect.disconnectedSelf) {
 				result.summary.sessionEnd = reason;
+
+				// The page went before the element that sent it could be read. What is known is the
+				// element tabbed from, and where the page ended up.
+				if (reason === "navigation" && detail?.navigation) {
+					result.navigation = detail.navigation;
+				}
 			}
 		},
 	};

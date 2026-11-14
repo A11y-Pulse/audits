@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>column-flow-cards</title>
+<style>
+body { margin: 0; font: 16px/1.5 sans-serif; }
+header, footer { padding: 16px; }
+ul {
+	display: grid; grid-auto-flow: column; grid-template-rows: repeat(12, auto); gap: 16px;
+	margin: 0; padding: 16px; list-style: none;
+}
+li { border: 1px solid #767676; padding: 12px; }
+li h2 { font-size: 1rem; margin: 0 0 8px; }
+li a { display: inline-block; padding: 8px 12px; }
+</style></head><body>
+<header><a id="home" href="#home">Outdoor Co</a></header>
+<main>
+<!-- 48 cards placed column by column, 12 to a column, so each column is over a viewport tall. Each
+     card holds two controls side by side. -->
+<ul id="products"></ul>
+</main>
+<footer><a id="terms" href="#terms">Terms</a></footer>
+<script>
+const list = document.getElementById("products");
+for (let i = 1; i <= 48; i++) {
+	const item = document.createElement("li");
+	const heading = document.createElement("h2");
+	heading.textContent = `Tent ${i}`;
+	const view = document.createElement("a");
+	view.id = `view${i}`;
+	view.href = `#view${i}`;
+	view.textContent = "View";
+	const buy = document.createElement("a");
+	buy.id = `buy${i}`;
+	buy.href = `#buy${i}`;
+	buy.textContent = "Buy";
+	item.append(heading, view, " ", buy);
+	list.append(item);
+}
+</script>
+</body></html>

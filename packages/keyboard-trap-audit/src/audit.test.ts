@@ -10,9 +10,13 @@ import { createKeyboardTrapAudit, type EscapeKey, type KeyboardTrapOptions } fro
 import {
 	clearContainerScript,
 	containerHtmlScript,
+	escapeIgnoredScript,
 	type FocusProbe,
+	focusOutsideScript,
 	focusSelectorScript,
 	inspectRingScript,
+	leaveOutsideScript,
+	outsideOpenedScript,
 	probeFocusScript,
 	type RingInspection,
 } from "./browser-scripts";
@@ -39,9 +43,19 @@ const session: TabSessionHandle = {
 
 const PAGE_URL = "https://example.test/";
 
-const TRAPPED: FocusProbe = { member: 0, containerVisible: true, href: PAGE_URL };
+const TRAPPED: FocusProbe = {
+	member: 0,
+	containerVisible: true,
+	href: PAGE_URL,
+	landed: '<button id="e0">',
+};
 
-const FREED: FocusProbe = { member: -1, containerVisible: true, href: PAGE_URL };
+const FREED: FocusProbe = {
+	member: -1,
+	containerVisible: true,
+	href: PAGE_URL,
+	landed: '<a id="outside" href="#">',
+};
 
 function inspection(
 	overrides: Partial<Extract<RingInspection, { resolved: true }>> = {},
@@ -68,17 +82,35 @@ type FakePage = {
 	afterFocus?: () => FocusProbe;
 	/** The page cancels every Tab and Shift+Tab. */
 	tabPrevented?: boolean;
+	/**
+	 * Whether focus given to an element outside the ring stays there. Unset when the page has no
+	 * such element.
+	 */
+	outsideHolds?: boolean;
+	/** The elements outside the ring were there at inspection and have since gone for good. */
+	outsideGone?: boolean;
+	/** Giving the element outside the ring focus made the page show something. */
+	outsideOpened?: boolean;
+	/** The page visibly did nothing with Escape. */
+	escapeIgnored?: boolean;
 };
 
 function fakeAdaptor(page: FakePage = {}): BrowserAdaptor & {
 	keys: EscapeKey[];
 	cleared: boolean;
+	probes: number;
+	focused: number[];
+	/** What had been pressed each time the element outside the ring was left again. */
+	leftOutsideAfter: EscapeKey[][];
 } {
 	let state = TRAPPED;
 	const adaptor = {
 		keys: [] as EscapeKey[],
 		cleared: false,
-		evaluate: (async (fn: unknown) => {
+		probes: 0,
+		focused: [] as number[],
+		leftOutsideAfter: [] as EscapeKey[][],
+		evaluate: (async (fn: unknown, ...args: unknown[]) => {
 			if (fn === inspectRingScript) {
 				return page.inspection ?? inspection();
 			}
@@ -92,12 +124,43 @@ function fakeAdaptor(page: FakePage = {}): BrowserAdaptor & {
 			}
 
 			if (fn === focusSelectorScript) {
+				adaptor.focused.push(args[1] as number);
 				state = page.afterFocus?.() ?? TRAPPED;
 
 				return true;
 			}
 
+			if (fn === focusOutsideScript) {
+				if (page.outsideGone) {
+					return "gone";
+				}
+
+				if (page.outsideHolds === undefined) {
+					return "none";
+				}
+
+				state = page.outsideHolds ? FREED : TRAPPED;
+
+				return "focused";
+			}
+
+			if (fn === outsideOpenedScript) {
+				return page.outsideOpened ?? false;
+			}
+
+			if (fn === leaveOutsideScript) {
+				adaptor.leftOutsideAfter.push([...adaptor.keys]);
+
+				return undefined;
+			}
+
+			if (fn === escapeIgnoredScript) {
+				return page.escapeIgnored ?? false;
+			}
+
 			if (fn === probeFocusScript) {
+				adaptor.probes++;
+
 				return state;
 			}
 
@@ -128,7 +191,11 @@ function fakeAdaptor(page: FakePage = {}): BrowserAdaptor & {
 
 function runSession(
 	indexes: Array<number | null>,
-	end: { reason?: "completed" | "lostFocus"; revisitedIndex?: number | null } = {},
+	end: {
+		reason?: "completed" | "lostFocus" | "stuck";
+		revisitedIndex?: number | null;
+		stuckIn?: { selector: string; html: string };
+	} = {},
 	options: KeyboardTrapOptions = {},
 ) {
 	const audit = createKeyboardTrapAudit({ screenshotSettleDelay: 0, ...options });
@@ -138,7 +205,10 @@ function runSession(
 		audit.onTabStop({ tabIndex: i + 1, activeElement: active(index) }, session);
 	});
 
-	audit.onSessionEnd?.(end.reason ?? "completed", { revisitedIndex: end.revisitedIndex ?? null });
+	audit.onSessionEnd?.(end.reason ?? "completed", {
+		revisitedIndex: end.revisitedIndex ?? null,
+		stuckIn: end.stuckIn ?? null,
+	});
 
 	return audit;
 }
@@ -177,6 +247,7 @@ describe("createKeyboardTrapAudit", () => {
 		const result = await verify(runSession([0, 1], { reason: "lostFocus" }), fakeAdaptor());
 
 		expect(result.outcome).toBe("inconclusive");
+		expect(result.inconclusiveReason).toBe("session-ended");
 		expect(result.summary.sessionEnd).toBe("lostFocus");
 	});
 
@@ -185,6 +256,7 @@ describe("createKeyboardTrapAudit", () => {
 		const result = await verify(audit, fakeAdaptor());
 
 		expect(result.outcome).toBe("inconclusive");
+		expect(result.inconclusiveReason).toBe("element-limit");
 		expect(result.summary.reachedLimit).toBe(true);
 		expect(session.disconnect).toHaveBeenCalled();
 	});
@@ -202,6 +274,7 @@ describe("createKeyboardTrapAudit", () => {
 		const result = await verify(runSession([0, 1], { revisitedIndex: 0 }), adaptor);
 
 		expect(result.outcome).toBe("inconclusive");
+		expect(result.inconclusiveReason).toBe("scattered-ring");
 		expect(adaptor.keys).toEqual([]);
 	});
 
@@ -210,6 +283,7 @@ describe("createKeyboardTrapAudit", () => {
 		const result = await verify(runSession([0, 1], { revisitedIndex: 0 }), adaptor);
 
 		expect(result.outcome).toBe("inconclusive");
+		expect(result.inconclusiveReason).toBe("ring-unresolved");
 	});
 
 	it("treats selectors that now name different elements as inconclusive", async () => {
@@ -355,9 +429,15 @@ describe("createKeyboardTrapAudit", () => {
 	});
 
 	it("passes when Tab leaves the ring after the other exits have failed", async () => {
+		// Tab moves from the first member to the second, and from there out of the ring.
 		const adaptor = fakeAdaptor({
-			afterKey: (key, keys) =>
-				key === "Tab" && keys.filter((k) => k === "Tab").length === 2 ? FREED : undefined,
+			afterKey: (key, keys) => {
+				if (key !== "Tab") {
+					return undefined;
+				}
+
+				return keys.filter((k) => k === "Tab").length === 2 ? FREED : { ...TRAPPED, member: 1 };
+			},
 		});
 		const result = await verify(runSession([0, 1], { revisitedIndex: 1 }), adaptor);
 
@@ -387,6 +467,7 @@ describe("createKeyboardTrapAudit", () => {
 		const result = await verify(runSession([0, 1], { revisitedIndex: 0 }), adaptor);
 
 		expect(result.outcome).toBe("inconclusive");
+		expect(result.inconclusiveReason).toBe("navigated");
 		expect(adaptor.cleared).toBe(true);
 	});
 
@@ -395,6 +476,336 @@ describe("createKeyboardTrapAudit", () => {
 		const result = await verify(runSession([0, 1], { revisitedIndex: 0 }), adaptor);
 
 		expect(result.outcome).toBe("inconclusive");
+		expect(result.inconclusiveReason).toBe("ring-changed");
+	});
+
+	it("names the iframe focus never came back out of", async () => {
+		const frame = { selector: "#booking", html: '<iframe id="booking" title="Booking">' };
+		const adaptor = fakeAdaptor();
+		const result = await verify(runSession([0], { reason: "stuck", stuckIn: frame }), adaptor);
+
+		expect(result.outcome).toBe("inconclusive");
+		expect(result.inconclusiveReason).toBe("stuck-in-frame");
+		expect(result.container).toEqual(frame);
+		expect(adaptor.keys).toEqual([]);
+	});
+
+	it("does not count the page edge as a way out when the page pulls focus back on re-entry", async () => {
+		const adaptor = fakeAdaptor({
+			inspection: inspection({ atStart: true }),
+			outsideHolds: false,
+		});
+		const result = await verify(runSession([0, 1], { revisitedIndex: 0 }), adaptor);
+
+		expect(result.outcome).toBe("inconclusive");
+		expect(result.inconclusiveReason).toBe("page-edge-only");
+		expect(result.escapedVia).toBeNull();
+		expect(result.roundsAttempted).toBe(2);
+		expect(result.attempts.filter((attempt) => attempt.pageEdge).map(({ key }) => key)).toEqual([
+			"Shift+Tab",
+			"Shift+Tab",
+		]);
+	});
+
+	it("treats focus left on nothing at the edge of the page as gone to the browser, not freed", async () => {
+		// Chromium drops focus to the document when Shift+Tab leaves the first element of a page.
+		const adaptor = fakeAdaptor({
+			inspection: inspection({ atStart: true }),
+			afterKey: (key) => (key === "Shift+Tab" ? { ...FREED, landed: null } : undefined),
+			outsideHolds: false,
+		});
+		const result = await verify(runSession([0, 1], { revisitedIndex: 0 }), adaptor);
+
+		expect(result.outcome).toBe("inconclusive");
+		expect(result.inconclusiveReason).toBe("page-edge-only");
+		expect(result.attempts.find((attempt) => attempt.key === "Shift+Tab")).toMatchObject({
+			pageEdge: true,
+			exited: false,
+		});
+	});
+
+	it("still counts focus left on nothing as freed away from the edge of the page", async () => {
+		const adaptor = fakeAdaptor({
+			afterKey: (key) => (key === "Shift+Tab" ? { ...FREED, landed: null } : undefined),
+			outsideHolds: false,
+		});
+		const result = await verify(runSession([0, 1], { revisitedIndex: 0 }), adaptor);
+
+		expect(result.outcome).toBe("escaped");
+		expect(result.escapedVia).toBe("shift-tab");
+	});
+
+	it("counts the page edge as a way out when focus can come back in at the other end", async () => {
+		const adaptor = fakeAdaptor({
+			inspection: inspection({ atEnd: true }),
+			outsideHolds: true,
+		});
+		const result = await verify(runSession([0, 1], { revisitedIndex: 0 }), adaptor);
+
+		expect(result.outcome).toBe("escaped");
+		expect(result.escapedVia).toBe("tab");
+		expect(result.attempts.at(-1)).toMatchObject({ key: "Tab", pageEdge: true, exited: true });
+	});
+
+	it("does not count the page edge as a way out when the elements outside the ring have gone since it was inspected", async () => {
+		const adaptor = fakeAdaptor({
+			inspection: inspection({ atStart: true }),
+			outsideGone: true,
+		});
+		const result = await verify(runSession([0, 1], { revisitedIndex: 0 }), adaptor);
+
+		expect(result.outcome).toBe("inconclusive");
+		expect(result.inconclusiveReason).toBe("page-edge-only");
+		expect(result.escapedVia).toBeNull();
+	});
+
+	it("leaves the element outside the ring again after focusing it, whether or not focus stayed there", async () => {
+		const held = fakeAdaptor({ inspection: inspection({ atStart: true }), outsideHolds: true });
+		await verify(runSession([0, 1], { revisitedIndex: 0 }), held);
+
+		const pulledBack = fakeAdaptor({
+			inspection: inspection({ atStart: true }),
+			outsideHolds: false,
+		});
+		await verify(runSession([0, 1], { revisitedIndex: 0 }, { escapeAttemptRounds: 1 }), pulledBack);
+
+		expect(held.leftOutsideAfter).toHaveLength(1);
+		// Once for Shift+Tab off the start; Tab is not at an edge here.
+		expect(pulledBack.leftOutsideAfter).toHaveLength(1);
+	});
+
+	it("presses Escape to close what the element outside the ring opened, before leaving it", async () => {
+		const adaptor = fakeAdaptor({
+			inspection: inspection({ atStart: true, escapeIndex: -1 }),
+			outsideHolds: true,
+			outsideOpened: true,
+		});
+		const result = await verify(runSession([0, 1], { revisitedIndex: 0 }), adaptor);
+
+		expect(result.outcome).toBe("escaped");
+		expect(result.escapedVia).toBe("shift-tab");
+		// The Escape that tidies up is not one of the keys tried on the ring.
+		expect(result.keysTried).toEqual(["Shift+Tab"]);
+		expect(adaptor.keys).toEqual(["Shift+Tab", "Escape"]);
+		expect(adaptor.leftOutsideAfter).toEqual([["Shift+Tab", "Escape"]]);
+	});
+
+	it("does not press Escape outside the ring when nothing opened, or when the page pulled focus back", async () => {
+		const nothingOpened = fakeAdaptor({
+			inspection: inspection({ atStart: true, escapeIndex: -1 }),
+			outsideHolds: true,
+		});
+		await verify(runSession([0, 1], { revisitedIndex: 0 }), nothingOpened);
+
+		const pulledBack = fakeAdaptor({
+			inspection: inspection({ atStart: true, escapeIndex: -1 }),
+			outsideHolds: false,
+			outsideOpened: true,
+		});
+		await verify(runSession([0, 1], { revisitedIndex: 0 }), pulledBack);
+
+		expect(nothingOpened.keys).not.toContain("Escape");
+		expect(pulledBack.keys).not.toContain("Escape");
+	});
+
+	it("credits Escape, not the next key, when the container goes soon after a wait on Escape that was cut short", async () => {
+		// The page showed no sign of handling Escape, and its dialog closed a moment later anyway.
+		const adaptor = fakeAdaptor({
+			escapeIgnored: true,
+			afterKey: (key) => (key === "Shift+Tab" ? { ...FREED, containerVisible: false } : undefined),
+		});
+		const result = await verify(runSession([0, 1], { revisitedIndex: 0 }), adaptor);
+
+		expect(result.outcome).toBe("escaped");
+		expect(result.escapedVia).toBe("escape-key");
+		expect(result.attempts.map(({ key, exited }) => ({ key, exited }))).toEqual([
+			{ key: "Escape", exited: true },
+			{ key: "Shift+Tab", exited: false },
+		]);
+	});
+
+	it("credits the key that was pressed when the container goes after Escape was waited on in full", async () => {
+		const adaptor = fakeAdaptor({
+			afterKey: (key) => (key === "Shift+Tab" ? { ...FREED, containerVisible: false } : undefined),
+		});
+		const result = await verify(runSession([0, 1], { revisitedIndex: 0 }), adaptor);
+
+		expect(result.escapedVia).toBe("shift-tab");
+		expect(result.attempts.map(({ key, exited }) => ({ key, exited }))).toEqual([
+			{ key: "Escape", exited: false },
+			{ key: "Shift+Tab", exited: true },
+		]);
+	});
+
+	it("credits the key that moved focus out while the container stays, even straight after Escape", async () => {
+		const adaptor = fakeAdaptor({
+			escapeIgnored: true,
+			afterKey: (key) => (key === "Shift+Tab" ? FREED : undefined),
+		});
+		const result = await verify(runSession([0, 1], { revisitedIndex: 0 }), adaptor);
+
+		expect(result.escapedVia).toBe("shift-tab");
+	});
+
+	it("records each key pressed, where focus landed and whether the page cancelled Tab", async () => {
+		const adaptor = fakeAdaptor({ tabPrevented: true });
+		const result = await verify(
+			runSession([0, 1], { revisitedIndex: 0 }, { escapeAttemptRounds: 1 }),
+			adaptor,
+		);
+
+		expect(result.keysTried).toEqual(["Escape", "Shift+Tab", "Tab"]);
+		expect(result.attempts).toEqual([
+			{
+				round: 1,
+				key: "Escape",
+				presses: 1,
+				from: '<button id="e0">',
+				landed: '<button id="e0">',
+				exited: false,
+			},
+			{
+				round: 1,
+				key: "Shift+Tab",
+				presses: 1,
+				from: '<button id="e0">',
+				landed: '<button id="e0">',
+				exited: false,
+				cancelled: true,
+			},
+			{
+				round: 1,
+				key: "Tab",
+				presses: 1,
+				from: '<button id="e0">',
+				landed: '<button id="e0">',
+				exited: false,
+				cancelled: true,
+			},
+		]);
+	});
+
+	it("lists only the keys it pressed", async () => {
+		const adaptor = fakeAdaptor({ inspection: inspection({ escapeIndex: -1, arrowSafe: [true] }) });
+		const result = await verify(runSession([0, 1], { revisitedIndex: 0 }), adaptor);
+
+		expect(result.keysTried).toEqual(["Shift+Tab", "ArrowDown", "Tab", "ArrowRight"]);
+	});
+
+	it("records where the key that freed focus put it", async () => {
+		const adaptor = fakeAdaptor({
+			afterKey: (key) => (key === "Shift+Tab" ? FREED : undefined),
+		});
+		const result = await verify(runSession([0, 1], { revisitedIndex: 0 }), adaptor);
+
+		expect(result.attempts.at(-1)).toMatchObject({
+			key: "Shift+Tab",
+			exited: true,
+			landed: '<a id="outside" href="#">',
+		});
+	});
+
+	it("stops walking a ring once focus is back on a member it has already been on", async () => {
+		// Shift+Tab steps back one member at a time and wraps round; Tab steps forward.
+		const size = 5;
+		let member = 0;
+		const adaptor = fakeAdaptor({
+			afterFocus: () => {
+				member = 0;
+
+				return TRAPPED;
+			},
+			afterKey: (key) => {
+				if (key !== "Shift+Tab" && key !== "Tab") {
+					return undefined;
+				}
+
+				member = (member + (key === "Tab" ? 1 : size - 1)) % size;
+
+				return { ...TRAPPED, member };
+			},
+		});
+		const indexes = Array.from({ length: size }, (_, i) => i);
+		const result = await verify(
+			runSession(indexes, { revisitedIndex: 0 }, { escapeAttemptRounds: 1 }),
+			adaptor,
+		);
+
+		expect(result.outcome).toBe("trapped");
+		// Once round the ring in each direction, where it used to press one more for luck.
+		expect(adaptor.keys.filter((key) => key === "Shift+Tab")).toHaveLength(size);
+		expect(adaptor.keys.filter((key) => key === "Tab")).toHaveLength(size);
+		expect(result.sampledRing).toBe(false);
+	});
+
+	it("presses Tab and Shift+Tab only either side of where a large ring wraps round", async () => {
+		const size = 150;
+		let member = 0;
+		const adaptor = fakeAdaptor({
+			afterFocus: () => {
+				member = adaptor.focused.at(-1) ?? 0;
+
+				return { ...TRAPPED, member };
+			},
+			afterKey: (key) => {
+				if (key !== "Shift+Tab" && key !== "Tab") {
+					return undefined;
+				}
+
+				member = (member + (key === "Tab" ? 1 : size - 1)) % size;
+
+				return { ...TRAPPED, member };
+			},
+		});
+		const indexes = Array.from({ length: size }, (_, i) => i);
+		const result = await verify(
+			runSession(indexes, { revisitedIndex: 0 }, { escapeAttemptRounds: 1 }),
+			adaptor,
+		);
+
+		// A ring that was only sampled is never called a trap: an exit in the middle went untried.
+		expect(result.outcome).toBe("inconclusive");
+		expect(result.inconclusiveReason).toBe("ring-sampled");
+		expect(result.summary.failed).toBe(0);
+		expect(result.sampledRing).toBe(true);
+		expect(adaptor.keys.filter((key) => key === "Shift+Tab")).toHaveLength(16);
+		expect(adaptor.keys.filter((key) => key === "Tab")).toHaveLength(16);
+		// Escape from the first member, then backwards from the eighth and forwards from eight
+		// before the last, so each walk crosses the wrap.
+		expect(adaptor.focused).toEqual([0, 8, 141]);
+	});
+
+	it("stops waiting on Escape once the page has visibly ignored it", async () => {
+		const patient = fakeAdaptor();
+		await verify(runSession([0, 1], { revisitedIndex: 0 }, { escapeAttemptRounds: 1 }), patient);
+
+		const quick = fakeAdaptor({ escapeIgnored: true });
+		await verify(runSession([0, 1], { revisitedIndex: 0 }, { escapeAttemptRounds: 1 }), quick);
+
+		// 21 polls over the full second against 3 before the page is asked.
+		expect(patient.probes - quick.probes).toBe(18);
+	});
+
+	it("gives up on the escape attempts when the timeout runs out", async () => {
+		const adaptor = fakeAdaptor();
+		const result = await verify(
+			runSession([0, 1], { revisitedIndex: 0 }, { timeout: 500 }),
+			adaptor,
+		);
+
+		expect(result.outcome).toBe("inconclusive");
+		expect(result.inconclusiveReason).toBe("timed-out");
+		expect(result.summary.timedOut).toBe(true);
+		expect(adaptor.keys).toEqual(["Escape"]);
+		expect(adaptor.cleared).toBe(true);
+	});
+
+	it("reports the dialog a ring sits in", async () => {
+		const dialog = { role: "dialog" as const, native: false, modal: true, buttons: 2 };
+		const adaptor = fakeAdaptor({ inspection: inspection({ dialog }) });
+		const result = await verify(runSession([0, 1], { revisitedIndex: 0 }), adaptor);
+
+		expect(result.dialog).toEqual(dialog);
 	});
 
 	it("caps the reported ring members but counts them all", async () => {

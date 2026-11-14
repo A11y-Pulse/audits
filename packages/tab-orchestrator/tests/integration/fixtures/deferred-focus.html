@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Account</title>
+<style>
+	button, a { display: inline-block; margin: 12px; padding: 8px 12px; }
+	/* The indicator eases in, so straight after focus arrives its computed width is still 0. */
+	#eased { outline: 0 solid #1a4fd8; transition: outline-width 200ms linear; }
+	#eased:focus { outline-width: 6px; }
+</style>
+</head><body>
+<button id="plain" type="button">Plain</button>
+<!-- A component that marks itself focused on the next animation frame, as UI libraries often do. -->
+<button id="framed" type="button">Framed</button>
+<!-- And one that does it from a promise callback. -->
+<button id="queued" type="button">Queued</button>
+<button id="eased" type="button">Eased</button>
+<script>
+	document.getElementById("framed").addEventListener("focus", (event) => {
+		requestAnimationFrame(() => event.target.setAttribute("data-focus-state", "framed"));
+	});
+
+	document.getElementById("queued").addEventListener("focus", (event) => {
+		Promise.resolve().then(() => event.target.setAttribute("data-focus-state", "queued"));
+	});
+</script>
+</body></html>

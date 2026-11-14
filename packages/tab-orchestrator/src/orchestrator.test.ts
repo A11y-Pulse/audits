@@ -10,6 +10,7 @@ import {
 	clearContextFocusInsScript,
 	clearMarkersScript,
 	clearObscurerScript,
+	documentReplacedScript,
 	drainContextObserverScript,
 	elementRectScript,
 	elementStylesScript,
@@ -26,7 +27,12 @@ import {
 	probeActiveElementScript,
 	scrollToCenterScript,
 } from "./browser-scripts";
-import { createTabOrchestrator, isContextDestroyedError } from "./orchestrator";
+import {
+	createTabOrchestrator,
+	isContextDestroyedError,
+	OBSCURING_RECHECK_DELAY_MS,
+} from "./orchestrator";
+import { sessionStartScript, tabStopScript } from "./session-scripts";
 import type { ActiveElementInfo, SessionEndDetail, TabConsumer, TabStopSnapshot } from "./types";
 
 function dummyAdaptor(): BrowserAdaptor {
@@ -900,6 +906,242 @@ describe("tab loop", () => {
 		expect(other.stops[1]?.obscuring).toBeUndefined();
 	});
 
+	/** An adaptor that reports every stop as covered by `cover`, and counts what that costs. */
+	function coveredAdaptor(cover: { opacity: "opaque" | "semi-transparent" }) {
+		const calls = { measure: 0, clear: 0, obscurerHandle: 0 };
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			active: [info(0)],
+		});
+		const original = adaptor.evaluate.bind(adaptor);
+		adaptor.evaluate = (async (fn, ...args) => {
+			if (fn === measureObscuringScript) {
+				calls.measure++;
+
+				return {
+					coveredFraction: 1,
+					fullyObscured: true,
+					offscreen: false,
+					opacity: cover.opacity,
+					obscuredByHtml: '<div id="banner">',
+					hasObscurer: true,
+				};
+			}
+
+			if (fn === clearObscurerScript) {
+				calls.clear++;
+
+				return undefined;
+			}
+
+			return original(fn, ...args);
+		}) as BrowserAdaptor["evaluate"];
+		adaptor.evaluateHandle = async (fn) => {
+			if (fn === obscurerHandleScript) {
+				calls.obscurerHandle++;
+			}
+
+			return {};
+		};
+
+		return { adaptor, calls };
+	}
+
+	it("looks twice at an opaque cover, in case it was only passing through", async () => {
+		vi.useFakeTimers();
+
+		try {
+			const { adaptor, calls } = coveredAdaptor({ opacity: "opaque" });
+			const obscuring = recordingConsumer(["obscuring"]);
+			const orchestrator = createTabOrchestrator(adaptor, { screenshotSettleDelay: 0 });
+			orchestrator.attach(obscuring);
+			const running = orchestrator.run();
+
+			await vi.advanceTimersByTimeAsync(OBSCURING_RECHECK_DELAY_MS - 1);
+			expect(calls.measure).toBe(1);
+			expect(obscuring.stops).toHaveLength(0);
+
+			await vi.advanceTimersByTimeAsync(1);
+			await vi.runAllTimersAsync();
+			await running;
+
+			expect(calls.measure).toBe(2);
+			expect(obscuring.stops[0]?.obscuring).toEqual({
+				coveredFraction: 1,
+				fullyObscured: true,
+				offscreen: false,
+				opacity: "opaque",
+				obscuredBy: { selector: "#fake", html: '<div id="banner">' },
+			});
+			expect(calls.clear).toBe(1);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it("does not wait to look again at a cover the page shows through", async () => {
+		vi.useFakeTimers();
+
+		try {
+			const { adaptor, calls } = coveredAdaptor({ opacity: "semi-transparent" });
+			const obscuring = recordingConsumer(["obscuring"]);
+			const orchestrator = createTabOrchestrator(adaptor, { screenshotSettleDelay: 0 });
+			orchestrator.attach(obscuring);
+			const running = orchestrator.run();
+
+			// Well short of the recheck delay: only the zero-length settle timers need to run.
+			await vi.advanceTimersByTimeAsync(1);
+			await running;
+
+			expect(calls.measure).toBe(1);
+			expect(obscuring.stops[0]?.obscuring?.opacity).toBe("semi-transparent");
+			expect(obscuring.stops[0]?.obscuring?.obscuredBy?.selector).toBe("#fake");
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it("only clears the obscurer marker when a cover was marked", async () => {
+		let clears = 0;
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			active: [info(0)],
+		});
+		const original = adaptor.evaluate.bind(adaptor);
+		adaptor.evaluate = (async (fn, ...args) => {
+			if (fn === measureObscuringScript) {
+				return {
+					coveredFraction: 0,
+					fullyObscured: false,
+					offscreen: false,
+					opacity: "opaque",
+					obscuredByHtml: null,
+					hasObscurer: false,
+				};
+			}
+
+			if (fn === clearObscurerScript) {
+				clears++;
+
+				return undefined;
+			}
+
+			return original(fn, ...args);
+		}) as BrowserAdaptor["evaluate"];
+		const obscuring = recordingConsumer(["obscuring"]);
+		const orchestrator = createTabOrchestrator(adaptor, { screenshotSettleDelay: 0 });
+		orchestrator.attach(obscuring);
+		await orchestrator.run();
+
+		expect(obscuring.stops[0]?.obscuring?.obscuredBy).toBeNull();
+		expect(clears).toBe(0);
+	});
+
+	it("asks an adaptor once for a composed script, then sends scripts one by one", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			active: [info(0)],
+		});
+		const original = adaptor.evaluate.bind(adaptor);
+		const seen: unknown[] = [];
+		adaptor.evaluate = (async (fn, ...args) => {
+			seen.push(fn);
+
+			return original(fn, ...args);
+		}) as BrowserAdaptor["evaluate"];
+		const a = recordingConsumer();
+		const orchestrator = createTabOrchestrator(adaptor, { screenshotSettleDelay: 0 });
+		orchestrator.attach(a);
+		await orchestrator.run();
+
+		// This adaptor does not run functions at all, so the composed script never answers.
+		expect(seen[0]).toBe(sessionStartScript.pageFunction);
+		expect(seen.filter((fn) => fn === sessionStartScript.pageFunction)).toHaveLength(1);
+		expect(seen).not.toContain(tabStopScript.pageFunction);
+		expect(seen).toContain(probeActiveElementScript);
+		expect(a.stops.map((stop) => stop.activeElement.selector)).toEqual(["#fake"]);
+	});
+
+	it("never sends a composed script when composeScripts is off", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true],
+			active: [info(0)],
+		});
+		const original = adaptor.evaluate.bind(adaptor);
+		const seen: unknown[] = [];
+		adaptor.evaluate = (async (fn, ...args) => {
+			seen.push(fn);
+
+			return original(fn, ...args);
+		}) as BrowserAdaptor["evaluate"];
+		const a = recordingConsumer();
+		const orchestrator = createTabOrchestrator(adaptor, {
+			screenshotSettleDelay: 0,
+			composeScripts: false,
+		});
+		orchestrator.attach(a);
+		await orchestrator.run();
+
+		expect(seen).not.toContain(sessionStartScript.pageFunction);
+		expect(a.stops).toHaveLength(1);
+	});
+
+	it("sends every stop as one composed script once the adaptor has answered one", async () => {
+		const adaptor = loopAdaptor({
+			hasFocus: [true, true, true],
+			active: [info(0), info(1)],
+		});
+		const original = adaptor.evaluate.bind(adaptor);
+		const seen: unknown[] = [];
+		const stops = [info(0), info(1)];
+		adaptor.evaluate = (async (fn, ...args) => {
+			seen.push(fn);
+
+			if (fn === sessionStartScript.pageFunction) {
+				const [startArgs] = args as [{ sentinel: string }];
+
+				return {
+					sentinel: startArgs.sentinel,
+					payload: { styles: [], entries: [] },
+					href: null,
+				};
+			}
+
+			if (fn === tabStopScript.pageFunction) {
+				const base = stops.shift();
+
+				return base === undefined
+					? { kind: "body", blurredStop: null, raw: null, baselineHref: null }
+					: {
+							kind: "stop",
+							base,
+							index: base.index,
+							selector: `#e${base.index}`,
+							raw: null,
+							drainDestroyed: false,
+							obscuring: null,
+							baselineHref: null,
+							ref: null,
+						};
+			}
+
+			return original(fn, ...args);
+		}) as BrowserAdaptor["evaluate"];
+		const handles = vi.fn(async () => ({}));
+		adaptor.evaluateHandle = handles;
+		const a = recordingConsumer();
+		const orchestrator = createTabOrchestrator(adaptor, { screenshotSettleDelay: 0 });
+		orchestrator.attach(a);
+		const stats = await orchestrator.run();
+
+		expect(a.stops.map((stop) => stop.activeElement.selector)).toEqual(["#e0", "#e1"]);
+		expect(stats.endReason).toBe("completed");
+		expect(seen.filter((fn) => fn === tabStopScript.pageFunction)).toHaveLength(3);
+		expect(seen).not.toContain(probeActiveElementScript);
+		// Nobody captured anything, so no element was ever fetched from the page.
+		expect(handles).not.toHaveBeenCalled();
+	});
+
 	it("notifies remaining consumers with failed and rethrows when pressTab throws", async () => {
 		const a = recordingConsumer();
 		const adaptor = loopAdaptor({
@@ -1237,10 +1479,11 @@ describe("tab loop", () => {
 		orchestrator.attach(a);
 		await orchestrator.run();
 		// The session's second (and final) loop iteration is the "done tabbing" isBody exit, which also
-		// drains context signals before ending, hence the trailing "drain" with no further
+		// drains context signals before ending, hence a trailing "drain" with no further
 		// "pair"/"clear": that drain reports hasAttributed: false, this fixture having nothing
-		// attributed on the second iteration.
-		expect(order).toEqual(["drain", "pair", "clear", "drain"]);
+		// attributed on the second iteration. The last "drain" is the session reading the observer
+		// once more as it ends, for what timers did after the last stop.
+		expect(order).toEqual(["drain", "pair", "clear", "drain", "drain"]);
 	});
 
 	describe("F55 focus-removal at the isBody exit", () => {
@@ -1636,6 +1879,341 @@ describe("tab loop", () => {
 			await expect(orchestrator.run()).rejects.toThrow("boom");
 			expect(clearCalls).toBe(1);
 		});
+	});
+});
+
+describe("session limits and failures", () => {
+	// Ten distinct elements, more than any limit below allows through.
+	const many = Array.from({ length: 10 }, (_, i) => info(i));
+	const focused = Array.from({ length: 11 }, () => true);
+
+	it("ends with reason limit once maxTabPresses is used up", async () => {
+		const a = recordingConsumer();
+		const adaptor = loopAdaptor({ hasFocus: focused, active: many });
+		const pressTab = vi.spyOn(adaptor, "pressTab");
+		const orchestrator = createTabOrchestrator(adaptor, {
+			screenshotSettleDelay: 0,
+			maxTabPresses: 3,
+		});
+		orchestrator.attach(a);
+
+		const stats = await orchestrator.run();
+
+		expect(pressTab).toHaveBeenCalledTimes(3);
+		expect(a.stops).toHaveLength(3);
+		expect(a.sessionEnds).toEqual(["limit"]);
+		expect(stats.endReason).toBe("limit");
+	});
+
+	it("ends with reason limit once maxDuration has passed", async () => {
+		const a = recordingConsumer([], async () => {
+			await new Promise((resolve) => setTimeout(resolve, 15));
+		});
+		const orchestrator = createTabOrchestrator(loopAdaptor({ hasFocus: focused, active: many }), {
+			screenshotSettleDelay: 0,
+			maxDuration: 20,
+		});
+		orchestrator.attach(a);
+
+		const stats = await orchestrator.run();
+
+		expect(stats.endReason).toBe("limit");
+		expect(a.stops.length).toBeGreaterThan(0);
+		expect(a.stops.length).toBeLessThan(many.length);
+	});
+
+	it("detaches a consumer that throws and sees the others through to the end", async () => {
+		const broken = recordingConsumer([], (snapshot) => {
+			if (snapshot.tabIndex === 2) {
+				throw new Error("audit bug");
+			}
+		});
+		const healthy = recordingConsumer();
+		const orchestrator = createTabOrchestrator(
+			loopAdaptor({ hasFocus: [true, true, true, true], active: [info(0), info(1), info(2)] }),
+			{ screenshotSettleDelay: 0 },
+		);
+		orchestrator.attach(broken);
+		orchestrator.attach(healthy);
+
+		await expect(orchestrator.run()).rejects.toThrow("audit bug");
+
+		expect(broken.stops).toHaveLength(2);
+		expect(broken.sessionEnds).toEqual(["failed"]);
+		expect(healthy.stops).toHaveLength(3);
+		expect(healthy.sessionEnds).toEqual(["completed"]);
+		expect(orchestrator.failures).toHaveLength(1);
+		expect(orchestrator.failures[0]?.consumer).toBe(broken);
+	});
+
+	it("detaches a consumer whose onSessionStart throws before the first Tab press", async () => {
+		const broken: TabConsumer = {
+			capabilities: new Set(),
+			onSessionStart: () => {
+				throw new Error("bad options");
+			},
+			onTabStop: vi.fn(),
+		};
+		const healthy = recordingConsumer();
+		const orchestrator = createTabOrchestrator(
+			loopAdaptor({ hasFocus: [true, true], active: [info(0)] }),
+			{ screenshotSettleDelay: 0 },
+		);
+		orchestrator.attach(broken);
+		orchestrator.attach(healthy);
+
+		await expect(orchestrator.run()).rejects.toThrow("bad options");
+
+		expect(broken.onTabStop).not.toHaveBeenCalled();
+		expect(healthy.stops).toHaveLength(1);
+	});
+
+	/** A drain with nothing to report, apart from what `partial` says. */
+	function quietDrain(partial: Record<string, unknown> = {}): Record<string, unknown> {
+		return {
+			openedWindow: false,
+			submittedForm: false,
+			focusRemoved: false,
+			redirect: null,
+			softUrlChange: false,
+			navigation: false,
+			attributedHtml: null,
+			hasAttributed: false,
+			late: [],
+			unattributed: null,
+			...partial,
+		};
+	}
+
+	/** A two-stop session whose context observer answers each drain from `drains` in turn. */
+	function dialogAdaptor(counts: number[], drains: Array<Record<string, unknown>>): BrowserAdaptor {
+		const adaptor = loopAdaptor({ hasFocus: [true, true, true], active: [info(0), info(1)] });
+		const original = adaptor.evaluate.bind(adaptor);
+
+		adaptor.takeDismissedDialogs = () => counts.shift() ?? 0;
+		adaptor.evaluate = (async (fn, ...args) => {
+			if (fn === drainContextObserverScript) {
+				return drains.shift() ?? quietDrain();
+			}
+
+			return original(fn, ...args);
+		}) as BrowserAdaptor["evaluate"];
+
+		return adaptor;
+	}
+
+	it("reports a dialog on the stop whose element the observer saw raise it", async () => {
+		const ctx = recordingConsumer(["contextSignals"]);
+		// The adaptor is asked before the first press, then once per stop.
+		const adaptor = dialogAdaptor([0, 0, 2], [quietDrain(), quietDrain({ raisedDialog: true })]);
+		const orchestrator = createTabOrchestrator(adaptor, { screenshotSettleDelay: 0 });
+		orchestrator.attach(ctx);
+
+		const stats = await orchestrator.run();
+
+		expect(ctx.stops.map((stop) => stop.contextSignals?.signals.openedDialog)).toEqual([
+			false,
+			true,
+		]);
+		expect(ctx.stops.map((stop) => stop.contextSignals?.unattributed)).toEqual([
+			undefined,
+			undefined,
+		]);
+		expect(stats.dialogsDismissed).toBe(2);
+	});
+
+	it("does not put dialogs dismissed before the first press down to the first stop", async () => {
+		const ctx = recordingConsumer(["contextSignals"]);
+		const adaptor = dialogAdaptor([3, 0, 0], []);
+		const orchestrator = createTabOrchestrator(adaptor, { screenshotSettleDelay: 0 });
+		orchestrator.attach(ctx);
+
+		const stats = await orchestrator.run();
+
+		expect(ctx.stops).toHaveLength(2);
+		expect(ctx.stops.map((stop) => stop.contextSignals?.signals.openedDialog)).toEqual([
+			false,
+			false,
+		]);
+		expect(ctx.stops.map((stop) => stop.contextSignals?.unattributed)).toEqual([
+			undefined,
+			undefined,
+		]);
+		expect(stats.dialogsDismissed).toBe(0);
+	});
+
+	it("reports a dialog nothing ties to an element as unattributed, not as the stop's", async () => {
+		const ctx = recordingConsumer(["contextSignals"]);
+		const dialogOnly = {
+			signals: {
+				openedWindow: false,
+				submittedForm: false,
+				focusRemoved: false,
+				redirect: null,
+				softUrlChange: false,
+				navigation: false,
+				openedDialog: true,
+			},
+			details: {},
+		};
+		// On the first stop the observer saw the page raise a dialog on its own account; on the
+		// second the adaptor dismissed one the observer never saw (raised from a frame, say).
+		const adaptor = dialogAdaptor(
+			[0, 1, 1],
+			[
+				quietDrain({
+					unattributed: {
+						openedWindow: false,
+						submittedForm: false,
+						softUrlChange: false,
+						navigationPrevented: false,
+						raisedDialog: true,
+					},
+				}),
+				quietDrain(),
+			],
+		);
+		const orchestrator = createTabOrchestrator(adaptor, { screenshotSettleDelay: 0 });
+		orchestrator.attach(ctx);
+
+		await orchestrator.run();
+
+		expect(ctx.stops.map((stop) => stop.contextSignals?.signals.openedDialog)).toEqual([
+			false,
+			false,
+		]);
+		expect(ctx.stops[0]?.contextSignals?.unattributed).toEqual([
+			{ signals: { ...dialogOnly.signals, navigationPrevented: false }, details: {} },
+		]);
+		expect(ctx.stops[1]?.contextSignals?.unattributed).toEqual([dialogOnly]);
+	});
+
+	it("hands what the observer still holds at the end of the session to onSessionEnd", async () => {
+		const details: unknown[] = [];
+		const consumer: TabConsumer = {
+			capabilities: new Set(["contextSignals"]),
+			onTabStop() {},
+			onSessionEnd(_reason, detail) {
+				details.push(detail.contextSignals);
+			},
+		};
+		const lateWindow = {
+			index: 1,
+			html: '<input id="last">',
+			openedWindow: true,
+			openedWindowUrl: "/late-offer",
+			submittedForm: false,
+			softUrlChange: false,
+			navigationPrevented: false,
+			raisedDialog: false,
+		};
+		// Two stops, the drain at the end of the tab order, then the last one as the session ends.
+		const adaptor = dialogAdaptor(
+			[],
+			[quietDrain(), quietDrain(), quietDrain(), quietDrain({ late: [lateWindow] })],
+		);
+		const orchestrator = createTabOrchestrator(adaptor, { screenshotSettleDelay: 0 });
+		orchestrator.attach(consumer);
+
+		await orchestrator.run();
+
+		expect(details).toEqual([
+			{
+				late: [
+					{
+						index: 1,
+						html: '<input id="last">',
+						signals: {
+							openedWindow: true,
+							submittedForm: false,
+							focusRemoved: false,
+							redirect: null,
+							softUrlChange: false,
+							navigation: false,
+							openedDialog: false,
+							navigationPrevented: false,
+						},
+						details: { openedWindowUrl: "/late-offer" },
+					},
+				],
+			},
+		]);
+	});
+
+	function navigatingAdaptor(replaced: boolean | Error): BrowserAdaptor {
+		const adaptor = loopAdaptor({ hasFocus: [true, true, true], active: [info(0), info(1)] });
+		const evaluate = adaptor.evaluate;
+		let selectors = 0;
+
+		adaptor.evaluate = (async (fn, ...args) => {
+			// The second stop's selector lookup is where the document goes away: a call the loop
+			// has no navigation check around.
+			if (fn === getSelector && ++selectors === 2) {
+				throw new Error("Execution context was destroyed, most likely because of a navigation.");
+			}
+
+			if (fn === documentReplacedScript && selectors === 2) {
+				if (replaced instanceof Error) {
+					throw replaced;
+				}
+
+				return replaced;
+			}
+
+			return evaluate(fn, ...args);
+		}) as BrowserAdaptor["evaluate"];
+
+		return adaptor;
+	}
+
+	it("ends with reason navigation when any call loses its document and the page comes back on a new one", async () => {
+		const a = recordingConsumer();
+		const orchestrator = createTabOrchestrator(navigatingAdaptor(true), {
+			screenshotSettleDelay: 0,
+		});
+		orchestrator.attach(a);
+
+		const stats = await orchestrator.run();
+
+		expect(stats.endReason).toBe("navigation");
+		expect(a.sessionEnds).toEqual(["navigation"]);
+		expect(a.stops).toHaveLength(1);
+	});
+
+	it("fails when a call loses its document and the page never answers again", async () => {
+		const a = recordingConsumer();
+		const orchestrator = createTabOrchestrator(
+			navigatingAdaptor(new Error("Target page, context or browser has been closed")),
+			{ screenshotSettleDelay: 0 },
+		);
+		orchestrator.attach(a);
+
+		await expect(orchestrator.run()).rejects.toThrow(/Execution context was destroyed/);
+		expect(a.sessionEnds).toEqual(["failed"]);
+	});
+
+	it("ends with reason navigation when the tab observer is gone, without contextSignals", async () => {
+		const a = recordingConsumer();
+		const adaptor = loopAdaptor({ hasFocus: [true, true, true], active: [info(0), info(1)] });
+		const evaluate = adaptor.evaluate;
+		let checks = 0;
+
+		adaptor.evaluate = (async (fn, ...args) => {
+			if (fn === documentReplacedScript) {
+				return ++checks === 2;
+			}
+
+			return evaluate(fn, ...args);
+		}) as BrowserAdaptor["evaluate"];
+
+		const orchestrator = createTabOrchestrator(adaptor, { screenshotSettleDelay: 0 });
+		orchestrator.attach(a);
+
+		const stats = await orchestrator.run();
+
+		// The second element belongs to whatever page came next, so it is never reported.
+		expect(a.stops).toHaveLength(1);
+		expect(stats.endReason).toBe("navigation");
 	});
 });
 

@@ -1,5 +1,6 @@
+import type { Rect } from "@a11y-pulse/browser-adaptor";
 import type { BaseAuditSummary } from "@a11y-pulse/tab-orchestrator";
-import type { TransitionKind } from "./analyse";
+import type { TransitionDirection, TransitionKind } from "./analyse";
 
 export type FocusOrderElement = {
 	/** Selector for the element (see getSelector). */
@@ -10,12 +11,30 @@ export type FocusOrderElement = {
 
 	/** 1-based tab stop at which this element was reached. */
 	tabIndex: number;
+
+	/** Page-relative rect when the element was focused. */
+	rect: Rect;
+
+	/** The element's own `tabindex` when it is positive, a likely cause of the move. */
+	positiveTabindex?: number;
 };
 
 export type FocusOrderTransition = {
 	kind: TransitionKind;
 	from: FocusOrderElement;
 	to: FocusOrderElement;
+
+	/**
+	 * Movement in reading-order pixels: `block` is negative when focus moved back towards the start
+	 * of the page (up, on a horizontal page), `inline` when it moved back towards the start of a line.
+	 */
+	distance: { block: number; inline: number };
+
+	/** Where focus went on screen, by the larger of its horizontal and vertical movement. */
+	direction: TransitionDirection;
+
+	/** Tab presses between `from` and `to`: 1 except for `backwards-drift`, which spans a run. */
+	steps: number;
 };
 
 export type FocusOrderResult = {
@@ -31,7 +50,10 @@ export type FocusOrderResult = {
 	/** The offending transitions in tab order. Empty unless `disordered`. */
 	transitions: FocusOrderTransition[];
 
-	/** Some element on the page has a positive `tabindex`, a likely cause of disorder. */
+	/**
+	 * Some element on the page has a positive `tabindex`, a likely cause of disorder. Each reported
+	 * element that has one carries its own `positiveTabindex`.
+	 */
 	positiveTabindex: boolean;
 
 	summary: BaseAuditSummary;

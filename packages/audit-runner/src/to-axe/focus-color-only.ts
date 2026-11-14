@@ -9,6 +9,7 @@ import {
 	type AuditNode,
 	type AuditOutput,
 	emptyOutput,
+	evidenceCheck,
 	toResult,
 } from "./audit-output";
 
@@ -18,9 +19,9 @@ export const FOCUS_COLOR_ONLY_EVIDENCE_CHECK_ID = "focus-color-only-evidence";
 
 const METADATA: AuditMetadata = {
 	id: FOCUS_COLOR_ONLY_AUDIT_ID,
-	help: "Focus must not be shown by a change of text color alone",
+	help: "Focus must not be shown by a change of color alone",
 	description:
-		"Ensures that elements whose only focus indicator is a change of text color use colors that differ in lightness by at least 3:1, as required by WCAG 1.4.1 Use of Color.",
+		"Ensures that elements whose only focus indicator is a change of one color (text, border, outline or background) use colors that differ in lightness by at least 3:1, as required by WCAG 1.4.1 Use of Color.",
 	helpUrl:
 		"https://github.com/A11y-Pulse/audits/tree/main/packages/focus-appearance-audit#colour-only-focus-indicators",
 	impact: "serious",
@@ -33,8 +34,20 @@ function formatRatio(ratio: number): string {
 	return (Math.floor(ratio * 100) / 100).toFixed(2);
 }
 
+const COLOR_NAMES: Record<ColorOnlyChange["property"], string> = {
+	color: "text color",
+	"border-color": "border color",
+	"outline-color": "outline color",
+	"background-color": "background color",
+};
+
+function colorName(colorOnly: ColorOnlyChange): string {
+	return COLOR_NAMES[colorOnly.property] ?? COLOR_NAMES.color;
+}
+
 function failureSummary({ colorOnly, tabIndex }: ColorOnlyElement): string {
-	const change = `Focus is shown only by the text color changing from ${colorOnly.unfocusedColor} to ${colorOnly.focusedColor}`;
+	const against = colorOnly.backgroundColor ? ` (against ${colorOnly.backgroundColor})` : "";
+	const change = `Focus is shown only by the ${colorName(colorOnly)} changing from ${colorOnly.unfocusedColor} to ${colorOnly.focusedColor}${against}`;
 
 	if (colorOnly.contrastRatio === null) {
 		return `${change}, and the contrast between the two colors could not be measured (tab stop #${tabIndex}). Check that the colors differ in lightness by at least 3:1, or add a focus indicator that does not rely on color, such as an outline or underline.`;
@@ -50,14 +63,15 @@ function toAuditNode(element: ColorOnlyElement, failed: boolean): AuditNode {
 		node.failureSummary = failureSummary(element);
 	}
 
-	if (element.colorOnly.evidence) {
-		node.evidence = {
-			id: FOCUS_COLOR_ONLY_EVIDENCE_CHECK_ID,
-			impact: "serious",
-			message: "Focus is shown only by a change of text color",
-			data: element.colorOnly.evidence,
-		};
-	}
+	const { evidence, ...change } = element.colorOnly;
+
+	// The screenshots of `evidence` stay at the top level of `data`, where they have always been.
+	node.evidence = evidenceCheck(
+		FOCUS_COLOR_ONLY_EVIDENCE_CHECK_ID,
+		"serious",
+		`Focus is shown only by a change of ${colorName(element.colorOnly)}`,
+		{ tabIndex: element.tabIndex, ...change, ...evidence },
+	);
 
 	return node;
 }

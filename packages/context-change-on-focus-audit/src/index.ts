@@ -6,6 +6,7 @@ export {
 } from "./audit";
 export type {
 	ContextChangeBucket,
+	ContextChangeDetails,
 	ContextChangeFinding,
 	ContextChangeKind,
 	ContextChangeSignals,

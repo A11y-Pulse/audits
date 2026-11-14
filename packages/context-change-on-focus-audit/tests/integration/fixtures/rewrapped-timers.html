@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Dashboard</title><style>
+  body { background: #fff; font: 16px/1.5 system-ui, sans-serif; }
+  :focus { outline: 3px solid #0050ff; }
+</style></head><body>
+  <!-- A script that loads late wraps `setTimeout` for its own purposes (error tracking and
+       performance libraries do), here when the second link takes focus, which is while the session
+       has its own wrapper in place. -->
+  <a id="home" href="#home">Home</a>
+  <a id="reports" href="#reports">Reports</a>
+  <a id="settings" href="#settings">Settings</a>
+  <script>
+    window.timersSeen = 0;
+
+    document.getElementById("reports").addEventListener("focus", () => {
+      const previous = window.setTimeout;
+
+      window.setTimeout = function (...args) {
+        window.timersSeen++;
+
+        return previous.apply(this, args);
+      };
+    }, { once: true });
+  </script>
+</body></html>

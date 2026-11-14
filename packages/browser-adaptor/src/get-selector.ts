@@ -7,6 +7,12 @@
  * element (a unique id, the rarest single class, or an :nth-of-type position), and the walk stops
  * as soon as the joined selector matches exactly one element. Selectors stay short because of that
  * early stop, not because of truncation; the length budget is only a backstop.
+ *
+ * A selector is only unique within the tree the element lives in. For an element inside an open
+ * shadow root, each host on the way out contributes its own selector, joined outermost first with
+ * ` >>> `: `my-footer >>> a.link`. That is deliberately not valid CSS, so `document.querySelector`
+ * throws on it rather than quietly resolving the inner part to some other element in the light DOM.
+ * Use `resolveSelector` to turn one back into its element.
  */
 export function getSelector(root: Node | null): string {
 	const MAX_LENGTH = 128;
@@ -30,13 +36,51 @@ export function getSelector(root: Node | null): string {
 			: null;
 	};
 
+	// Counting matches walks the whole tree, and the same few selectors come up at every level of
+	// the walk, so each count is taken once per call. Nothing changes the page in between.
+	const countsByRoot = new Map<ParentNode, Map<string, number>>();
+
 	const matchCount = (queryRoot: ParentNode, selector: string): number => {
-		try {
-			return queryRoot.querySelectorAll(selector).length;
-		} catch {
-			// A selector that fails to parse can't be relied on.
-			return Number.POSITIVE_INFINITY;
+		let counts = countsByRoot.get(queryRoot);
+
+		if (counts === undefined) {
+			counts = new Map();
+			countsByRoot.set(queryRoot, counts);
 		}
+
+		let count = counts.get(selector);
+
+		if (count === undefined) {
+			try {
+				count = queryRoot.querySelectorAll(selector).length;
+			} catch {
+				// A selector that fails to parse can't be relied on.
+				count = Number.POSITIVE_INFINITY;
+			}
+
+			counts.set(selector, count);
+		}
+
+		return count;
+	};
+
+	// How many elements in the root carry the class. Where the root offers it, the live collection
+	// answers this: the browser keeps its length until the document changes, so the count stays cheap
+	// across the many calls an audit makes, where a selector query walks the tree every time.
+	const classCount = (queryRoot: ParentNode, cls: string, selector: string): number => {
+		const byClassName = (queryRoot as Partial<Document>).getElementsByClassName;
+
+		if (
+			typeof byClassName === "function" &&
+			typeof CSS !== "undefined" &&
+			typeof CSS.escape === "function"
+		) {
+			try {
+				return byClassName.call(queryRoot, cls).length;
+			} catch {}
+		}
+
+		return matchCount(queryRoot, selector);
 	};
 
 	// A candidate feature is only usable if it actually selects this element; an escaping or engine
@@ -92,7 +136,7 @@ export function getSelector(root: Node | null): string {
 				continue;
 			}
 
-			const count = matchCount(queryRoot, candidate.feature);
+			const count = classCount(queryRoot, cls, candidate.feature);
 
 			if (count < bestCount) {
 				best = candidate;
@@ -203,50 +247,103 @@ export function getSelector(root: Node | null): string {
 		return segment;
 	};
 
-	const segments: string[] = [];
-	let node: Node | null = root;
-	const queryRoot = root && root.nodeType === 1 ? rootOf(root as Element) : null;
+	// The selector for `start` within its own tree (the document, or the shadow root it is in).
+	const selectorWithin = (start: Node | null): string => {
+		const segments: string[] = [];
+		let node: Node | null = start;
+		const queryRoot = start && start.nodeType === 1 ? rootOf(start as Element) : null;
 
-	try {
-		// Walk only element nodes. Stopping at the first non-element parent (the document, or a
-		// ShadowRoot when the target is inside an open shadow root) keeps the selector within its tree
-		// and avoids reading `classList` off a node that has none.
-		while (node && node.nodeType === 1) {
-			const element = node as Element;
-			let { segment, anchored } = segmentFor(element, queryRoot);
+		try {
+			// Walk only element nodes. Stopping at the first non-element parent (the document, or a
+			// ShadowRoot when the target is inside an open shadow root) keeps the selector within its tree
+			// and avoids reading `classList` off a node that has none.
+			while (node && node.nodeType === 1) {
+				const element = node as Element;
+				let { segment, anchored } = segmentFor(element, queryRoot);
 
-			// Keep within the budget (the +1 accounts for the ">" that would join this segment to the
-			// rest). A level whose full segment doesn't fit is degraded to tag + position rather than
-			// discarded, so ancestor context is never lost to one long feature.
-			const joinedWith = (candidate: string): number =>
-				segments.length ? candidate.length + 1 + segments.join(">").length : candidate.length;
-
-			if (joinedWith(segment) > MAX_LENGTH - 1) {
-				segment = degradedSegmentFor(element);
-				anchored = false;
+				// Keep within the budget (the +1 accounts for the ">" that would join this segment to the
+				// rest). A level whose full segment doesn't fit is degraded to tag + position rather than
+				// discarded, so ancestor context is never lost to one long feature.
+				const joinedWith = (candidate: string): number =>
+					segments.length ? candidate.length + 1 + segments.join(">").length : candidate.length;
 
 				if (joinedWith(segment) > MAX_LENGTH - 1) {
+					segment = degradedSegmentFor(element);
+					anchored = false;
+
+					if (joinedWith(segment) > MAX_LENGTH - 1) {
+						break;
+					}
+				}
+
+				segments.unshift(segment);
+
+				if (anchored) {
 					break;
 				}
+
+				// Stop as soon as the selector already identifies a single element. This, not truncation, is
+				// what keeps selectors short.
+				if (queryRoot && matchCount(queryRoot, segments.join(">")) === 1) {
+					break;
+				}
+
+				node = element.parentNode;
 			}
+		} catch {
+			// A malformed node tree must never crash the audit; return what we have.
+		}
 
-			segments.unshift(segment);
+		return segments.join(">");
+	};
 
-			if (anchored) {
+	const parts: string[] = [selectorWithin(root)];
+
+	try {
+		let inner: Node | null = root;
+
+		// Step out through each enclosing shadow root to its host.
+		while (inner && inner.nodeType === 1) {
+			const tree = (inner as Element & { getRootNode?: () => Node }).getRootNode?.();
+			const host: Element | null =
+				tree && tree.nodeType === 11 ? ((tree as ShadowRoot).host ?? null) : null;
+
+			if (!host) {
 				break;
 			}
 
-			// Stop as soon as the selector already identifies a single element. This, not truncation, is
-			// what keeps selectors short.
-			if (queryRoot && matchCount(queryRoot, segments.join(">")) === 1) {
-				break;
-			}
-
-			node = element.parentNode;
+			parts.unshift(selectorWithin(host));
+			inner = host;
 		}
 	} catch {
-		// A malformed node tree must never crash the audit; return what we have.
+		// As above: return what we have.
 	}
 
-	return segments.join(">");
+	return parts.join(" >>> ");
+}
+
+/**
+ * Find the element a `getSelector` selector names, stepping into the shadow root of each host it
+ * lists. Returns `null` when any part matches nothing. This function is serialized and run in the
+ * page context, so it must not reference any symbols outside its own scope.
+ */
+export function resolveSelector(selector: string): Element | null {
+	let scope: ParentNode = document;
+	let element: Element | null = null;
+
+	for (const part of selector.split(" >>> ")) {
+		try {
+			element = scope.querySelector(part);
+		} catch {
+			return null;
+		}
+
+		if (!element) {
+			return null;
+		}
+
+		scope = element.shadowRoot ?? element;
+	}
+
+	return element;
 }

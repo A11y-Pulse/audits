@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Payment</title><style>
+  body { background: #fff; font: 16px/1.5 system-ui, sans-serif; }
+  :focus { outline: 3px solid #0050ff; }
+</style></head><body>
+  <label>Name <input id="name"></label>
+  <label>Card number <input id="card"></label>
+  <label>Expiry <input id="expiry"></label>
+  <script>
+    let warned = false;
+
+    document.getElementById("card").addEventListener("focus", () => {
+      // Once, as a page would: the dialog closing gives the field its focus back.
+      if (!warned) {
+        warned = true;
+        alert("Have your card ready");
+      }
+    });
+  </script>
+</body></html>

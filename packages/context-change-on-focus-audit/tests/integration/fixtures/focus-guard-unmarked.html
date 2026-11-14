@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Delete project</title><style>
+  body { background: #fff; font: 16px/1.5 system-ui, sans-serif; }
+  :focus { outline: 3px solid #0050ff; }
+  .sentinel { width: 1px; height: 0; overflow: hidden; position: fixed; top: 1px; left: 1px; }
+</style></head><body>
+  <!-- Focus guards with nothing to mark them as such, sitting beside the dialog inside the wrapper
+       it shares with its backdrop (the arrangement MUI uses), which hand focus to a control in the
+       dialog. -->
+  <button id="open">Delete project</button>
+  <div class="modal-root">
+    <div class="backdrop"></div>
+    <div id="guard-start" class="sentinel" tabindex="0"></div>
+    <div role="dialog" aria-modal="true" aria-labelledby="title">
+      <h1 id="title">Delete this project?</h1>
+      <button id="confirm">Delete</button>
+      <button id="cancel">Cancel</button>
+    </div>
+    <div id="guard-end" class="sentinel" tabindex="0"></div>
+  </div>
+  <script>
+    const first = document.getElementById("confirm");
+    document.getElementById("guard-start").addEventListener("focus", () => first.focus());
+    document.getElementById("guard-end").addEventListener("focus", () => first.focus());
+  </script>
+</body></html>

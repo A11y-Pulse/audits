@@ -57,13 +57,18 @@ describeEachEngine<BrowserAdaptor>(
 
 		it("passes a page where every element has a focus outline", async () => {
 			const result = await runFixture("all-pass.html");
-			expect(result.summary.failed).toBe(0);
-			expect(result.summary.passed).toBeGreaterThanOrEqual(3);
+			expect(result.summary).toMatchObject({ checked: 3, passed: 3, failed: 0, needsReview: 0 });
+			expect(result.elements.map((e) => e.detectionMethod)).toEqual(["style", "style", "style"]);
+			expect(result.elements[0]?.changedProperties).toEqual([
+				"outline-color",
+				"outline-style",
+				"outline-width",
+			]);
 		});
 
 		it("flags every element when focus styles are suppressed", async () => {
 			const result = await runFixture("all-fail.html");
-			expect(result.summary.failed).toBeGreaterThanOrEqual(2);
+			expect(result.summary).toMatchObject({ checked: 2, passed: 0, failed: 2, needsReview: 0 });
 		});
 
 		it("flags only the failing element on a mixed page", async () => {
@@ -73,6 +78,425 @@ describeEachEngine<BrowserAdaptor>(
 			expect(failed[0]?.selector).toBe("#bad");
 			expect(failed[0]?.html).toContain('id="bad"');
 			expect(failed[0]?.html).not.toContain("data-a11y-focus-idx");
+		});
+
+		/** Each element's selector against how it came out, for exact comparison. */
+		function outcomes(result: FocusAppearanceResult): Record<string, string> {
+			return Object.fromEntries(
+				result.elements.map((element) => [
+					element.selector,
+					element.needsReview !== undefined
+						? `review:${element.needsReview}`
+						: (element.detectionMethod ?? "fail"),
+				]),
+			);
+		}
+
+		it("fails visually hidden inputs whose custom control shows no focus", async () => {
+			// The browser's default outline lands on the hidden input, where nobody can see it. The
+			// label is compared instead, and only the controls that style their visible box pass.
+			const result = await runFixture("hidden-inputs.html");
+
+			expect(outcomes(result)).toEqual({
+				"#bad-sr-only": "fail",
+				"#bad-opacity": "fail",
+				"#bad-offscreen": "fail",
+				"#good-sr-only": "pixel-diff",
+				"#good-opacity": "pixel-diff",
+				"#good-offscreen": "pixel-diff",
+			});
+			expect(result.elements.map((e) => e.measuredOn)).toEqual(Array(6).fill("label"));
+			expect(result.elements[0]?.failureEvidence?.focusedScreenshot.byteLength).toBeGreaterThan(0);
+		});
+
+		it("compares the label or parent of a hidden input that has no wrapping label", async () => {
+			const result = await runFixture("hidden-input-separate-label.html");
+
+			expect(outcomes(result)).toEqual({
+				"#good": "pixel-diff",
+				"#bad": "fail",
+				"#unlabelled": "fail",
+			});
+			expect(result.elements.map((e) => e.measuredOn)).toEqual(["label", "label", "parent"]);
+		});
+
+		it("does not count transparent outlines, shadows or borders as indicators", async () => {
+			const result = await runFixture("transparent-indicators.html");
+
+			expect(outcomes(result)).toEqual({
+				"#transparent-outline": "fail",
+				"#transparent-shadow": "fail",
+				"#transparent-border": "fail",
+				"#ring": "style",
+				"#outline": "style",
+			});
+			// The ring's transparent outline is not what passed it.
+			expect(result.elements[3]?.changedProperties).toEqual(["box-shadow"]);
+		});
+
+		it("sends text fields that show only a caret for review, the same on every engine", async () => {
+			const result = await runFixture("text-inputs.html");
+			// Firefox selects a read-only field's text on Tab and paints the selection.
+			const readonlySelects = engine.name === "playwright-firefox";
+
+			expect(outcomes(result)).toEqual({
+				"#caret-only": "review:caret",
+				"#caret-textarea": "review:caret",
+				"#no-caret": "fail",
+				"#outlined": "style",
+				"#readonly": readonlySelects ? "pixel-diff" : "fail",
+			});
+			expect(result.summary).toMatchObject(
+				readonlySelects
+					? { passed: 2, failed: 1, needsReview: 2 }
+					: { passed: 1, failed: 2, needsReview: 2 },
+			);
+		});
+
+		it("leaves no trace of hiding the caret", async () => {
+			const page = await engine.newPage();
+
+			try {
+				await page.goto(`${server.url}/text-inputs.html`);
+				await runFocusAppearanceAudit(page.adaptor);
+
+				const left = await page.adaptor.evaluate(() => ({
+					sheets: document.adoptedStyleSheets.length,
+					state: "__a11yPulsePair" in window,
+					caret: getComputedStyle(document.querySelector("#caret-only") as Element).caretColor,
+				}));
+
+				expect(left.sheets).toBe(0);
+				expect(left.state).toBe(false);
+				expect(left.caret).not.toMatch(/rgba\(0, 0, 0, 0\)|transparent/);
+			} finally {
+				await page.close();
+			}
+		});
+
+		it("finds an indicator drawn on a :focus-within wrapper or a label", async () => {
+			const result = await runFixture("focus-within.html");
+
+			expect(outcomes(result)).toEqual({
+				"#wrapped": "style",
+				"#labelled": "style",
+				"#unstyled-wrapper": "fail",
+			});
+			expect(result.elements[0]?.indicatorOn).toEqual({
+				kind: "ancestor",
+				html: '<div class="search" role="search">',
+			});
+			expect(result.elements[0]?.changedProperties).toContain("box-shadow");
+			expect(result.elements[1]?.indicatorOn).toEqual({
+				kind: "label",
+				html: '<label for="labelled">',
+			});
+		});
+
+		it("judges :focus-visible rules as the keyboard sees them", async () => {
+			const result = await runFixture("focus-visible.html");
+
+			expect(outcomes(result)).toEqual({
+				"#fv": "style",
+				"#link": "style",
+				"#mouse-only": "fail",
+			});
+		});
+
+		it("detects indicators that transition in", async () => {
+			const result = await runFixture("transition.html");
+
+			expect(outcomes(result)).toEqual({
+				"#fade": "style",
+				"#filter": "pixel-diff",
+				"#none": "fail",
+			});
+		});
+
+		it("measures sticky and fixed elements, and reviews one pinned under a banner", async () => {
+			const result = await runFixture("sticky-layout.html");
+
+			expect(outcomes(result)).toEqual({
+				"#header-good": "style",
+				"#header-bad": "fail",
+				"#body-top": "style",
+				"#body-middle": "style",
+				// The last link in the document cannot be scrolled out from under the cookie banner, so
+				// its screenshots show the banner. That is not evidence of a missing indicator.
+				"#pinned-under-banner": "review:obstructed",
+				"#accept": "style",
+			});
+
+			const pinned = result.elements.find((e) => e.selector === "#pinned-under-banner");
+			expect(pinned?.passed).toBe(false);
+			expect(pinned?.failureEvidence).toBeDefined();
+		});
+
+		it("checks links that wrap across lines", async () => {
+			const result = await runFixture("wrapped-links.html");
+
+			expect(outcomes(result)).toEqual({
+				"#wrapped-good": "style",
+				"#wrapped-underline": "style",
+				"#wrapped-bad": "fail",
+			});
+		});
+
+		it("flags focus shown by one colour changing", async () => {
+			const result = await runFixture("color-only.html");
+			const colorOnly = Object.fromEntries(
+				result.elements.map((element) => [
+					element.selector,
+					element.colorOnly
+						? `${element.colorOnly.property} ${element.colorOnly.contrastRatio?.toFixed(1)}`
+						: null,
+				]),
+			);
+
+			expect(result.summary).toMatchObject({ checked: 7, passed: 7, failed: 0 });
+			expect(colorOnly).toEqual({
+				"#text-low": "color 1.2",
+				"#text-high": "color 4.8",
+				"#text-underline": null,
+				"#border-low": "border-color 1.2",
+				"#border-high": "border-color 7.4",
+				"#background-low": "background-color 1.1",
+				"#outline-low": "outline-color 1.2",
+			});
+
+			const low = result.elements.find((e) => e.selector === "#text-low")?.colorOnly;
+			expect(low?.backgroundColor).toBe("rgb(255, 255, 255)");
+			expect(low?.evidence?.focusedScreenshot.byteLength).toBeGreaterThan(0);
+
+			// Distinguishable by lightness alone: recorded, but no screenshots are needed.
+			const high = result.elements.find((e) => e.selector === "#text-high")?.colorOnly;
+			expect(high).not.toHaveProperty("evidence");
+		});
+
+		it("stops keeping screenshots at screenshotLimit but still checks every element", async () => {
+			const result = await runFixture("hidden-inputs.html", { screenshotLimit: 1 });
+
+			expect(result.summary).toMatchObject({ checked: 6, failed: 3, reachedScreenshotLimit: true });
+			expect(
+				result.elements.filter((e) => !e.passed).map((e) => e.failureEvidence !== undefined),
+			).toEqual([true, false, false]);
+		});
+
+		/** Each measured element's selector against its contrast: a rounded ratio, or why there is none. */
+		function contrasts(result: FocusAppearanceResult): Record<string, string | number> {
+			return Object.fromEntries(
+				result.elements
+					.filter((element) => element.indicatorContrast !== undefined)
+					.map(({ selector, indicatorContrast }) => [
+						selector,
+						indicatorContrast?.ratio == null
+							? `unknown:${indicatorContrast?.reason}`
+							: Math.round(indicatorContrast.ratio * 10) / 10,
+					]),
+			);
+		}
+
+		it("measures the contrast of each focus indicator", async () => {
+			const result = await runFixture("indicator-contrast.html");
+
+			// Every one of these has an indicator: contrast is judged apart from 2.4.7.
+			expect(result.summary).toMatchObject({ checked: 12, passed: 12, failed: 0 });
+			expect(contrasts(result)).toEqual({
+				"#strong-outline": 5.8,
+				"#faint-outline": 1.4,
+				"#thin-outline": 5.8,
+				// Mid-grey on white: enough against what is next to it, however little it moved from
+				// the grey it was. That it is the only change is the colour-only check's business.
+				"#border-shift": 3.5,
+				"#ring-and-border": 5.1,
+				"#underline-and-border": 3.5,
+				"#ring-on-dark": 11.1,
+				// The colours behind it cannot be read from styles, so the screenshots are: the blue
+				// outline all but disappears into the dark end of the photograph.
+				"#over-image": 1.3,
+				"#strong-label": 12.4,
+				"#faint-label": 1.5,
+				"#subtle-label": 1.1,
+			});
+			expect(result.summary.lowContrastIndicators).toBe(4);
+
+			const bySelector = Object.fromEntries(result.elements.map((e) => [e.selector, e]));
+
+			expect(bySelector["#faint-outline"]?.indicatorContrast).toMatchObject({
+				method: "style",
+				property: "outline",
+				indicatorColor: "rgb(217, 217, 217)",
+				adjacentColor: "rgb(255, 255, 255)",
+				comparedAgainst: "surroundings",
+			});
+			expect(bySelector["#border-shift"]?.indicatorContrast).toMatchObject({
+				method: "style",
+				property: "border",
+				indicatorColor: "rgb(138, 138, 138)",
+				adjacentColor: "rgb(255, 255, 255)",
+			});
+			expect(bySelector["#border-shift"]?.indicatorContrast?.stateChangeRatio).toBeCloseTo(1.2, 1);
+			expect(bySelector["#border-shift"]?.colorOnly?.contrastRatio).toBeCloseTo(1.2, 1);
+			expect(bySelector["#over-image"]?.indicatorContrast).toMatchObject({
+				method: "pixels",
+				comparedAgainst: "adjacent-pixels",
+			});
+			expect(bySelector["#ring-on-dark"]?.indicatorContrast).toMatchObject({
+				property: "box-shadow",
+				adjacentColor: "rgb(20, 33, 61)",
+			});
+			// The hidden checkboxes are judged from the screenshots of their labels.
+			expect(bySelector["#strong-label"]?.indicatorContrast).toMatchObject({
+				method: "pixels",
+				indicatorColor: "rgb(29, 53, 87)",
+				adjacentColor: "rgb(255, 255, 255)",
+			});
+			expect(bySelector["#faint-label"]?.indicatorContrast).toMatchObject({
+				method: "pixels",
+				indicatorColor: "rgb(208, 208, 208)",
+			});
+			// Too faint to count as a pixel difference, found on its wrapping label's styles, then measured finely.
+			expect(bySelector["#subtle-label"]).toMatchObject({
+				detectionMethod: "style",
+				indicatorOn: { kind: "ancestor" },
+				indicatorContrast: { method: "pixels", indicatorColor: "rgb(244, 244, 244)" },
+			});
+
+			// Screenshots are kept for the weak ones only.
+			expect(
+				result.elements
+					.filter((e) => e.indicatorContrast?.evidence !== undefined)
+					.map((e) => e.selector),
+			).toEqual(["#faint-outline", "#over-image", "#faint-label", "#subtle-label"]);
+		});
+
+		it("does not judge an indicator part-way through a transition, and waits for one it screenshots", async () => {
+			const result = await runFixture("transition.html");
+
+			expect(contrasts(result)).toEqual({
+				// Read from styles while the ring was still fading in: a part-way colour says nothing.
+				"#fade": "unknown:translucent",
+				// Read from screenshots, which wait for the fade to finish: black against the white page.
+				"#filter": 21,
+			});
+			expect(result.summary.lowContrastIndicators).toBe(0);
+		});
+
+		it("leaves the browser's default focus ring and unmeasurable indicators alone", async () => {
+			const result = await runFixture("indicator-contrast.html");
+			const measured = Object.keys(contrasts(result));
+
+			// The default ring is the browser's, and a pseudo-element's colours are not read.
+			expect(measured).not.toContain("#default-ring");
+			expect(contrasts(await runFixture("pseudo.html"))).toEqual({});
+		});
+
+		it("judges an indicator against the colours next to it, not against the unfocused state", async () => {
+			const result = await runFixture("indicator-adjacent.html");
+			const bySelector = Object.fromEntries(result.elements.map((e) => [e.selector, e]));
+
+			expect(result.summary).toMatchObject({ checked: 6, passed: 6, failed: 0 });
+			expect(contrasts(result)).toEqual({
+				// Blue on white, however little it differs from the grey it replaced.
+				"#recolour": 8.6,
+				// Outlines pulled inside the button by a negative offset sit on the button's own fill.
+				"#inset-outline": 16,
+				"#faint-inset": 1.2,
+				// Positioned over a dark layer that no ancestor accounts for: read from the screenshots.
+				"#over-layer": 16,
+				// A white border on a dark fill stands out from the fill, if not from the white page.
+				"#filled-border": 16,
+				"#appearing-bg": 1.3,
+			});
+
+			expect(bySelector["#recolour"]?.indicatorContrast).toMatchObject({
+				method: "style",
+				property: "border",
+				indicatorColor: "rgb(0, 0, 255)",
+				adjacentColor: "rgb(255, 255, 255)",
+			});
+			// How far it moved from the unfocused grey is recorded, and decides nothing.
+			expect(bySelector["#recolour"]?.indicatorContrast?.stateChangeRatio).toBeCloseTo(1.89, 1);
+			expect(bySelector["#inset-outline"]?.indicatorContrast).toMatchObject({
+				property: "outline",
+				comparedAgainst: "own-background",
+				adjacentColor: "rgb(20, 33, 61)",
+			});
+			expect(bySelector["#over-layer"]?.indicatorContrast).toMatchObject({
+				method: "pixels",
+				comparedAgainst: "adjacent-pixels",
+				indicatorColor: "rgb(255, 255, 255)",
+				adjacentColor: "rgb(20, 33, 61)",
+			});
+			expect(bySelector["#filled-border"]?.indicatorContrast).toMatchObject({
+				property: "border",
+				comparedAgainst: "own-background",
+			});
+
+			// A background that appears on focus is one colour changing. It is measured against the
+			// white that showed through before, and left to the colour-only check.
+			expect(bySelector["#appearing-bg"]?.colorOnly).toMatchObject({
+				property: "background-color",
+				unfocusedColor: "rgba(0, 0, 0, 0)",
+				focusedColor: "rgb(255, 221, 0)",
+				backgroundColor: "rgb(255, 255, 255)",
+			});
+			expect(bySelector["#appearing-bg"]?.colorOnly?.contrastRatio).toBeCloseTo(1.35, 1);
+			expect(result.summary.lowContrastIndicators).toBe(1);
+		});
+
+		it("does not report a change of text colour as a low-contrast indicator", async () => {
+			// With the style check off every element is read from screenshots, where a recoloured
+			// link is just changed pixels: they are judged against the page behind them.
+			const result = await runFixture("color-only.html", { skipStyleCheck: true });
+			const text = result.elements.filter((e) => e.selector.startsWith("#text-"));
+
+			expect(text.map((e) => e.detectionMethod)).toEqual([
+				"pixel-diff",
+				"pixel-diff",
+				"pixel-diff",
+			]);
+			expect(text.map((e) => (e.indicatorContrast?.ratio ?? 0) >= 3)).toEqual([true, false, true]);
+			// Near enough white: the edges of glyphs are blended with it.
+			expect(text[1]?.indicatorContrast?.adjacentColor).toMatch(/^rgb\(25\d, 25\d, 25\d\)$/);
+		});
+
+		it("leaves the browser's default ring alone when it is found from screenshots", async () => {
+			const late = await runFixture("late-default-ring.html");
+
+			expect(outcomes(late)).toEqual({ "#first": "style", "#late": "pixel-diff" });
+			expect(contrasts(late)).toEqual({});
+			expect(late.summary.lowContrastIndicators).toBe(0);
+
+			const unchecked = await runFixture("late-default-ring.html", { skipStyleCheck: true });
+
+			expect(outcomes(unchecked)).toEqual({ "#first": "pixel-diff", "#late": "pixel-diff" });
+			expect(contrasts(unchecked)).toEqual({});
+		});
+
+		it("does not pass elements on a wrapper they share or one that is animating", async () => {
+			const result = await runFixture("shared-wrapper.html");
+
+			expect(outcomes(result)).toEqual({
+				// The group lights up for either button, so it does not say which one has focus.
+				"#bold": "review:shared-indicator",
+				"#italic": "review:shared-indicator",
+				// The group pulses on its own: what differs between two reads is the animation.
+				"#like": "review:animating",
+				"#share": "review:animating",
+				// A wrapper around a single control does identify it.
+				"#publish-now": "style",
+			});
+			expect(result.summary).toMatchObject({ checked: 5, passed: 1, failed: 0, needsReview: 4 });
+			expect(result.elements[4]?.indicatorOn).toMatchObject({ kind: "ancestor" });
+		});
+
+		it("finds the indicator of a hidden input on a sibling box away from its label", async () => {
+			const result = await runFixture("hidden-input-sibling-box.html");
+
+			expect(outcomes(result)).toEqual({ "#receipts": "pixel-diff", "#offers": "fail" });
+			expect(result.elements.map((e) => e.measuredOn)).toEqual(["label", "label"]);
+			expect(contrasts(result)).toEqual({ "#receipts": 5.8 });
 		});
 
 		it("passes a box-shadow indicator via the computed-style path", async () => {
@@ -262,9 +686,9 @@ describeEachEngine<BrowserAdaptor>(
 				const second = await runOnce();
 				const third = await runOnce();
 
-				expect(first.summary.failed).toBeGreaterThanOrEqual(2);
-				expect(second.summary.failed).toBeGreaterThanOrEqual(2);
-				expect(third.summary.failed).toBeGreaterThanOrEqual(2);
+				expect(first.summary.failed).toBe(2);
+				expect(second.summary.failed).toBe(2);
+				expect(third.summary.failed).toBe(2);
 			} finally {
 				await page.close();
 			}

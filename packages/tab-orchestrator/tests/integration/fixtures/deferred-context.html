@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Support</title>
+<style>
+	button, input { display: block; margin: 12px; padding: 8px 12px; }
+</style>
+</head><body>
+<button id="before" type="button">Before</button>
+<!-- A chat widget that pops its window open a moment after its field gets focus, from a timer. -->
+<input id="chat" type="text" aria-label="Ask a question">
+<!-- And a field that hands focus on from a zero-delay timer, as focus-management code often does. -->
+<input id="relay" type="text" aria-label="Postcode">
+<button id="after" type="button">After</button>
+<script>
+	document.getElementById("chat").addEventListener("focus", () => {
+		setTimeout(() => window.open("about:blank"), 20);
+	});
+
+	document.getElementById("relay").addEventListener("focus", () => {
+		setTimeout(() => document.getElementById("after").focus(), 0);
+	});
+</script>
+</body></html>

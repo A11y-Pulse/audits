@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Component preview</title>
+<script>
+	// What a component preview with fake timers installed (a mocked clock in a story or a test page)
+	// leaves behind: timers are accepted and never fire. `?frames=off` stops animation frames too,
+	// as a page with its virtual time paused does.
+	window.setTimeout = function () {
+		return 0;
+	};
+
+	if (new URLSearchParams(location.search).get("frames") === "off") {
+		window.requestAnimationFrame = function () {
+			return 0;
+		};
+	}
+</script>
+</head><body>
+<h1>Button group</h1>
+<button id="save" type="button">Save</button>
+<button id="copy" type="button">Copy</button>
+<a id="docs" href="/docs">Documentation</a>
+<button id="share" type="button">Share</button>
+<a id="source" href="/source">View source</a>
+</body></html>

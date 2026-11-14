@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Unsaved changes</title></head><body>
+<!-- Navigates on focus, but asks first whether to leave, and the session dismisses the question. -->
+<a id="first" href="#first">First</a>
+<input id="jump" onfocus="location.href = 'navigation-target.html'">
+<a id="last" href="#last">Last</a>
+<script>
+	addEventListener("beforeunload", (event) => {
+		event.preventDefault();
+		event.returnValue = "";
+	});
+</script>
+</body></html>

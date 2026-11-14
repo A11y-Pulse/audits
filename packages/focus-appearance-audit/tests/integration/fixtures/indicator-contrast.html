@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Account</title><style>
+  body { background: #fff; color: #1a1a1a; font: 16px/1.5 system-ui, sans-serif; margin: 40px; }
+  section { margin: 0 0 28px; padding: 20px; }
+  a, button, input[type="text"] { font: inherit; }
+  button, .field { padding: 8px 14px; border-radius: 4px; }
+  button { background: #f2f2f2; border: 1px solid #767676; color: #1a1a1a; }
+  a:focus-visible, button:focus-visible:not(.native), input:focus-visible { outline: none; }
+
+  /* Strong and weak outlines on the white page. */
+  #strong-outline:focus-visible { outline: 2px solid #0050ff; outline-offset: 2px; }
+  #faint-outline:focus-visible { outline: 2px solid #d9d9d9; outline-offset: 2px; }
+  #thin-outline:focus-visible { outline: 1px solid #0050ff; outline-offset: 1px; }
+
+  /* A border that is always there and only shifts shade on focus. */
+  .field { border: 2px solid #999; background: #fff; }
+  #border-shift:focus-visible { border-color: #8a8a8a; }
+
+  /* The browser's own ring, alone and with a faint border shift; and an underline with the same shift. */
+  #ring-and-border:focus-visible { border-color: #6e6e6e; }
+  #underline-and-border { border: 2px solid #999; padding: 4px 8px; text-decoration: none; }
+  #underline-and-border:focus-visible { border-color: #8a8a8a; text-decoration: underline; }
+
+  /* A ring drawn with box-shadow on a dark panel. */
+  .dark { background: #14213d; color: #fff; }
+  .dark a { color: #fff; }
+  #ring-on-dark:focus-visible { box-shadow: 0 0 0 3px #ffd166; }
+
+  /* The same outline over a photograph cannot be judged from colours. */
+  .hero { background-image: linear-gradient(120deg, #264653, #e9c46a 60%, #e76f51); }
+  .hero a { color: #fff; }
+  #over-image:focus-visible { outline: 2px solid #0050ff; outline-offset: 2px; }
+
+  /* Custom checkboxes: the real input is hidden and its label is highlighted instead. */
+  .check { display: flex; align-items: center; gap: 8px; margin: 12px 0; padding: 6px 10px; position: relative; width: 320px; }
+  .check input { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); border: 0; }
+  .box { width: 18px; height: 18px; border: 2px solid #555; border-radius: 3px; background: #fff; }
+  .check:has(#strong-label:focus-visible) { background: #1d3557; color: #fff; }
+  .check:has(#faint-label:focus-visible) { background: #d0d0d0; }
+  .check:has(#subtle-label:focus-visible) { background: #f4f4f4; }
+</style></head><body>
+  <h1>Account</h1>
+  <section>
+    <a id="strong-outline" href="/profile">Edit profile</a>
+    <a id="faint-outline" href="/billing">Billing</a>
+    <a id="thin-outline" href="/security">Security</a>
+  </section>
+  <section>
+    <label for="border-shift">Display name</label>
+    <input id="border-shift" class="field" type="text" value="Sam">
+  </section>
+  <section>
+    <button id="default-ring" class="native" type="button">Save</button>
+    <button id="ring-and-border" class="native" type="button">Cancel</button>
+    <a id="underline-and-border" href="/help">Help</a>
+  </section>
+  <section class="dark">
+    <a id="ring-on-dark" href="/upgrade">Upgrade plan</a>
+  </section>
+  <section class="hero">
+    <a id="over-image" href="/tour">Take the tour</a>
+  </section>
+  <section>
+    <label class="check"><input type="checkbox" id="strong-label"><span class="box"></span> Email me receipts</label>
+    <label class="check"><input type="checkbox" id="faint-label"><span class="box"></span> Email me offers</label>
+    <label class="check"><input type="checkbox" id="subtle-label"><span class="box"></span> Email me surveys</label>
+  </section>
+</body></html>

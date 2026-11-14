@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Newsletter</title><style>
+  body { background: #fff; font: 16px/1.5 system-ui, sans-serif; }
+  :focus { outline: 3px solid #0050ff; }
+  label { display: block; }
+</style></head><body>
+  <!-- The last field in the tab order defers its change of context by half a second, by which time
+       there is no later tab stop for it to be noticed at. `?do=navigate` makes it a navigation
+       rather than a new window. -->
+  <label>Name <input id="name"></label>
+  <label>Email <input id="email"></label>
+  <label>Postcode <input id="postcode"></label>
+  <script>
+    const navigate = new URLSearchParams(location.search).get("do") === "navigate";
+
+    document.getElementById("postcode").addEventListener("focus", () => {
+      setTimeout(() => {
+        if (navigate) {
+          location.href = "/other-page.html";
+        } else {
+          window.open("/late-offer");
+        }
+      }, 500);
+    });
+  </script>
+</body></html>

@@ -1,124 +1,17 @@
-import type { BrowserAdaptor } from "@a11y-pulse/browser-adaptor";
-import { getSelector } from "@a11y-pulse/browser-adaptor/dom";
-import type { ActiveElementInfo } from "@a11y-pulse/tab-orchestrator";
-import {
-	activeElementHandleScript,
-	baselineScript,
-	clearMarkersScript,
-	createTabOrchestrator,
-	hasFocusScript,
-	probeActiveElementScript,
-	type TabConsumer,
-	type TabStopSnapshot,
+import type {
+	ContextChangeDetails,
+	ContextChangeSignals,
+	LateContextChange,
+	TabSessionHandle,
+	TabStopSnapshot,
+	UnattributedContextChange,
 } from "@a11y-pulse/tab-orchestrator";
-import { describe, expect, it } from "vitest";
-import {
-	type DrainContextObserverResult,
-	drainContextObserverScript,
-	installContextObserverScript,
-	locationHrefScript,
-} from "../../tab-orchestrator/src/browser-scripts";
-import { type ContextChangeOnFocusOptions, createContextChangeOnFocusAudit } from "./audit";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createContextChangeOnFocusAudit } from "./audit";
 
-const EMPTY_STYLES = { element: {}, before: {}, after: {} };
+const PNG = new Uint8Array([1]);
 
-function info(
-	index: number,
-	extra: Partial<ActiveElementInfo> = {},
-): Omit<ActiveElementInfo, "selector"> {
-	return {
-		index,
-		isBody: false,
-		isIframe: false,
-		html: `<button>${index}</button>`,
-		styles: EMPTY_STYLES,
-		rect: { x: 0, y: 0, width: 10, height: 10 },
-		...extra,
-	};
-}
-
-function recordingConsumer(): TabConsumer & { stops: TabStopSnapshot[] } {
-	const record = {
-		stops: [] as TabStopSnapshot[],
-		capabilities: new Set<never>(),
-		async onTabStop(snapshot: TabStopSnapshot) {
-			record.stops.push(snapshot);
-		},
-	};
-
-	return record;
-}
-
-/**
- * Duplicated from `@a11y-pulse/tab-orchestrator`'s own `orchestrator.test.ts` fake-adaptor helper
- * (not exported by the package's public API). Dispatches on the identity of the injected
- * browser-script functions.
- */
-function loopAdaptor(script: {
-	hasFocus?: boolean[];
-	active?: Array<Omit<ActiveElementInfo, "selector"> | null>;
-}): BrowserAdaptor {
-	let stopIndex = -1;
-	let tabbed = false;
-	let activeCall = 0;
-
-	return {
-		evaluate: (async (fn, ..._args) => {
-			if (fn === baselineScript) {
-				return { styles: [EMPTY_STYLES], entries: [] };
-			}
-
-			if (fn === probeActiveElementScript) {
-				tabbed = false;
-
-				return (
-					script.active?.[activeCall++] ?? {
-						index: null,
-						isBody: true,
-						isIframe: false,
-						html: "",
-						styles: EMPTY_STYLES,
-						rect: { x: 0, y: 0, width: 0, height: 0 },
-					}
-				);
-			}
-
-			if (fn === getSelector) {
-				return "#fake";
-			}
-
-			if (fn === clearMarkersScript) {
-				return undefined;
-			}
-
-			if (fn === hasFocusScript) {
-				return script.hasFocus?.[tabbed ? stopIndex : stopIndex + 1] ?? false;
-			}
-
-			return false;
-		}) as BrowserAdaptor["evaluate"],
-		async evaluateHandle(fn) {
-			if (fn === activeElementHandleScript) {
-				return { kind: "active" };
-			}
-
-			return {};
-		},
-		async disposeRef() {},
-		async pressTab() {
-			stopIndex++;
-			tabbed = true;
-		},
-		async pressEnter() {},
-		async pressKey() {},
-		async screenshotClip() {
-			return new Uint8Array([1]);
-		},
-		async ensureFocusReporting() {},
-	};
-}
-
-function emptyDrain(): DrainContextObserverResult {
+function signals(partial: Partial<ContextChangeSignals> = {}): ContextChangeSignals {
 	return {
 		openedWindow: false,
 		submittedForm: false,
@@ -126,279 +19,538 @@ function emptyDrain(): DrainContextObserverResult {
 		redirect: null,
 		softUrlChange: false,
 		navigation: false,
-		attributedHtml: null,
-		hasAttributed: false,
+		...partial,
 	};
 }
 
-/**
- * `loopAdaptor` plus `drainContextObserverScript` dispatch: serves the queued signals for the
- * *current* tab stop, keeps `locationHrefScript` constant so the orchestrator's proactive href-diff
- * navigation check never fires (it would otherwise short-circuit before `onTabStop` for a stop
- * whose fake drain reports `navigation: true`), and no-ops `installContextObserverScript`.
- */
-function contextAdaptor(
-	drains: DrainContextObserverResult[],
-	overrides: { hasFocus?: boolean[] } = {},
-): BrowserAdaptor {
-	const adaptor = loopAdaptor({
-		hasFocus: overrides.hasFocus ?? drains.map(() => true).concat(true),
-		active: drains.map((_, index) => info(index)),
-	});
-	const original = adaptor.evaluate.bind(adaptor);
-	let stopIndex = -1;
-	adaptor.evaluate = (async (fn, ...args) => {
-		if (fn === probeActiveElementScript) {
-			stopIndex++;
-
-			return original(fn, ...args);
-		}
-
-		if (fn === locationHrefScript) {
-			return "http://fake/";
-		}
-
-		if (fn === installContextObserverScript) {
-			return undefined;
-		}
-
-		if (fn === drainContextObserverScript) {
-			return drains[stopIndex] ?? emptyDrain();
-		}
-
-		return original(fn, ...args);
-	}) as BrowserAdaptor["evaluate"];
-
-	return adaptor;
+/** The snapshot the orchestrator hands over for the `n`th tab stop, focused on `#el-n`. */
+function stop(
+	n: number,
+	partial: Partial<ContextChangeSignals> = {},
+	extra: {
+		details?: ContextChangeDetails;
+		late?: LateContextChange[];
+		unattributed?: UnattributedContextChange[];
+	} = {},
+): TabStopSnapshot {
+	return {
+		tabIndex: n,
+		activeElement: {
+			index: n,
+			isBody: false,
+			isIframe: false,
+			selector: `#el-${n}`,
+			html: `<button id="el-${n}">`,
+			styles: { element: {}, before: {}, after: {} },
+			rect: { x: 0, y: 0, width: 10, height: 10 },
+		},
+		contextSignals: {
+			signals: signals(partial),
+			details: extra.details ?? {},
+			late: extra.late,
+			unattributed: extra.unattributed,
+		},
+	};
 }
 
+type FakeSession = TabSessionHandle & {
+	disconnects: number;
+	shots: string[];
+	/** Targets whose capture should reject. */
+	failing: Set<string>;
+};
+
+function fakeSession(): FakeSession {
+	const session: FakeSession = {
+		disconnects: 0,
+		shots: [],
+		failing: new Set(),
+		disconnect() {
+			session.disconnects++;
+		},
+		async ensureUnfocusedPair() {
+			throw new Error("not used by this audit");
+		},
+		async screenshotClip(target = "focused") {
+			session.shots.push(target);
+
+			if (session.failing.has(target)) {
+				throw new Error(`no ${target} element`);
+			}
+
+			return PNG;
+		},
+	};
+
+	return session;
+}
+
+afterEach(() => {
+	vi.useRealTimers();
+});
+
 describe("createContextChangeOnFocusAudit", () => {
-	it("declares the contextSignals and screenshot capabilities", () => {
-		const audit = createContextChangeOnFocusAudit();
-		expect(audit.capabilities.has("contextSignals")).toBe(true);
-		expect(audit.capabilities.has("screenshot")).toBe(true);
-		expect(audit.capabilities.has("obscuring")).toBe(false);
-		expect(audit.capabilities.has("unfocusedPair")).toBe(false);
-		expect(audit.capabilities.has("baselineStyles")).toBe(false);
-		expect(audit.capabilities.size).toBe(2);
-	});
-
-	it("records a violation for a new window and disconnects at elementLimit", async () => {
-		const audit = createContextChangeOnFocusAudit({ elementLimit: 1 });
-		const orchestrator = createTabOrchestrator(
-			contextAdaptor([drainWith({ openedWindow: true }), emptyDrain()]),
-			{ screenshotSettleDelay: 0 },
-		);
-		orchestrator.attach(audit);
-		await orchestrator.run();
-		expect(audit.result.elements).toHaveLength(1);
-		expect(audit.result.elements[0]?.failed).toBe(true);
-		expect(audit.result.elements[0]?.findings).toEqual([
-			{ kind: "new-window", bucket: "violation" },
+	it("asks the orchestrator for context signals and screenshots only", () => {
+		expect([...createContextChangeOnFocusAudit().capabilities].sort()).toEqual([
+			"contextSignals",
+			"screenshot",
 		]);
-		expect(audit.result.summary.reachedLimit).toBe(true);
 	});
 
-	it("records a pass for a clean tab stop", async () => {
+	it("passes a stop with no signals and counts it", async () => {
 		const audit = createContextChangeOnFocusAudit();
-		const orchestrator = createTabOrchestrator(contextAdaptor([emptyDrain()]), {
-			screenshotSettleDelay: 0,
+		const session = fakeSession();
+
+		await audit.onTabStop(stop(1), session);
+		audit.onSessionEnd?.("completed", { revisitedIndex: null });
+
+		expect(audit.result.elements).toEqual([
+			{
+				selector: "#el-1",
+				html: '<button id="el-1">',
+				tabIndex: 1,
+				findings: [],
+				failed: false,
+				screenshot: undefined,
+			},
+		]);
+		expect(audit.result.summary).toMatchObject({
+			checked: 1,
+			passed: 1,
+			failed: 0,
+			sessionEnd: "completed",
 		});
-		orchestrator.attach(audit);
-		await orchestrator.run();
-		expect(audit.result.elements).toHaveLength(1);
-		expect(audit.result.elements[0]?.failed).toBe(false);
-		expect(audit.result.elements[0]?.findings).toEqual([]);
-		expect(audit.result.summary.checked).toBe(1);
-		expect(audit.result.summary.passed).toBe(1);
-		expect(audit.result.summary.failed).toBe(0);
-		expect(audit.result.summary.sessionEnd).toBe("completed");
+		expect(session.shots).toEqual([]);
 	});
 
-	it("records incomplete findings without counting them as failures", async () => {
+	it("keeps what is known about each change on its finding", async () => {
 		const audit = createContextChangeOnFocusAudit();
-		const orchestrator = createTabOrchestrator(
-			contextAdaptor([drainWith({ softUrlChange: true })]),
-			{ screenshotSettleDelay: 0 },
+		const session = fakeSession();
+		const form = { selector: "#search", html: '<form id="search">', action: "http://x/results" };
+
+		await audit.onTabStop(
+			stop(
+				1,
+				{ openedWindow: true, submittedForm: true, softUrlChange: true },
+				{
+					details: {
+						openedWindowUrl: "http://x/popup",
+						submittedForm: form,
+						urlChange: { from: "http://x/", to: "http://x/#tab" },
+					},
+				},
+			),
+			session,
 		);
-		orchestrator.attach(audit);
-		await orchestrator.run();
+
 		expect(audit.result.elements[0]?.findings).toEqual([
-			{ kind: "url-changed", bucket: "incomplete" },
-		]);
-		expect(audit.result.elements[0]?.failed).toBe(false);
-		expect(audit.result.summary.failed).toBe(0);
-	});
-
-	it("attaches the selector/html of the focused element", async () => {
-		const audit = createContextChangeOnFocusAudit();
-		const orchestrator = createTabOrchestrator(
-			contextAdaptor([drainWith({ focusRemoved: true })]),
-			{ screenshotSettleDelay: 0 },
-		);
-		orchestrator.attach(audit);
-		await orchestrator.run();
-		const element = audit.result.elements[0];
-		expect(element?.selector).toBe("#fake");
-		expect(element?.tabIndex).toBe(1);
-		expect(element?.findings).toEqual([{ kind: "focus-removed", bucket: "violation" }]);
-	});
-
-	it("reports a navigation finding and ends the session as navigation", async () => {
-		const audit = createContextChangeOnFocusAudit();
-		const orchestrator = createTabOrchestrator(
-			contextAdaptor([drainWith({ navigation: true }), emptyDrain()]),
-			{ screenshotSettleDelay: 0 },
-		);
-		orchestrator.attach(audit);
-		await orchestrator.run();
-		expect(audit.result.elements).toHaveLength(1);
-		expect(audit.result.elements[0]?.findings).toEqual([
-			{ kind: "navigation", bucket: "violation" },
+			{ kind: "new-window", bucket: "violation", url: "http://x/popup" },
+			{ kind: "auto-submit", bucket: "violation", form },
+			{ kind: "url-changed", bucket: "incomplete", from: "http://x/", to: "http://x/#tab" },
 		]);
 		expect(audit.result.elements[0]?.failed).toBe(true);
-		expect(audit.result.summary.sessionEnd).toBe("navigation");
 	});
 
-	it("disconnects after failedElementLimit while another consumer keeps receiving stops", async () => {
-		const other = recordingConsumer();
-		const audit = createContextChangeOnFocusAudit({ failedElementLimit: 1 });
-		const orchestrator = createTabOrchestrator(
-			contextAdaptor([drainWith({ openedWindow: true }), emptyDrain()]),
-			{ screenshotSettleDelay: 0 },
-		);
-		orchestrator.attach(audit);
-		orchestrator.attach(other);
-		await orchestrator.run();
-		expect(audit.result.summary.checked).toBe(1);
-		expect(audit.result.summary.failed).toBe(1);
-		expect(audit.result.summary.reachedFailedElementLimit).toBe(true);
-		expect(audit.result.summary.reachedLimit).toBe(false);
-		expect(audit.result.summary.sessionEnd).toBeNull();
-		expect(other.stops).toHaveLength(2);
-	});
-
-	it("never finishes early when failedElementLimit is 0 (default)", async () => {
+	it("does not count an element with only review findings as failed", async () => {
 		const audit = createContextChangeOnFocusAudit();
-		const orchestrator = createTabOrchestrator(
-			contextAdaptor([drainWith({ openedWindow: true }), drainWith({ submittedForm: true })]),
-			{ screenshotSettleDelay: 0 },
-		);
-		orchestrator.attach(audit);
-		await orchestrator.run();
-		expect(audit.result.summary.checked).toBe(2);
-		expect(audit.result.summary.failed).toBe(2);
-		expect(audit.result.summary.reachedFailedElementLimit).toBe(false);
-		expect(audit.result.summary.sessionEnd).toBe("completed");
+
+		await audit.onTabStop(stop(1, { softUrlChange: true }), fakeSession());
+
+		expect(audit.result.elements[0]?.failed).toBe(false);
+		expect(audit.result.summary).toMatchObject({ checked: 1, passed: 1, failed: 0 });
 	});
 
-	it("returns results gathered so far when timeout fires during a hung settle", async () => {
-		const audit = createContextChangeOnFocusAudit({
-			timeout: 150,
-			screenshotSettleDelay: 80,
-		});
-		const orchestrator = createTabOrchestrator(
-			contextAdaptor([emptyDrain(), emptyDrain(), emptyDrain()]),
-			{ screenshotSettleDelay: 80 },
-		);
-		orchestrator.attach(audit);
-
-		const started = Date.now();
-		await orchestrator.run();
-
-		expect(Date.now() - started).toBeLessThan(400);
-		expect(audit.result.summary.timedOut).toBe(true);
-		expect(audit.result.summary.checked).toBe(1);
-		expect(audit.result.summary.sessionEnd).toBeNull();
-	}, 2000);
-
-	it("does not time out when timeout is 0 (default)", async () => {
-		const audit = createContextChangeOnFocusAudit({ timeout: 0 });
-		const orchestrator = createTabOrchestrator(contextAdaptor([emptyDrain(), emptyDrain()]), {
-			screenshotSettleDelay: 0,
-		});
-		orchestrator.attach(audit);
-		await orchestrator.run();
-		expect(audit.result.summary.timedOut).toBe(false);
-		expect(audit.result.summary.checked).toBe(2);
-		expect(audit.result.summary.sessionEnd).toBe("completed");
-	});
-
-	it("sets sessionEnd to lostFocus when the document loses focus while attached", async () => {
+	it("reports a native dialog raised on focus", async () => {
 		const audit = createContextChangeOnFocusAudit();
-		const adaptor = contextAdaptor([emptyDrain()], {
-			hasFocus: [true, false],
-		});
-		const orchestrator = createTabOrchestrator(adaptor, {
-			screenshotSettleDelay: 0,
-		});
-		orchestrator.attach(audit);
-		await orchestrator.run();
-		expect(audit.result.summary.checked).toBe(1);
-		expect(audit.result.summary.sessionEnd).toBe("lostFocus");
+
+		await audit.onTabStop(stop(1, { openedDialog: true }), fakeSession());
+
+		expect(audit.result.elements[0]?.findings).toEqual([{ kind: "dialog", bucket: "violation" }]);
+	});
+
+	it("reports nothing for focus passed on by a focus guard", async () => {
+		const audit = createContextChangeOnFocusAudit();
+
+		await audit.onTabStop(stop(1, { focusGuard: true }), fakeSession());
+
+		expect(audit.result.elements[0]).toMatchObject({ selector: "#el-1", findings: [] });
 	});
 });
 
-describe("createContextChangeOnFocusAudit screenshots", () => {
-	it("captures a screenshot for an element with findings but not for a clean one", async () => {
+describe("attribution of focus that was given away", () => {
+	const thief = { selector: "#thief", html: '<input id="thief">' };
+
+	it("reports the element that redirected focus, with where focus went on the finding", async () => {
 		const audit = createContextChangeOnFocusAudit();
-		const orchestrator = createTabOrchestrator(
-			contextAdaptor([
-				drainWith({ openedWindow: true }),
-				drainWith({ softUrlChange: true }),
-				emptyDrain(),
-			]),
-			{ screenshotSettleDelay: 0 },
+		const session = fakeSession();
+
+		// Focus settled on #el-1, but #thief is the element that received it and passed it on.
+		await audit.onTabStop(
+			stop(1, { redirect: "outside" }, { details: { attributed: thief } }),
+			session,
 		);
-		orchestrator.attach(audit);
-		await orchestrator.run();
-		expect(audit.result.elements[0]?.screenshot).toEqual(new Uint8Array([1]));
-		expect(audit.result.elements[1]?.screenshot).toEqual(new Uint8Array([1]));
-		expect(audit.result.elements[2]?.screenshot).toBeUndefined();
+
+		expect(audit.result.elements).toEqual([
+			{
+				...thief,
+				tabIndex: 1,
+				findings: [
+					{
+						kind: "focus-redirected-outside",
+						bucket: "violation",
+						redirectedTo: { selector: "#el-1", html: '<button id="el-1">' },
+					},
+				],
+				failed: true,
+				screenshot: PNG,
+			},
+		]);
+		expect(session.shots).toEqual(["attributed"]);
 	});
 
-	it("does not capture a screenshot after a navigation", async () => {
+	it("falls back to the focused element's screenshot when the redirecting one is gone", async () => {
 		const audit = createContextChangeOnFocusAudit();
-		const orchestrator = createTabOrchestrator(contextAdaptor([drainWith({ navigation: true })]), {
-			screenshotSettleDelay: 0,
+		const session = fakeSession();
+		session.failing.add("attributed");
+
+		await audit.onTabStop(
+			stop(1, { redirect: "outside" }, { details: { attributed: thief } }),
+			session,
+		);
+
+		expect(session.shots).toEqual(["attributed", "focused"]);
+		expect(audit.result.elements[0]).toMatchObject({ selector: "#thief", screenshot: PNG });
+	});
+
+	it("keeps the focused element when it is itself the attributed one", async () => {
+		const audit = createContextChangeOnFocusAudit();
+		const session = fakeSession();
+
+		// A self-blurring element: the orchestrator's synthetic stop is already about that element.
+		await audit.onTabStop(
+			stop(
+				1,
+				{ focusRemoved: true },
+				{ details: { attributed: { selector: "#el-1", html: '<button id="el-1">' } } },
+			),
+			session,
+		);
+
+		expect(audit.result.elements[0]).toMatchObject({
+			selector: "#el-1",
+			findings: [{ kind: "focus-removed", bucket: "violation" }],
 		});
-		orchestrator.attach(audit);
-		await orchestrator.run();
-		expect(audit.result.elements[0]?.failed).toBe(true);
-		expect(audit.result.elements[0]?.screenshot).toBeUndefined();
+		expect(session.shots).toEqual(["focused"]);
+	});
+});
+
+describe("changes that arrive after focus has moved on", () => {
+	const late = (index: number | null, html: string): LateContextChange => ({
+		index,
+		html,
+		signals: signals({ openedWindow: true }),
+		details: { openedWindowUrl: "http://x/late" },
+	});
+
+	it("adds a delayed finding to the earlier element, not the focused one", async () => {
+		const audit = createContextChangeOnFocusAudit();
+		const session = fakeSession();
+
+		await audit.onTabStop(stop(1), session);
+		await audit.onTabStop(stop(2), session);
+		await audit.onTabStop(stop(3, {}, { late: [late(1, '<button id="el-1">')] }), session);
+
+		expect(audit.result.elements.map((element) => [element.selector, element.failed])).toEqual([
+			["#el-1", true],
+			["#el-2", false],
+			["#el-3", false],
+		]);
+		expect(audit.result.elements[0]?.findings).toEqual([
+			{ kind: "new-window", bucket: "violation", url: "http://x/late", delayed: true },
+		]);
+		expect(audit.result.summary).toMatchObject({ checked: 3, failed: 1, passed: 2 });
+	});
+
+	it("finds an element that redirected focus by its markup", async () => {
+		const audit = createContextChangeOnFocusAudit();
+		const session = fakeSession();
+		const thief = { selector: "#thief", html: '<input id="thief">' };
+
+		await audit.onTabStop(
+			stop(1, { redirect: "outside" }, { details: { attributed: thief } }),
+			session,
+		);
+		await audit.onTabStop(stop(2, {}, { late: [late(null, thief.html)] }), session);
+
+		expect(audit.result.elements).toHaveLength(2);
+		expect(audit.result.elements[0]?.findings.map((finding) => finding.kind)).toEqual([
+			"focus-redirected-outside",
+			"new-window",
+		]);
+	});
+
+	it("reports a delayed change from an element that was never a stop on its own entry", async () => {
+		const audit = createContextChangeOnFocusAudit();
+
+		await audit.onTabStop(stop(1, {}, { late: [late(null, "<div tabindex=0>")] }), fakeSession());
+
+		expect(audit.result.elements).toEqual([
+			{
+				selector: "",
+				html: "<div tabindex=0>",
+				tabIndex: 1,
+				findings: [
+					{ kind: "new-window", bucket: "violation", url: "http://x/late", delayed: true },
+				],
+				failed: true,
+			},
+			expect.objectContaining({ selector: "#el-1", findings: [] }),
+		]);
+	});
+});
+
+describe("what the session still had to report when it ended", () => {
+	it("adds a change the last element deferred to that element, and counts it", async () => {
+		const audit = createContextChangeOnFocusAudit();
+		const session = fakeSession();
+
+		await audit.onTabStop(stop(1), session);
+		await audit.onTabStop(stop(2), session);
+		audit.onSessionEnd?.("completed", {
+			revisitedIndex: null,
+			contextSignals: {
+				late: [
+					{
+						index: 2,
+						html: '<button id="el-2">',
+						signals: signals({ navigationPrevented: true }),
+						details: { navigationUrl: "http://x/next" },
+					},
+				],
+			},
+		});
+
+		expect(audit.result.elements.map((element) => [element.selector, element.findings])).toEqual([
+			["#el-1", []],
+			["#el-2", [{ kind: "navigation", bucket: "violation", url: "http://x/next", delayed: true }]],
+		]);
+		expect(audit.result.summary).toMatchObject({
+			checked: 2,
+			failed: 1,
+			passed: 1,
+			sessionEnd: "completed",
+		});
+	});
+
+	it("records how the session ended, including on lost focus", async () => {
+		const audit = createContextChangeOnFocusAudit();
+
+		await audit.onTabStop(stop(1), fakeSession());
+		audit.onSessionEnd?.("lostFocus", { revisitedIndex: null });
+
+		expect(audit.result.summary).toMatchObject({ sessionEnd: "lostFocus", checked: 1 });
+		expect(audit.result.unattributed).toBeUndefined();
+	});
+});
+
+describe("changes no focused element can be shown to have caused", () => {
+	const unattributed = (
+		partial: Partial<ContextChangeSignals>,
+		details: ContextChangeDetails = {},
+	): UnattributedContextChange => ({ signals: signals(partial), details });
+
+	it("keeps them off the focused element, for review, once each", async () => {
+		const audit = createContextChangeOnFocusAudit();
+		const session = fakeSession();
+		const redirect = unattributed(
+			{ navigationPrevented: true },
+			{ navigationUrl: "http://x/signed-out" },
+		);
+
+		await audit.onTabStop(stop(1, {}, { unattributed: [redirect] }), session);
+		// An interval that keeps trying, and a window opened by something else.
+		await audit.onTabStop(
+			stop(
+				2,
+				{},
+				{
+					unattributed: [
+						redirect,
+						unattributed({ openedWindow: true }, { openedWindowUrl: "/promotion" }),
+					],
+				},
+			),
+			session,
+		);
+		audit.onSessionEnd?.("completed", {
+			revisitedIndex: null,
+			contextSignals: { unattributed: [unattributed({ openedDialog: true })] },
+		});
+
+		expect(audit.result.elements.map((element) => element.findings)).toEqual([[], []]);
+		expect(session.shots).toEqual([]);
+		expect(audit.result.unattributed).toEqual([
+			{ kind: "navigation", bucket: "incomplete", url: "http://x/signed-out" },
+			{ kind: "new-window", bucket: "incomplete", url: "/promotion" },
+			{ kind: "dialog", bucket: "incomplete" },
+		]);
+		expect(audit.result.summary).toMatchObject({ checked: 2, failed: 0, passed: 2 });
+	});
+});
+
+describe("navigation", () => {
+	it("reports a cancelled navigation on the element, with its screenshot, and carries on", async () => {
+		const audit = createContextChangeOnFocusAudit();
+		const session = fakeSession();
+
+		await audit.onTabStop(
+			stop(1, { navigationPrevented: true }, { details: { navigationUrl: "http://x/away" } }),
+			session,
+		);
+		await audit.onTabStop(stop(2), session);
+
+		expect(audit.result.elements[0]).toMatchObject({
+			selector: "#el-1",
+			failed: true,
+			findings: [{ kind: "navigation", bucket: "violation", url: "http://x/away" }],
+			screenshot: PNG,
+		});
+		expect(audit.result.elements).toHaveLength(2);
+	});
+
+	it("takes no screenshot once the page has really navigated", async () => {
+		const audit = createContextChangeOnFocusAudit();
+		const session = fakeSession();
+
+		await audit.onTabStop(stop(1, { navigation: true }), session);
+		audit.onSessionEnd?.("navigation", { revisitedIndex: null });
+
+		expect(audit.result.elements[0]?.findings).toEqual([
+			{ kind: "navigation", bucket: "violation" },
+		]);
+		expect(session.shots).toEqual([]);
+		expect(audit.result.navigation).toBeUndefined();
+		expect(audit.result.summary.sessionEnd).toBe("navigation");
+	});
+
+	it("records a navigation whose element could not be read against the stop before it", async () => {
+		const audit = createContextChangeOnFocusAudit();
+		const after = { selector: "#el-1", html: '<button id="el-1">' };
+
+		await audit.onTabStop(stop(1), fakeSession());
+		audit.onSessionEnd?.("navigation", {
+			revisitedIndex: null,
+			navigation: { after, url: "http://x/away" },
+		});
+
+		expect(audit.result.navigation).toEqual({ after, url: "http://x/away" });
+		expect(audit.result.elements[0]?.findings).toEqual([]);
+	});
+});
+
+describe("limits", () => {
+	it("disconnects at elementLimit", async () => {
+		const audit = createContextChangeOnFocusAudit({ elementLimit: 2 });
+		const session = fakeSession();
+
+		await audit.onTabStop(stop(1), session);
+		expect(session.disconnects).toBe(0);
+
+		await audit.onTabStop(stop(2), session);
+		expect(session.disconnects).toBe(1);
+		expect(audit.result.summary.reachedLimit).toBe(true);
+
+		// A session that ends after the audit left it says nothing about how the audit ended.
+		audit.onSessionEnd?.("completed", { revisitedIndex: null });
+		expect(audit.result.summary.sessionEnd).toBeNull();
+	});
+
+	it("disconnects at failedElementLimit, counting delayed failures too", async () => {
+		const audit = createContextChangeOnFocusAudit({ failedElementLimit: 2 });
+		const session = fakeSession();
+
+		await audit.onTabStop(stop(1, { openedWindow: true }), session);
+		await audit.onTabStop(stop(2), session);
+		expect(session.disconnects).toBe(0);
+
+		await audit.onTabStop(
+			stop(
+				3,
+				{},
+				{
+					late: [
+						{
+							index: 2,
+							html: '<button id="el-2">',
+							signals: signals({ submittedForm: true }),
+							details: {},
+						},
+					],
+				},
+			),
+			session,
+		);
+
+		expect(session.disconnects).toBe(1);
+		expect(audit.result.summary).toMatchObject({
+			failed: 2,
+			reachedFailedElementLimit: true,
+			reachedLimit: false,
+		});
+	});
+
+	it("never stops for failures when failedElementLimit is 0 (default)", async () => {
+		const audit = createContextChangeOnFocusAudit();
+		const session = fakeSession();
+
+		await audit.onTabStop(stop(1, { openedWindow: true }), session);
+		await audit.onTabStop(stop(2, { submittedForm: true }), session);
+
+		expect(session.disconnects).toBe(0);
+		expect(audit.result.summary.failed).toBe(2);
 	});
 
 	it("omits screenshots past screenshotLimit but keeps every element", async () => {
 		const audit = createContextChangeOnFocusAudit({ screenshotLimit: 2 });
-		const orchestrator = createTabOrchestrator(
-			contextAdaptor([
-				drainWith({ openedWindow: true }),
-				drainWith({ openedWindow: true }),
-				drainWith({ openedWindow: true }),
-			]),
-			{ screenshotSettleDelay: 0 },
-		);
-		orchestrator.attach(audit);
-		await orchestrator.run();
-		expect(audit.result.elements).toHaveLength(3);
-		expect(audit.result.elements.slice(0, 2).every((e) => e.screenshot)).toBe(true);
-		expect(audit.result.elements[2]?.screenshot).toBeUndefined();
+		const session = fakeSession();
+
+		for (const n of [1, 2, 3]) {
+			await audit.onTabStop(stop(n, { openedWindow: true }), session);
+		}
+
+		expect(audit.result.elements.map((element) => element.screenshot)).toEqual([
+			PNG,
+			PNG,
+			undefined,
+		]);
 	});
-});
 
-function drainWith(partial: Partial<DrainContextObserverResult>): DrainContextObserverResult {
-	return { ...emptyDrain(), ...partial };
-}
+	it("leaves the session and marks the result when its timeout passes", async () => {
+		vi.useFakeTimers();
 
-describe("createContextChangeOnFocusAudit options type", () => {
-	it("accepts the documented options", () => {
-		const options: ContextChangeOnFocusOptions = {
-			elementLimit: 5,
-			failedElementLimit: 1,
-			timeout: 100,
-			screenshotSettleDelay: 10,
-			screenshotLimit: 3,
-		};
-		expect(createContextChangeOnFocusAudit(options).capabilities.has("contextSignals")).toBe(true);
+		const audit = createContextChangeOnFocusAudit({ timeout: 150 });
+		const session = fakeSession();
+
+		audit.onSessionStart?.(session);
+		await audit.onTabStop(stop(1), session);
+		vi.advanceTimersByTime(149);
+		expect(session.disconnects).toBe(0);
+
+		vi.advanceTimersByTime(1);
+		expect(session.disconnects).toBe(1);
+		expect(audit.result.summary).toMatchObject({ timedOut: true, checked: 1 });
+	});
+
+	it("sets no timer when timeout is 0 (default)", async () => {
+		vi.useFakeTimers();
+
+		const audit = createContextChangeOnFocusAudit();
+		const session = fakeSession();
+
+		audit.onSessionStart?.(session);
+		vi.advanceTimersByTime(60_000);
+
+		expect(session.disconnects).toBe(0);
+		expect(audit.result.summary.timedOut).toBe(false);
 	});
 });

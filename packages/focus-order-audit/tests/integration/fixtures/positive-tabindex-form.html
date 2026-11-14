@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>positive-tabindex-form</title>
+<style>
+body { margin: 0; font: 16px/1.5 sans-serif; }
+header, footer { display: flex; gap: 16px; padding: 16px; }
+article { padding: 16px; max-width: 40em; }
+article p { margin: 0 0 600px; }
+form { display: grid; gap: 12px; padding: 16px; max-width: 24em; }
+input, button { font: inherit; padding: 8px; }
+</style></head><body>
+<header><a id="home" href="#home">Outdoor Co</a><a id="shop" href="#shop">Shop</a><a id="guides" href="#guides">Guides</a></header>
+<main>
+<article>
+<h1>Choosing a four-season tent</h1>
+<p>Start with the <a id="poles" href="#poles">pole structure</a>.</p>
+<p>Then compare <a id="fabrics" href="#fabrics">fly fabrics</a>.</p>
+<p>Finally, check the <a id="weights" href="#weights">packed weight</a>.</p>
+</article>
+<form action="#subscribed">
+<h2>Get the gear guide</h2>
+<label for="name">Name</label><input id="name" name="name" tabindex="1">
+<label for="email">Email</label><input id="email" name="email" type="email" tabindex="2">
+<button id="subscribe" type="submit" tabindex="3">Subscribe</button>
+</form>
+</main>
+<footer><a id="terms" href="#terms">Terms</a></footer>
+</body></html>

@@ -65,4 +65,8 @@ describe("classifyObscuring", () => {
 			),
 		).toBe("pass");
 	});
+
+	it("passes an element that is not painted, even when it is also off screen", () => {
+		expect(classifyObscuring(measurement({ notPainted: true, offscreen: true }))).toBe("pass");
+	});
 });

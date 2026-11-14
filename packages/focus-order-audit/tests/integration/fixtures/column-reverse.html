@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>column-reverse</title>
+<style>
+body { margin: 0; font: 16px/1.5 sans-serif; }
+header, footer { padding: 16px; }
+ol { display: flex; flex-direction: column-reverse; margin: 0; padding: 16px; list-style: none; }
+li a { display: block; padding: 8px; }
+</style></head><body>
+<header><a id="home" href="#home">Release notes</a></header>
+<main>
+<!-- Newest first on screen, oldest first in the source: 30 rows of 40px, so no one move is long. -->
+<ol id="releases"></ol>
+</main>
+<footer><a id="rss" href="#rss">RSS feed</a></footer>
+<script>
+const list = document.getElementById("releases");
+for (let i = 1; i <= 30; i++) {
+	const item = document.createElement("li");
+	const link = document.createElement("a");
+	link.id = `v${i}`;
+	link.href = `#v${i}`;
+	link.textContent = `Version 1.${i}`;
+	item.append(link);
+	list.append(item);
+}
+</script>
+</body></html>

@@ -13,6 +13,7 @@ const SUMMARY: FocusNotObscuredResult["summary"] = {
 	reachedFailedElementLimit: false,
 	timedOut: false,
 	sessionEnd: "completed",
+	scrolledToTopChecked: 0,
 };
 
 const UNOBSCURED: FocusNotObscuredElementResult["measurement"] = {
@@ -72,6 +73,28 @@ describe("focusNotObscuredToAxe", () => {
 		expect(output.violations[0]?.nodes[0]?.failureSummary).toContain("tab stop #4");
 	});
 
+	it("says when an element was only found hidden after scrolling it to the top", () => {
+		const output = focusNotObscuredToAxe({
+			elements: [
+				element({
+					bucket: "violation",
+					foundBy: "scrolled-to-top",
+					measurement: {
+						...UNOBSCURED,
+						fullyObscured: true,
+						obscuredBy: { selector: "#header", html: "<header>" },
+					},
+				}),
+			],
+			summary: SUMMARY,
+		});
+
+		const summary = output.violations[0]?.nodes[0]?.failureSummary;
+		expect(summary).toContain("`#header`");
+		expect(summary).toContain("scrolled to the top of the viewport");
+		expect(summary).toContain("scroll-padding-top");
+	});
+
 	it("attaches a screenshot when the audit captured one", () => {
 		const screenshot = new Uint8Array([1]);
 		const output = focusNotObscuredToAxe({
@@ -83,5 +106,44 @@ describe("focusNotObscuredToAxe", () => {
 			id: FOCUS_NOT_OBSCURED_EVIDENCE_CHECK_ID,
 			data: { screenshot },
 		});
+	});
+
+	it("carries the measurement and the cover as structured evidence without a screenshot", () => {
+		const measurement: FocusNotObscuredElementResult["measurement"] = {
+			coveredFraction: 1,
+			fullyObscured: true,
+			offscreen: false,
+			opacity: "opaque",
+			obscuredBy: {
+				selector: "#banner",
+				html: '<div id="banner">',
+				rect: { x: 0, y: 700, width: 1280, height: 100 },
+				position: "fixed",
+			},
+			rect: { x: 20, y: 740, width: 80, height: 20 },
+		};
+		const output = focusNotObscuredToAxe({
+			elements: [element({ bucket: "violation", measurement, tabIndex: 7 })],
+			summary: SUMMARY,
+		});
+		const check = output.violations[0]?.nodes[0]?.any[0];
+
+		expect(check?.id).toBe(FOCUS_NOT_OBSCURED_EVIDENCE_CHECK_ID);
+		expect(check?.data).toEqual({ tabIndex: 7, ...measurement });
+	});
+
+	it("does not say a passing node is hidden", () => {
+		const output = focusNotObscuredToAxe({ elements: [element()], summary: SUMMARY });
+		const check = output.passes[0]?.nodes[0]?.any[0];
+
+		expect(check?.message).toBe("Focused element is not entirely hidden");
+		expect(check?.data).toMatchObject({ coveredFraction: 0, obscuredBy: null });
+	});
+
+	it("is inapplicable when no element was measured", () => {
+		const output = focusNotObscuredToAxe({ elements: [], summary: SUMMARY });
+
+		expect(output.inapplicable).toHaveLength(1);
+		expect(output.passes).toEqual([]);
 	});
 });

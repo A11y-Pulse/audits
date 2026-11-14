@@ -1,0 +1,7 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Tabs</title></head><body>
+<a id="hashes" href="#first" onfocus="history.replaceState(null, '', '#section')">First</a>
+<!-- Routers and scroll restoration re-assert the current URL like this all the time. -->
+<a id="restates" href="#second" onfocus="history.replaceState({ y: 1 }, '', location.href)">Second</a>
+<a id="plain" href="#third">Third</a>
+</body></html>
