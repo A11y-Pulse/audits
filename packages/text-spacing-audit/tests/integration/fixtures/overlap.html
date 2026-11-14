@@ -4,29 +4,38 @@
 		<meta charset="utf-8" />
 		<title>Text spacing overlap</title>
 		<style>
+			body {
+				margin: 0;
+				font: 16px/20px sans-serif;
+			}
 			.stage {
 				position: relative;
-				width: 20rem;
-				height: 5rem;
+				width: 40rem;
+				height: 12rem;
 			}
 			.block {
 				position: absolute;
 				left: 0;
 				margin: 0;
-				font: 16px/1.1 sans-serif;
 			}
 			#a {
 				top: 0;
 			}
+			/* Placed just under the four lines above it, with no room for them to grow. */
 			#b {
-				top: 1.25rem;
+				top: 84px;
 			}
 		</style>
 	</head>
 	<body>
 		<div class="stage">
-			<p class="block" id="a">First neighbouring line of text</p>
-			<p class="block" id="b">Second neighbouring line of text</p>
+			<p class="block" id="a">
+				Opening hours this week<br />
+				Monday to Friday, nine until five<br />
+				Saturday, ten until four<br />
+				Closed on Sunday
+			</p>
+			<p class="block" id="b">Call ahead on public holidays</p>
 		</div>
 	</body>
 </html>

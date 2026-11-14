@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>whole page inside a horizontal scroller</title>
+	<style>
+		html, body { margin: 0; }
+		#app { overflow-x: auto; }
+		#layout { width: 1200px; display: flex; }
+		#layout > * { flex: 1; padding: 1rem; }
+	</style>
+</head>
+<body>
+	<div id="app">
+		<div id="layout">
+			<nav><a href="/">Home</a> <a href="/products">Products</a> <a href="/contact">Contact</a></nav>
+			<main>
+				<h1>Our products</h1>
+				<p>Every part of this page sits inside one container that scrolls sideways, so reading it at 320px means scrolling in two directions.</p>
+			</main>
+			<aside><p>Related links and offers appear in this third column.</p></aside>
+		</div>
+	</div>
+</body>
+</html>

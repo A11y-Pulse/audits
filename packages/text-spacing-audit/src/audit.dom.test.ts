@@ -2,7 +2,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import type { TextSpacingAuditAdaptor } from "./adaptor";
 import { runTextSpacingAudit } from "./audit";
-import { removeInjectedStyles } from "./browser-scripts";
 
 function giveLayoutRect(el: Element, width = 200, height = 20): void {
 	el.getBoundingClientRect = () =>
@@ -21,32 +20,21 @@ function giveLayoutRect(el: Element, width = 200, height = 20): void {
 		}) as DOMRect;
 }
 
-function executingAdaptor(): TextSpacingAuditAdaptor & {
-	sawFreeze: boolean;
-	sawOverride: boolean;
-} {
-	const record = { sawFreeze: false, sawOverride: false };
+/** Runs each script against the test document, recording which stylesheets were present after it. */
+function executingAdaptor(): TextSpacingAuditAdaptor & { stylesAfter: Record<string, string[]> } {
+	const stylesAfter: Record<string, string[]> = {};
 
 	return {
-		get sawFreeze() {
-			return record.sawFreeze;
-		},
-		get sawOverride() {
-			return record.sawOverride;
-		},
+		stylesAfter,
 		evaluate: async <T>(
 			fn: (...args: never[]) => T | Promise<T>,
 			...args: unknown[]
 		): Promise<T> => {
 			const result = await (fn as (...fnArgs: unknown[]) => T | Promise<T>)(...args);
 
-			if (document.querySelector('[data-a11y-pulse="ts-freeze"]')) {
-				record.sawFreeze = true;
-			}
-
-			if (document.querySelector('[data-a11y-pulse="ts-override"]')) {
-				record.sawOverride = true;
-			}
+			stylesAfter[fn.name] = Array.from(document.querySelectorAll("style[data-a11y-pulse]")).map(
+				(style) => style.getAttribute("data-a11y-pulse") ?? "",
+			);
 
 			return result;
 		},
@@ -56,23 +44,26 @@ function executingAdaptor(): TextSpacingAuditAdaptor & {
 
 afterEach(() => {
 	document.body.innerHTML = "";
-	removeInjectedStyles();
 });
 
-describe("runTextSpacingAudit freeze and restore via adaptor", () => {
-	it("injects the freeze stylesheet before measuring and removes injected styles after", async () => {
+describe("runTextSpacingAudit against a document", () => {
+	it("freezes motion before measuring, applies the override, and removes both afterwards", async () => {
 		document.body.innerHTML = `<p id="copy">Hello world from a spacious paragraph.</p>`;
 		giveLayoutRect(document.getElementById("copy") as Element);
 
 		const adaptor = executingAdaptor();
-		const result = await runTextSpacingAudit(adaptor, { settleMs: 0 });
+		const result = await runTextSpacingAudit(adaptor);
 
-		expect(adaptor.sawFreeze).toBe(true);
-		expect(document.querySelectorAll("[data-a11y-pulse]")).toHaveLength(0);
+		expect(adaptor.stylesAfter).toEqual({
+			collectBaselineScript: ["ts-freeze"],
+			applyOverrideScript: ["ts-override", "ts-freeze"],
+			restoreAndVerifyScript: [],
+		});
+		expect(result.candidateCount).toBe(1);
 		expect(result.restored).toBe(true);
 	});
 
-	it("caps candidates at candidateLimit", async () => {
+	it("caps candidates at candidateLimit and reports the page as truncated", async () => {
 		document.body.innerHTML = Array.from(
 			{ length: 8 },
 			(_, i) => `<p id="p${i}">Paragraph ${i}</p>`,
@@ -82,11 +73,9 @@ describe("runTextSpacingAudit freeze and restore via adaptor", () => {
 			giveLayoutRect(el);
 		}
 
-		const result = await runTextSpacingAudit(executingAdaptor(), {
-			candidateLimit: 3,
-			settleMs: 0,
-		});
+		const result = await runTextSpacingAudit(executingAdaptor(), { candidateLimit: 3 });
 
 		expect(result.candidateCount).toBe(3);
+		expect(result.truncated).toBe(true);
 	});
 });

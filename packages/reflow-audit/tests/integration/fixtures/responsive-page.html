@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>responsive storefront</title>
+	<style>
+		*, *::before, *::after { box-sizing: border-box; }
+		html, body { margin: 0; font: 16px/1.5 system-ui, sans-serif; }
+		.skip { position: absolute; left: -9999px; }
+		.skip:focus { left: 0; }
+		header { position: sticky; top: 0; background: #fff; border-bottom: 1px solid #ccc; }
+		.bar { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0.5rem 1rem; align-items: center; }
+		nav ul { display: flex; flex-wrap: wrap; gap: 1rem; list-style: none; margin: 0; padding: 0; }
+		#drawer { position: fixed; top: 0; right: 0; width: 280px; height: 100%; transform: translateX(100%); background: #223; color: #fff; }
+		.hero { position: relative; overflow: hidden; }
+		.hero img { display: block; width: 100%; height: auto; }
+		.hero .glow { position: absolute; top: -40px; right: -120px; width: 400px; height: 400px; border-radius: 50%; background: rgba(255, 255, 255, 0.2); }
+		main { padding: 1rem; max-width: 70rem; margin: 0 auto; }
+		.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; }
+		.grid img, video, iframe { max-width: 100%; height: auto; }
+		.rail { display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory; }
+		.rail > * { flex: 0 0 260px; height: 90px; background: #eee; scroll-snap-align: start; }
+		.table-wrap { overflow-x: auto; }
+		td, th { white-space: nowrap; padding: 0.5rem; text-align: left; }
+		.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+		footer { padding: 1rem; overflow-wrap: anywhere; }
+		@media (min-width: 700px) { .bar { flex-wrap: nowrap; } }
+	</style>
+</head>
+<body>
+	<a class="skip" href="#main">Skip to main content</a>
+	<header>
+		<div class="bar">
+			<a href="/"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='32'%3E%3Crect width='120' height='32' fill='%23246'/%3E%3C/svg%3E" width="120" height="32" alt="Harbour Outfitters"></a>
+			<nav aria-label="Main">
+				<ul>
+					<li><a href="/new">New arrivals</a></li>
+					<li><a href="/jackets">Jackets</a></li>
+					<li><a href="/boots">Boots</a></li>
+					<li><a href="/sale">Sale</a></li>
+				</ul>
+			</nav>
+			<button type="button" aria-controls="drawer" aria-expanded="false">Basket <span class="sr-only">with a very long description of every item that is in it right now</span></button>
+		</div>
+	</header>
+	<aside id="drawer"><h2>Your basket</h2><p>Your basket is empty.</p></aside>
+	<div class="hero">
+		<img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1600' height='500'%3E%3Crect width='1600' height='500' fill='%23579'/%3E%3C/svg%3E" width="1600" height="500" alt="Two walkers on a coastal track in the rain">
+		<div class="glow"></div>
+	</div>
+	<main id="main">
+		<h1>Wet weather gear for the long way round</h1>
+		<p>Everything here is tested on the coast before it reaches the shelf. Orders over $100 ship free within New Zealand.</p>
+		<div class="grid">
+			<a href="/p/1"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect width='400' height='400' fill='%23a64'/%3E%3C/svg%3E" width="400" height="400" alt="Storm shell jacket">Storm shell jacket</a>
+			<a href="/p/2"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect width='400' height='400' fill='%2364a'/%3E%3C/svg%3E" width="400" height="400" alt="Leather tramping boots">Leather tramping boots</a>
+		</div>
+		<h2>Featured</h2>
+		<div class="rail" aria-label="Featured gear">
+			<a href="/f/1">Merino base layers</a><a href="/f/2">Dry bags</a><a href="/f/3">Head torches</a><a href="/f/4">Gaiters</a>
+		</div>
+		<h2>Size guide</h2>
+		<div class="table-wrap">
+			<table>
+				<caption>Jacket sizes in centimetres</caption>
+				<tr><th scope="col">Size</th><th scope="col">Chest</th><th scope="col">Waist</th><th scope="col">Sleeve</th><th scope="col">Back length</th></tr>
+				<tr><th scope="row">Small</th><td>92 to 97</td><td>76 to 81</td><td>81</td><td>70</td></tr>
+				<tr><th scope="row">Medium</th><td>98 to 104</td><td>82 to 88</td><td>84</td><td>72</td></tr>
+			</table>
+		</div>
+		<h2>See it in the field</h2>
+		<video controls width="960" height="540" poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='960' height='540'%3E%3Crect width='960' height='540' fill='%23333'/%3E%3C/svg%3E"></video>
+	</main>
+	<footer>
+		<p>Questions? Email support-and-returns-team@harbour-outfitters.example.co.nz or call 0800 000 000.</p>
+	</footer>
+</body>
+</html>

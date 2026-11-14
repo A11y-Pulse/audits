@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Text spacing visually hidden text</title>
+		<style>
+			body {
+				margin: 16px;
+				font: 16px/1.4 sans-serif;
+			}
+			.sr-only {
+				position: absolute;
+				width: 1px;
+				height: 1px;
+				padding: 0;
+				margin: -1px;
+				overflow: hidden;
+				clip: rect(0, 0, 0, 0);
+				white-space: nowrap;
+				border: 0;
+			}
+		</style>
+	</head>
+	<body>
+		<a href="#main" class="sr-only">Skip to main content</a>
+		<button type="button">
+			<span aria-hidden="true">×</span>
+			<span class="sr-only">Close the newsletter sign-up dialog</span>
+		</button>
+		<main id="main">
+			<h1>Visually hidden text <span class="sr-only">(for screen reader users only)</span></h1>
+			<p>The hidden labels above are clipped on purpose and were never visible.</p>
+		</main>
+	</body>
+</html>

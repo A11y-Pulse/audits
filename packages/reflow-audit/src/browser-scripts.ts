@@ -1,8 +1,7 @@
 /**
  * IMPORTANT: Functions in this file that are serialized and injected into the audited page must not
- * reference any symbols outside their own scope. Shared helpers used by unit tests are therefore
- * duplicated inside each injected function. Type-only imports are erased by the compiler, so they
- * don't count.
+ * reference any symbols outside their own scope. Type-only imports are erased by the compiler, so
+ * they don't count.
  */
 
 import type { Rect } from "@a11y-pulse/browser-adaptor";
@@ -20,12 +19,46 @@ export type LayoutFingerprint = {
 	childCount: number;
 };
 
+/**
+ * - `element-overflow`: an element's box extends past the viewport and adds horizontal scroll.
+ * - `text-overflow`: text spills out of its element past the viewport and adds horizontal scroll.
+ * - `fixed-width-container`: a layout container with a px width wider than the viewport.
+ * - `media-overflow`: an `img`, `video` or `iframe` wider than the viewport.
+ * - `clipped-content`: content extends past the viewport where it cannot be scrolled to (clipped by
+ *   the page's `overflow-x`, or inside `position: fixed`).
+ * - `scrolling-container`: most of the page sits in a container that scrolls horizontally. Its
+ *   `overflowing` lists what inside it is too wide.
+ */
+export type ReflowOffenderReason =
+	| "element-overflow"
+	| "text-overflow"
+	| "fixed-width-container"
+	| "media-overflow"
+	| "clipped-content"
+	| "scrolling-container";
+
+/** Content that is too wide for the horizontal scroller it sits in. */
+export type ReflowOverflowingContent = {
+	selector: string;
+	html: string;
+	/** How far the content reaches past the scroller's edge. */
+	overflowPx: number;
+	/** Box of the content, in document coordinates. */
+	rect: Rect;
+};
+
 export type ReflowMeasureOffender = {
 	selector: string;
 	html: string;
 	overflowPx: number;
-	reason: "element-overflow" | "fixed-width-container";
+	reason: ReflowOffenderReason;
+	/** Box of the offending element (or of its overflowing text), in document coordinates. */
 	rect: Rect;
+	/**
+	 * `scrolling-container` only: the outermost content inside the scroller that is wider than it,
+	 * first few only.
+	 */
+	overflowing?: ReflowOverflowingContent[];
 };
 
 export type ReflowMeasure = {
@@ -33,80 +66,6 @@ export type ReflowMeasure = {
 	explainedByExempt: boolean;
 	offenders: ReflowMeasureOffender[];
 };
-
-export function computeDocumentOverflowPx(
-	documentElement: { scrollWidth: number; clientWidth: number },
-	body: { scrollWidth: number; clientWidth: number },
-): number {
-	const htmlOverflow = documentElement.scrollWidth - documentElement.clientWidth;
-	const bodyOverflow = body.scrollWidth - body.clientWidth;
-
-	return Math.max(0, htmlOverflow, bodyOverflow);
-}
-
-function clipsX(overflowX: string): boolean {
-	return overflowX === "hidden" || overflowX === "clip";
-}
-
-/**
- * Document overflow that the reader can actually scroll. `overflow-x: hidden` on the viewport
- * (including body overflow propagated onto html) clips rather than scrolls, which does not count as
- * horizontal scroll.
- */
-export function scrollableDocumentOverflowPx(
-	documentElement: {
-		scrollWidth: number;
-		clientWidth: number;
-		overflowX: string;
-	},
-	body: { scrollWidth: number; clientWidth: number; overflowX: string },
-): number {
-	const htmlDelta = Math.max(0, documentElement.scrollWidth - documentElement.clientWidth);
-	const bodyDelta = Math.max(0, body.scrollWidth - body.clientWidth);
-	const viewportOverflowX =
-		documentElement.overflowX === "visible" ? body.overflowX : documentElement.overflowX;
-
-	let overflow = 0;
-
-	if (!clipsX(viewportOverflowX)) {
-		overflow = Math.max(overflow, htmlDelta);
-	}
-
-	if (documentElement.overflowX !== "visible" && !clipsX(body.overflowX)) {
-		overflow = Math.max(overflow, bodyDelta);
-	}
-
-	return overflow;
-}
-
-const LAYOUT_TABLE_ROLES = new Set(["presentation", "none"]);
-const ARIA_TABLE_ROLES = new Set(["table", "grid", "treegrid"]);
-const EXEMPT_TAGS = new Set(["svg", "canvas", "video", "img", "iframe", "embed", "object"]);
-const SLIDE_DESCRIPTIONS = new Set(["slide", "slides", "presentation"]);
-
-export function isExemptElement(el: Element): boolean {
-	const tag = el.tagName.toLowerCase();
-
-	if (tag === "table") {
-		const role = (el.getAttribute("role") ?? "").toLowerCase();
-
-		return !LAYOUT_TABLE_ROLES.has(role);
-	}
-
-	const role = (el.getAttribute("role") ?? "").toLowerCase();
-
-	if (ARIA_TABLE_ROLES.has(role) || role === "toolbar") {
-		return true;
-	}
-
-	if (EXEMPT_TAGS.has(tag)) {
-		return true;
-	}
-
-	const description = (el.getAttribute("aria-roledescription") ?? "").toLowerCase();
-
-	return SLIDE_DESCRIPTIONS.has(description);
-}
 
 /**
  * Read a layout fingerprint used by the settle loop. Serialized and run in the page.
@@ -132,33 +91,55 @@ export function pageDimensionsScript(): { width: number; height: number } {
 }
 
 /**
+ * Scroll the window to `x` (keeping its vertical position unless `y` is given) without animation,
+ * and return where it was. Serialized and run in the page.
+ */
+export function scrollWindowToScript(x: number, y: number | null): { x: number; y: number } {
+	const previous = { x: window.scrollX || 0, y: window.scrollY || 0 };
+
+	window.scrollTo({ left: x, top: y ?? previous.y, behavior: "instant" });
+
+	return previous;
+}
+
+/**
  * Measure document overflow and collect offenders. Serialized and run in the page; must stay
  * self-contained.
  */
 export function measureReflowScript(): ReflowMeasure {
 	const roundingTolerance = 2;
 	const viewportWidth = window.innerWidth;
+	const scrollX = window.scrollX || 0;
+	const scrollY = window.scrollY || 0;
 	const html = document.documentElement;
 	const body = document.body;
 	const clipsX = (overflowX: string): boolean => overflowX === "hidden" || overflowX === "clip";
-	const htmlOverflowX = getComputedStyle(html).overflowX;
-	const bodyOverflowX = body ? getComputedStyle(body).overflowX : "visible";
+	const htmlOverflowX = getComputedStyle(html).overflowX || "visible";
+	const bodyOverflowX = (body && getComputedStyle(body).overflowX) || "visible";
 	const htmlDelta = Math.max(0, html.scrollWidth - html.clientWidth);
 	const bodyDelta = body ? Math.max(0, body.scrollWidth - body.clientWidth) : 0;
 	const viewportOverflowX = htmlOverflowX === "visible" ? bodyOverflowX : htmlOverflowX;
+	// The viewport takes its scroll origin from body's direction: an RTL page overflows to the left.
+	const rtl = getComputedStyle(body ?? html).direction === "rtl";
 	let documentOverflowPx = 0;
 
 	if (!clipsX(viewportOverflowX)) {
 		documentOverflowPx = Math.max(documentOverflowPx, htmlDelta);
 	}
 
-	if (htmlOverflowX !== "visible" && !clipsX(bodyOverflowX)) {
+	// Once the root element takes the viewport's overflow for itself, body's applies to body's own
+	// box. Only a body that scrolls adds a sideways scroll; one left `visible` merely spills into a
+	// root that clips it.
+	if (htmlOverflowX !== "visible" && (bodyOverflowX === "auto" || bodyOverflowX === "scroll")) {
 		documentOverflowPx = Math.max(documentOverflowPx, bodyDelta);
 	}
 
+	const documentScrolls = documentOverflowPx > roundingTolerance;
+
 	const layoutTableRoles = new Set(["presentation", "none"]);
 	const ariaTableRoles = new Set(["table", "grid", "treegrid"]);
-	const exemptTags = new Set(["svg", "canvas", "video", "img", "iframe", "embed", "object"]);
+	const exemptTags = new Set(["svg", "canvas", "embed", "object"]);
+	const mediaTags = new Set(["img", "video", "iframe"]);
 	const slideDescriptions = new Set(["slide", "slides", "presentation"]);
 	const layoutTags = new Set([
 		"div",
@@ -171,16 +152,44 @@ export function measureReflowScript(): ReflowMeasure {
 		"nav",
 	]);
 
-	const isExempt = (el: Element): boolean => {
-		const tag = el.tagName.toLowerCase();
+	const styles = new Map<Element, CSSStyleDeclaration>();
 
-		if (tag === "table") {
-			const role = (el.getAttribute("role") ?? "").toLowerCase();
+	const styleOf = (el: Element): CSSStyleDeclaration => {
+		let cs = styles.get(el);
 
-			return !layoutTableRoles.has(role);
+		if (!cs) {
+			cs = getComputedStyle(el);
+			styles.set(el, cs);
 		}
 
+		return cs;
+	};
+
+	// A table only needs two-dimensional layout when it holds data. One with no header cells,
+	// caption or header associations of its own is positioning content, which has to reflow.
+	const isDataTable = (table: Element): boolean => {
+		for (const marker of Array.from(
+			table.querySelectorAll("th, caption, thead, [scope], [headers]"),
+		)) {
+			if (marker.closest("table") === table) {
+				return true;
+			}
+		}
+
+		return false;
+	};
+
+	const isExempt = (el: Element): boolean => {
+		const tag = el.tagName.toLowerCase();
 		const role = (el.getAttribute("role") ?? "").toLowerCase();
+
+		if (tag === "table") {
+			if (layoutTableRoles.has(role)) {
+				return false;
+			}
+
+			return ariaTableRoles.has(role) || isDataTable(el);
+		}
 
 		if (ariaTableRoles.has(role) || role === "toolbar") {
 			return true;
@@ -209,22 +218,29 @@ export function measureReflowScript(): ReflowMeasure {
 		return null;
 	};
 
-	const ancestors = (el: Element): Element[] => {
-		const chain: Element[] = [];
-		let node: Element | null = el;
+	/** Memoise a predicate that holds for an element when it holds for the element or an ancestor. */
+	const inherited = (own: (el: Element) => boolean): ((el: Element) => boolean) => {
+		const memo = new Map<Element, boolean>();
 
-		while (node) {
-			chain.push(node);
-			node = parentElementCrossingShadow(node);
-		}
+		const lookup = (el: Element): boolean => {
+			const known = memo.get(el);
 
-		return chain;
+			if (known !== undefined) {
+				return known;
+			}
+
+			const parent = parentElementCrossingShadow(el);
+			const value = own(el) || (parent !== null && lookup(parent));
+			memo.set(el, value);
+
+			return value;
+		};
+
+		return lookup;
 	};
 
-	const isOrInsideExempt = (el: Element): boolean => ancestors(el).some(isExempt);
-
-	const isAriaHidden = (el: Element): boolean =>
-		ancestors(el).some((node) => node.getAttribute("aria-hidden") === "true");
+	const isOrInsideExempt = inherited(isExempt);
+	const isAriaHidden = inherited((el) => el.getAttribute("aria-hidden") === "true");
 
 	const isVisible = (el: Element): boolean => {
 		const visibilityCheck = el as Element & {
@@ -241,32 +257,92 @@ export function measureReflowScript(): ReflowMeasure {
 			});
 		}
 
-		const cs = getComputedStyle(el);
+		const cs = styleOf(el);
 
 		return cs.display !== "none" && cs.visibility !== "hidden" && cs.opacity !== "0";
 	};
 
-	const fitsViewportScroller = (el: Element): boolean => {
-		for (const node of ancestors(el).slice(1)) {
-			if (node === html || node === body) {
-				continue;
+	/**
+	 * What stops content from adding to the page's horizontal scroll: a viewport-fitting ancestor
+	 * that clips (`clip`) or scrolls (`scroll`) its overflow, or a `position: fixed` box (`fixed`).
+	 */
+	type Containment =
+		| { kind: "none" }
+		| { kind: "fixed" }
+		| { kind: "clip" | "scroll"; by: Element };
+
+	const NOT_CONTAINED: Containment = { kind: "none" };
+	const FIXED: Containment = { kind: "fixed" };
+	const containmentMemo = new Map<Element, Containment>();
+
+	const isPositioned = (cs: CSSStyleDeclaration): boolean =>
+		(cs.position !== "static" && cs.position !== "") ||
+		(cs.transform !== "none" && cs.transform !== "" && cs.transform !== undefined);
+
+	// Containment seen by an absolutely positioned box: ancestors between it and its containing
+	// block do not clip it.
+	const containmentOfAbsolute = (el: Element): Containment => {
+		let node = parentElementCrossingShadow(el);
+
+		while (node && node !== html && node !== body) {
+			if (isPositioned(styleOf(node))) {
+				return containmentInside(node);
 			}
 
-			const cs = getComputedStyle(node);
-			const overflowX = cs.overflowX;
-
-			if (overflowX !== "auto" && overflowX !== "scroll") {
-				continue;
-			}
-
-			const rect = node.getBoundingClientRect();
-
-			if (rect.width <= viewportWidth + roundingTolerance) {
-				return true;
-			}
+			node = parentElementCrossingShadow(node);
 		}
 
-		return false;
+		return NOT_CONTAINED;
+	};
+
+	// Containment seen by content laid out inside `node`.
+	const containmentInside = (node: Element | null): Containment => {
+		if (!node || node === html || node === body) {
+			return NOT_CONTAINED;
+		}
+
+		const known = containmentMemo.get(node);
+
+		if (known) {
+			return known;
+		}
+
+		const cs = styleOf(node);
+		const overflowX = cs.overflowX;
+		let result: Containment;
+
+		// A box that clips or scrolls its own overflow contains it whatever its position: a fixed tab
+		// bar that scrolls sideways keeps its tabs within reach.
+		if (
+			(clipsX(overflowX) || overflowX === "auto" || overflowX === "scroll") &&
+			node.getBoundingClientRect().width <= viewportWidth + roundingTolerance
+		) {
+			result = { kind: clipsX(overflowX) ? "clip" : "scroll", by: node };
+		} else if (cs.position === "fixed") {
+			result = FIXED;
+		} else if (cs.position === "absolute") {
+			result = containmentOfAbsolute(node);
+		} else {
+			result = containmentInside(parentElementCrossingShadow(node));
+		}
+
+		containmentMemo.set(node, result);
+
+		return result;
+	};
+
+	const containmentOf = (el: Element): Containment => {
+		const position = styleOf(el).position;
+
+		if (position === "fixed") {
+			return FIXED;
+		}
+
+		if (position === "absolute") {
+			return containmentOfAbsolute(el);
+		}
+
+		return containmentInside(parentElementCrossingShadow(el));
 	};
 
 	const parsePx = (value: string): number | null => {
@@ -496,9 +572,225 @@ export function measureReflowScript(): ReflowMeasure {
 	const elements: Element[] = [];
 	collectElements(document, elements);
 
-	const overflowOffenders: ReflowMeasureOffender[] = [];
+	type Box = { left: number; top: number; right: number; bottom: number };
+
+	const MAX_OVERFLOWING = 5;
+	const offenders: ReflowMeasureOffender[] = [];
 	const recorded = new Set<Element>();
+	// Each horizontal scroller found to hold overflowing content, with the outermost of that content.
+	const scrollers = new Map<Element, Array<{ el: Element; box: Box }>>();
+	const scrollerContent = new Set<Element>();
+	const textCandidates: Element[] = [];
+	let scrollingOverflow = false;
 	let maxExemptOverflowPx = 0;
+
+	// Elements are visited ancestors-first, so whether an ancestor was recorded is already final.
+	const underRecordedMemo = new Map<Element, boolean>();
+
+	const isUnderRecorded = (el: Element): boolean => {
+		const parent = parentElementCrossingShadow(el);
+
+		if (!parent) {
+			return false;
+		}
+
+		const known = underRecordedMemo.get(parent);
+
+		if (known !== undefined) {
+			return known;
+		}
+
+		const value = recorded.has(parent) || isUnderRecorded(parent);
+		underRecordedMemo.set(parent, value);
+
+		return value;
+	};
+
+	const hasRecordedAncestor = (el: Element): boolean => {
+		for (
+			let node = parentElementCrossingShadow(el);
+			node;
+			node = parentElementCrossingShadow(node)
+		) {
+			if (recorded.has(node)) {
+				return true;
+			}
+		}
+
+		return false;
+	};
+
+	const documentRect = (box: Box): Rect => ({
+		x: box.left + scrollX,
+		y: box.top + scrollY,
+		width: box.right - box.left,
+		height: box.bottom - box.top,
+	});
+
+	const record = (
+		el: Element,
+		reason: ReflowMeasureOffender["reason"],
+		overflowPx: number,
+		box: Box,
+		overflowing?: ReflowOverflowingContent[],
+	) => {
+		const offender: ReflowMeasureOffender = {
+			selector: getSelector(el),
+			html: (el.cloneNode(false) as Element).outerHTML,
+			overflowPx: Math.round(overflowPx),
+			reason,
+			rect: documentRect(box),
+		};
+
+		if (overflowing && overflowing.length > 0) {
+			offender.overflowing = overflowing;
+		}
+
+		offenders.push(offender);
+	};
+
+	// Elements are visited ancestors-first, so only the outermost overflowing content is kept.
+	const noteScrollerContent = (scroller: Element, el: Element, box: Box): void => {
+		let content = scrollers.get(scroller);
+
+		if (!content) {
+			content = [];
+			scrollers.set(scroller, content);
+		}
+
+		for (
+			let node = parentElementCrossingShadow(el);
+			node && node !== scroller;
+			node = parentElementCrossingShadow(node)
+		) {
+			if (scrollerContent.has(node)) {
+				return;
+			}
+		}
+
+		scrollerContent.add(el);
+
+		if (content.length < MAX_OVERFLOWING) {
+			content.push({ el, box });
+		}
+	};
+
+	/**
+	 * Whether an inline wrapper (`<picture>`, a link around an image) reaches past the viewport only
+	 * because of media inside it. Its box is just the box of what it wraps, so the media is the thing
+	 * to report.
+	 */
+	const overflowsOnlyThroughMedia = (el: Element, box: Box): boolean => {
+		if (mediaTags.has(el.tagName.toLowerCase()) || styleOf(el).display !== "inline") {
+			return false;
+		}
+
+		const reach = (target: Box): number =>
+			Math.max(overflowOf(target, false), overflowOf(target, true));
+		let mediaReach = Number.NEGATIVE_INFINITY;
+
+		for (const media of Array.from(el.querySelectorAll("img, video, iframe"))) {
+			const mediaRect = media.getBoundingClientRect();
+
+			if (mediaRect.width > 0 && mediaRect.height > 0) {
+				mediaReach = Math.max(mediaReach, reach(mediaRect));
+			}
+		}
+
+		if (mediaReach + roundingTolerance < reach(box)) {
+			return false;
+		}
+
+		// Text of the wrapper's own that runs past the edge is the wrapper's to answer for.
+		if (typeof document.createRange === "function") {
+			for (const child of Array.from(el.childNodes)) {
+				if (child.nodeType !== 3 || !(child.nodeValue ?? "").trim()) {
+					continue;
+				}
+
+				const range = document.createRange();
+				range.selectNodeContents(child);
+
+				if (
+					typeof range.getBoundingClientRect === "function" &&
+					reach(range.getBoundingClientRect()) > roundingTolerance
+				) {
+					return false;
+				}
+			}
+		}
+
+		return true;
+	};
+
+	// How far `box` (viewport coordinates) reaches past the edge the page scrolls towards.
+	const overflowOf = (box: Box, fixed: boolean): number => {
+		const offset = fixed ? 0 : scrollX;
+
+		return rtl ? -(box.left + offset) : box.right + offset - viewportWidth;
+	};
+
+	// Entirely beyond the viewport edge: off-canvas content rather than content that is cut off.
+	const isOffCanvas = (box: Box, fixed: boolean): boolean => {
+		const offset = fixed ? 0 : scrollX;
+
+		return rtl ? box.right + offset <= 0 : box.left + offset >= viewportWidth;
+	};
+
+	/**
+	 * Decide what an overflowing box means. `el` is the element the box belongs to and `violation`
+	 * the reason to record when the overflow really does add horizontal scroll to the page.
+	 */
+	const classify = (
+		el: Element,
+		box: Box,
+		containment: Containment,
+		violation: "element-overflow" | "text-overflow",
+	): void => {
+		if (containment.kind === "clip") {
+			return;
+		}
+
+		const exempt = isOrInsideExempt(el);
+		const media = mediaTags.has(el.tagName.toLowerCase());
+
+		if (containment.kind === "scroll") {
+			if (!exempt && !media && !isOrInsideExempt(containment.by)) {
+				noteScrollerContent(containment.by, el, box);
+			}
+
+			return;
+		}
+
+		const fixed = containment.kind === "fixed";
+		const overflowPx = overflowOf(box, fixed);
+
+		if (overflowPx <= roundingTolerance) {
+			return;
+		}
+
+		if (exempt) {
+			if (!fixed) {
+				maxExemptOverflowPx = Math.max(maxExemptOverflowPx, overflowPx);
+			}
+
+			return;
+		}
+
+		// Nothing here scrolls into view: either the box is fixed or the page clips its overflow.
+		if (fixed || !documentScrolls) {
+			if (!isOffCanvas(box, fixed)) {
+				recorded.add(el);
+				record(el, "clipped-content", overflowPx, box);
+			}
+
+			return;
+		}
+
+		recorded.add(el);
+		scrollingOverflow ||= !media;
+		record(el, media ? "media-overflow" : violation, overflowPx, box);
+	};
 
 	for (const el of elements) {
 		if (el === html || el === body) {
@@ -506,17 +798,89 @@ export function measureReflowScript(): ReflowMeasure {
 		}
 
 		const rect = el.getBoundingClientRect();
-		const overflowPx = rect.right - viewportWidth;
 
-		if (overflowPx <= roundingTolerance) {
+		if (rect.width <= 0 || rect.height <= 0 || rect.bottom + scrollY <= 0) {
 			continue;
 		}
 
-		if (rect.width <= 0 || rect.height <= 0) {
+		// Fixed boxes are measured against the viewport, everything else against the document, and
+		// which applies is not known until the styles are read: let either through here.
+		if (Math.max(overflowOf(rect, false), overflowOf(rect, true)) <= roundingTolerance) {
+			const contentEdge = rtl ? rect.right - el.scrollWidth : rect.left + el.scrollWidth;
+
+			if (
+				el.clientWidth > 0 &&
+				el.scrollWidth > el.clientWidth + roundingTolerance &&
+				overflowOf({ left: contentEdge, top: 0, right: contentEdge, bottom: 0 }, false) >
+					roundingTolerance
+			) {
+				textCandidates.push(el);
+			}
+
 			continue;
 		}
 
-		if (rect.right <= 0 || rect.bottom <= 0) {
+		if (isUnderRecorded(el) || !isVisible(el) || isAriaHidden(el)) {
+			continue;
+		}
+
+		// Left unrecorded, so the media inside is visited and reported in its own right.
+		if (overflowsOnlyThroughMedia(el, rect)) {
+			continue;
+		}
+
+		classify(el, rect, containmentOf(el), "element-overflow");
+	}
+
+	// Text that spills out of a box which itself fits: a nowrap heading, a long URL, a wide <pre>.
+	for (const el of textCandidates) {
+		if (typeof document.createRange !== "function" || recorded.has(el) || hasRecordedAncestor(el)) {
+			continue;
+		}
+
+		const cs = styleOf(el);
+
+		// A box that clips or scrolls its own overflow keeps its text to itself.
+		if (cs.overflowX !== "visible" && cs.overflowX !== "") {
+			continue;
+		}
+
+		let box: Box | null = null;
+
+		for (const child of Array.from(el.childNodes)) {
+			if (child.nodeType !== 3 || !(child.nodeValue ?? "").trim()) {
+				continue;
+			}
+
+			const range = document.createRange();
+			range.selectNodeContents(child);
+
+			if (typeof range.getBoundingClientRect !== "function") {
+				continue;
+			}
+
+			const textRect = range.getBoundingClientRect();
+
+			if (textRect.width <= 0 || textRect.height <= 0) {
+				continue;
+			}
+
+			box = box
+				? {
+						left: Math.min(box.left, textRect.left),
+						top: Math.min(box.top, textRect.top),
+						right: Math.max(box.right, textRect.right),
+						bottom: Math.max(box.bottom, textRect.bottom),
+					}
+				: {
+						left: textRect.left,
+						top: textRect.top,
+						right: textRect.right,
+						bottom: textRect.bottom,
+					};
+		}
+
+		if (!box || Math.max(overflowOf(box, false), overflowOf(box, true)) <= roundingTolerance) {
 			continue;
 		}
 
@@ -524,52 +888,72 @@ export function measureReflowScript(): ReflowMeasure {
 			continue;
 		}
 
-		const cs = getComputedStyle(el);
+		const containment = cs.position === "fixed" ? FIXED : containmentOf(el);
 
-		if (cs.position === "fixed") {
-			continue;
-		}
-
-		if (fitsViewportScroller(el)) {
-			continue;
-		}
-
-		if (isOrInsideExempt(el)) {
-			maxExemptOverflowPx = Math.max(maxExemptOverflowPx, overflowPx);
-			continue;
-		}
-
-		if (
-			ancestors(el)
-				.slice(1)
-				.some((node) => recorded.has(node))
-		) {
-			continue;
-		}
-
-		recorded.add(el);
-		overflowOffenders.push({
-			selector: getSelector(el),
-			html: (el.cloneNode(false) as Element).outerHTML,
-			overflowPx: Math.round(overflowPx),
-			reason: "element-overflow",
-			rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
-		});
+		classify(el, box, containment, "text-overflow");
 	}
 
-	const offenders = [...overflowOffenders];
+	// A horizontal scroller that holds most of the page puts the page itself behind a sideways
+	// scroll; a carousel rail or a code sample does not.
+	if (scrollers.size > 0) {
+		// Rendered text only: textContent would also count scripts, styles and hidden content.
+		const textLength = (el: HTMLElement): number => {
+			// biome-ignore lint/performance/useDomNodeTextContent: see above
+			const rendered = el.innerText;
 
-	if (documentOverflowPx > roundingTolerance) {
+			return (typeof rendered === "string" ? rendered : (el.textContent ?? "")).trim().length;
+		};
+		const pageTextLength = body ? textLength(body) : 0;
+
+		for (const [scroller, content] of scrollers) {
+			if (pageTextLength === 0 || textLength(scroller as HTMLElement) * 2 <= pageTextLength) {
+				continue;
+			}
+
+			if (recorded.has(scroller) || hasRecordedAncestor(scroller)) {
+				continue;
+			}
+
+			if (!isVisible(scroller) || isAriaHidden(scroller)) {
+				continue;
+			}
+
+			const scrollerRect = scroller.getBoundingClientRect();
+
+			recorded.add(scroller);
+			record(
+				scroller,
+				"scrolling-container",
+				scroller.scrollWidth - scroller.clientWidth,
+				scrollerRect,
+				content.map(({ el, box }) => ({
+					selector: getSelector(el),
+					html: (el.cloneNode(false) as Element).outerHTML,
+					// The box moves with the scroller's own scroll position; the overflow does not.
+					overflowPx: Math.round(
+						rtl
+							? scrollerRect.left - box.left - scroller.scrollLeft
+							: box.right + scroller.scrollLeft - scrollerRect.right,
+					),
+					rect: documentRect(box),
+				})),
+			);
+		}
+	}
+
+	if (documentScrolls) {
 		for (const el of elements) {
-			if (el === html || el === body || recorded.has(el)) {
+			if (!layoutTags.has(el.tagName.toLowerCase()) || recorded.has(el)) {
 				continue;
 			}
 
-			if (isOrInsideExempt(el) || isAriaHidden(el) || !isVisible(el)) {
+			const cs = styleOf(el);
+			const display = cs.display;
+
+			if (display === "inline" || display === "none" || cs.position === "fixed") {
 				continue;
 			}
 
-			const cs = getComputedStyle(el);
 			const width = parsePx(cs.width);
 			const minWidth = parsePx(cs.minWidth);
 			const computed = Math.max(width ?? 0, minWidth ?? 0);
@@ -578,35 +962,24 @@ export function measureReflowScript(): ReflowMeasure {
 				continue;
 			}
 
-			const tag = el.tagName.toLowerCase();
-			const display = cs.display;
-
-			if (
-				!layoutTags.has(tag) ||
-				display === "inline" ||
-				display === "none" ||
-				cs.position === "fixed"
-			) {
+			if (isOrInsideExempt(el) || isAriaHidden(el) || !isVisible(el)) {
 				continue;
 			}
 
-			const rect = el.getBoundingClientRect();
+			// A wide box inside something that clips or scrolls it is not what widens the page.
+			if (containmentOf(el).kind !== "none") {
+				continue;
+			}
 
-			offenders.push({
-				selector: getSelector(el),
-				html: (el.cloneNode(false) as Element).outerHTML,
-				overflowPx: Math.round(computed - viewportWidth),
-				reason: "fixed-width-container",
-				rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
-			});
+			record(el, "fixed-width-container", computed - viewportWidth, el.getBoundingClientRect());
 		}
 	}
 
 	return {
 		documentOverflowPx,
 		explainedByExempt:
-			overflowOffenders.length === 0 &&
-			documentOverflowPx > roundingTolerance &&
+			!scrollingOverflow &&
+			documentScrolls &&
 			maxExemptOverflowPx + roundingTolerance >= documentOverflowPx,
 		offenders,
 	};
