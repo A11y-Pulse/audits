@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>collapsed in-page links are not unreachable skip links</title></head>
+<body>
+	<header>
+		<a href="/">Home</a>
+		<button type="button" aria-expanded="false" aria-controls="sections">Sections</button>
+		<!-- "Popular" contains the Portuguese "pular", "Their albums" the Spanish "ir al". -->
+		<ul id="sections" hidden>
+			<li><a href="#popular">Popular posts</a></li>
+			<li><a href="#albums">Their albums</a></li>
+			<li><a href="#audiences">Smaller audiences</a></li>
+		</ul>
+		<a href="/about">About</a>
+	</header>
+	<main>
+		<h1>Blog</h1>
+		<h2 id="popular">Popular posts</h2>
+		<h2 id="albums">Their albums</h2>
+		<h2 id="audiences">Smaller audiences</h2>
+		<a href="/more">More</a>
+	</main>
+</body>
+</html>

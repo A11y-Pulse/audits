@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8"><title>the same widget rendered twice, one copy hidden</title>
+	<style>.mobile-only { display: none }</style>
+</head>
+<body>
+	<div class="desktop-only">
+		<div id="desktop-tabs" role="tablist" aria-label="Delivery">
+			<button id="desktop-standard" role="tab" aria-selected="true" aria-controls="desktop-panel-standard">Standard</button>
+			<button id="desktop-express" role="tab" aria-selected="false" aria-controls="desktop-panel-express" tabindex="-1">Express</button>
+		</div>
+		<div id="desktop-panel-standard" role="tabpanel" aria-labelledby="desktop-standard">3 to 5 days</div>
+	</div>
+	<div class="mobile-only">
+		<div id="mobile-tabs" role="tablist" aria-label="Delivery">
+			<button id="mobile-standard" role="tab" aria-selected="true" aria-controls="mobile-panel-standard">Standard</button>
+			<button id="mobile-express" role="tab" aria-selected="false" tabindex="-1">Express</button>
+		</div>
+		<div id="mobile-panel-standard" role="tabpanel" aria-labelledby="mobile-standard">3 to 5 days</div>
+	</div>
+</body>
+</html>

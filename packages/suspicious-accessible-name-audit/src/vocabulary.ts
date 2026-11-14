@@ -5,27 +5,35 @@ export const DEFAULT_ARTEFACTS: readonly string[] = [
 	"null",
 	"nan",
 	"[object object]",
-	"true",
-	"false",
 	"todo",
 	"tbd",
 	"fixme",
 	"xxx",
-	"test",
 	"placeholder",
 	"untitled",
-	"label",
 	"button",
 	"btn",
 	"link",
-	"banner",
 	"img",
 	"cta",
-	"element",
 	"widget",
 	"component",
-	"module",
 	"iframe",
+];
+
+/**
+ * Whole names that are a leftover as often as not, but are also ordinary words: a quiz answer
+ * labelled "True", or "Test", "Label", "Module" and "Banner" on a German, Swedish or French page.
+ * They go to review rather than failing.
+ */
+export const DEFAULT_REVIEW_WORDS: readonly string[] = [
+	"true",
+	"false",
+	"test",
+	"label",
+	"banner",
+	"element",
+	"module",
 ];
 
 export const PLACEHOLDER_STEMS: readonly string[] = [
@@ -79,6 +87,8 @@ export type VocabularyOverride = {
 	mode?: "extend" | "replace";
 	/** Whole names that are artefacts, such as "ungültig". */
 	artefacts?: readonly string[];
+	/** Whole names that may be a leftover but are also ordinary words, such as "test". */
+	reviewWords?: readonly string[];
 	/** Placeholder stems, matched with a number after them, such as "bild" in "bild1". */
 	placeholderStems?: readonly string[];
 	/** Role words by computed role, such as `{ button: ["knapp"] }`. Applied to every page language. */
@@ -87,6 +97,7 @@ export type VocabularyOverride = {
 
 export type Vocabulary = {
 	artefacts: ReadonlySet<string>;
+	reviewWords: ReadonlySet<string>;
 	placeholderStems: ReadonlySet<string>;
 	placeholderSuffix: RegExp;
 	roleWords: (lang: string | null) => RoleWords;
@@ -148,10 +159,13 @@ function resolveRoleWords(
 export function resolveVocabulary(override: VocabularyOverride = {}): Vocabulary {
 	const replace = override.mode === "replace";
 	const artefacts = pickWords(DEFAULT_ARTEFACTS, override.artefacts, replace).map(fold);
+	const reviewWords = pickWords(DEFAULT_REVIEW_WORDS, override.reviewWords, replace).map(fold);
 	const stems = pickWords(PLACEHOLDER_STEMS, override.placeholderStems, replace).map(fold);
 
 	return {
 		artefacts: new Set(artefacts),
+		// A word given as an artefact is not also a review word.
+		reviewWords: new Set(reviewWords.filter((word) => !artefacts.includes(word))),
 		placeholderStems: new Set(stems),
 		placeholderSuffix:
 			stems.length === 0

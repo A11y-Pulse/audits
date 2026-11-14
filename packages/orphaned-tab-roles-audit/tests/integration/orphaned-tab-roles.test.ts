@@ -55,12 +55,118 @@ describeEachEngine<BrowserAdaptor>(
 			expect(result.summary).toEqual({ checked: 4, failed: 0, needsReview: 0, passed: 4 });
 		});
 
-		it("never fails tabs whose panels are mounted lazily", async () => {
+		it("passes tabs whose panels are mounted lazily, beside a wired tab in the tablist", async () => {
 			const result = await runFixture("tabs-lazy-mount.html");
 
-			expect(result.failed).toEqual([]);
-			expect(findings(result.needsReview)).toEqual([
-				{ selector: "#tab-large", finding: "association-unverifiable" },
+			expect(result.summary).toEqual({ checked: 3, failed: 0, needsReview: 0, passed: 3 });
+		});
+
+		it("passes React Aria style tabs, where only the selected tab has aria-controls", async () => {
+			const result = await runFixture("react-aria-tabs.html");
+
+			expect(result.summary).toEqual({ checked: 4, failed: 0, needsReview: 0, passed: 4 });
+			expect(result.passed.map(({ selector, tablist }) => ({ selector, tablist }))).toEqual([
+				{ selector: "#react-aria-1-tab-details", tablist: "#product-tabs" },
+				{ selector: "#react-aria-1-tab-sizing", tablist: "#product-tabs" },
+				{ selector: "#react-aria-1-tab-reviews", tablist: "#product-tabs" },
+				{ selector: "#react-aria-1-tabpanel-details", tablist: undefined },
+			]);
+		});
+
+		it("passes Radix style tabs, where inactive panels are unmounted", async () => {
+			const result = await runFixture("radix-tabs.html");
+
+			expect(result.summary).toEqual({ checked: 4, failed: 0, needsReview: 0, passed: 4 });
+			expect(result.passed[1]).toMatchObject({
+				selector: "#radix-r0-trigger-password",
+				controls: [{ id: "radix-r0-content-password", found: false, role: null, tag: null }],
+			});
+		});
+
+		it("passes MUI and Bootstrap style tabs, where every panel stays mounted", async () => {
+			const mui = await runFixture("mui-tabs.html");
+			const bootstrap = await runFixture("bootstrap-tabs.html");
+
+			expect(mui.summary).toEqual({ checked: 6, failed: 0, needsReview: 0, passed: 6 });
+			expect(bootstrap.summary).toEqual({ checked: 6, failed: 0, needsReview: 0, passed: 6 });
+			expect(bootstrap.passed[0]).toMatchObject({ selector: "#home-tab", tablist: "#myTab" });
+		});
+
+		it("still fails an unwired tablist beside a lazily mounted one", async () => {
+			const result = await runFixture("lazy-beside-unwired.html");
+
+			expect(findings(result.failed)).toEqual([
+				{ selector: "#filter-all", finding: "tab-without-panel" },
+				{ selector: "#filter-recent", finding: "tab-without-panel" },
+			]);
+			expect(result.failed.map(({ tablist }) => tablist)).toEqual(["#filter-tabs", "#filter-tabs"]);
+			expect(result.summary).toEqual({ checked: 5, failed: 2, needsReview: 0, passed: 3 });
+		});
+
+		it("fails the tabs left without a panel when every panel is labelled by the first tab", async () => {
+			const result = await runFixture("panels-share-one-tab.html");
+
+			expect(findings(result.failed)).toEqual([
+				{ selector: "#tab-2", finding: "tab-without-panel" },
+				{ selector: "#tab-3", finding: "tab-without-panel" },
+			]);
+			expect(result.summary).toEqual({ checked: 6, failed: 2, needsReview: 0, passed: 4 });
+		});
+
+		it("fails unwired tabs beside one wired tab when no tab is selected", async () => {
+			const result = await runFixture("one-wired-none-selected.html");
+
+			expect(findings(result.failed)).toEqual([
+				{ selector: "#tab-prices", finding: "tab-without-panel" },
+				{ selector: "#tab-map", finding: "tab-without-panel" },
+			]);
+			expect(result.summary).toEqual({ checked: 4, failed: 2, needsReview: 0, passed: 2 });
+		});
+
+		it("judges a nested tablist on its own tabs, not its parent's", async () => {
+			const result = await runFixture("nested-tablists.html");
+
+			expect(findings(result.failed)).toEqual([
+				{ selector: "#inner-display", finding: "tab-without-panel" },
+				{ selector: "#inner-input", finding: "tab-without-panel" },
+			]);
+			expect(result.failed.map(({ tablist }) => tablist)).toEqual(["#inner-tabs", "#inner-tabs"]);
+			expect(result.passed.map(({ selector }) => selector)).toEqual([
+				"#outer-general",
+				"#outer-privacy",
+				"#outer-panel-general",
+			]);
+		});
+
+		it("passes both copies of a widget rendered twice with one copy hidden", async () => {
+			const result = await runFixture("hidden-duplicate-widget.html");
+
+			expect(result.summary).toEqual({ checked: 6, failed: 0, needsReview: 0, passed: 6 });
+		});
+
+		it("reports where a tab inside a navigation link goes", async () => {
+			const result = await runFixture("tab-inside-link.html");
+
+			expect(
+				result.failed.map(({ selector, finding, tablist, href }) => ({
+					selector,
+					finding,
+					tablist,
+					href,
+				})),
+			).toEqual([
+				{
+					selector: "#nav-dogs",
+					finding: "tab-used-as-link",
+					tablist: "#section-nav",
+					href: `${server.url}/dogs?sort=new`,
+				},
+				{
+					selector: "#nav-cats",
+					finding: "tab-used-as-link",
+					tablist: "#section-nav",
+					href: "https://elsewhere.test/cats",
+				},
 			]);
 		});
 
@@ -109,7 +215,7 @@ describeEachEngine<BrowserAdaptor>(
 			expect(fixed.summary.checked).toBe(0);
 		});
 
-		it("fails an unwired widget whose page's panels all belong to another widget", async () => {
+		it("fails an unwired tablist whose page's panels all belong to another tablist", async () => {
 			const result = await runFixture("multiple-widgets.html");
 
 			expect(findings(result.failed)).toEqual([
@@ -138,6 +244,9 @@ describeEachEngine<BrowserAdaptor>(
 			expect(findings(result.needsReview)).toEqual([
 				{ selector: "#tab-a", finding: "controls-not-a-tabpanel" },
 				{ selector: "#panel-elsewhere", finding: "association-unverifiable" },
+			]);
+			expect(result.needsReview[0]?.controls).toEqual([
+				{ id: "region-a", found: true, role: "region", tag: "div" },
 			]);
 		});
 

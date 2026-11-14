@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>an unwired tablist beside a lazily mounted one</title></head>
+<body>
+	<div id="specs-tabs" role="tablist" aria-label="Specifications">
+		<div id="specs-size" role="tab" tabindex="0" aria-selected="true" aria-controls="specs-panel-size">Size</div>
+		<div id="specs-weight" role="tab" tabindex="-1" aria-selected="false">Weight</div>
+	</div>
+	<div id="specs-panel-size" role="tabpanel" aria-labelledby="specs-size">42 × 30 cm</div>
+
+	<div id="filter-tabs" role="tablist" aria-label="Filter reviews">
+		<button id="filter-all" role="tab" aria-selected="true">All</button>
+		<button id="filter-recent" role="tab" aria-selected="false">Recent</button>
+	</div>
+	<ul><li>Great bag.</li></ul>
+</body>
+</html>

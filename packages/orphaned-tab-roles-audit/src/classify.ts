@@ -3,7 +3,7 @@ import type { CollectedTabRole } from "./browser-scripts";
 /**
  * - `tab-used-as-link`: a tab that links to another document and is associated with no panel.
  * - `tab-without-panel`: a tab with no panel it could control, because the page has none or every
- *   one belongs to another tab.
+ *   one belongs to a tab in another tablist.
  * - `tabpanel-without-tab`: a tab panel no tab could control, because the page has no tabs or every
  *   one belongs to another panel.
  * - `controls-not-a-tabpanel`: a tab whose `aria-controls` points at something other than a tab
@@ -67,6 +67,28 @@ export function classifyTabRoles(elements: readonly CollectedTabRole[]): TabRole
 	const tabHasOwnPanel = (i: number) =>
 		associated(i) || (elements[i]!.hasControls && !elements[i]!.controlsOther);
 
+	// Libraries that mount only the active panel leave the other tabs with nothing to point at:
+	// React Aria puts `aria-controls` on the selected tab alone, Radix puts a dangling one on every
+	// tab. Only that exact shape vouches for the unselected siblings: the selected tab paired with
+	// one panel that is paired with it alone. A wired tab that is not selected, or one sharing
+	// panels with other tabs, says nothing about whether its siblings were ever wired.
+	const pairedOneToOne = (i: number) => {
+		const [only, ...rest] = partners[i]!;
+
+		return only !== undefined && rest.length === 0 && partners[only]!.size === 1;
+	};
+	const lazyTablists = new Set(
+		tabs
+			.filter((i) => elements[i]!.selected === true && pairedOneToOne(i))
+			.flatMap((i) => {
+				const tablist = elements[i]!.tablist;
+
+				return typeof tablist === "number" ? [tablist] : [];
+			}),
+	);
+	const selectedSiblingVouches = (element: CollectedTabRole) =>
+		typeof element.tablist === "number" && lazyTablists.has(element.tablist);
+
 	return elements.map((element, i) => {
 		if (associated(i)) {
 			return PASSED;
@@ -84,6 +106,11 @@ export function classifyTabRoles(elements: readonly CollectedTabRole[]): TabRole
 
 		if (element.controlsOther) {
 			return needsReview("controls-not-a-tabpanel");
+		}
+
+		// A leftover panel may be this tab's own, wired up wrongly, so that still goes to review.
+		if (!element.selected && selectedSiblingVouches(element) && panels.every(associated)) {
+			return PASSED;
 		}
 
 		// A dangling `aria-controls` is how lazily mounted panels look, so only a page with no panels

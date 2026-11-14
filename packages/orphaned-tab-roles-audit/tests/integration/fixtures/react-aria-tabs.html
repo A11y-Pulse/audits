@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>React Aria style tabs</title></head>
+<body>
+	<!--
+		Hand-written approximation of what react-aria-components <Tabs> renders, not captured from a
+		live page: only the selected tab carries aria-controls, and only its panel is mounted.
+	-->
+	<main>
+		<h1>Trail running shoes</h1>
+		<div class="react-aria-Tabs" data-orientation="horizontal">
+			<div id="product-tabs" class="react-aria-TabList" role="tablist" aria-orientation="horizontal" aria-label="Product information">
+				<div id="react-aria-1-tab-details" class="react-aria-Tab" role="tab" tabindex="0" aria-selected="true" aria-controls="react-aria-1-tabpanel-details" data-key="details" data-selected="true">Details</div>
+				<div id="react-aria-1-tab-sizing" class="react-aria-Tab" role="tab" tabindex="-1" aria-selected="false" data-key="sizing">Sizing</div>
+				<div id="react-aria-1-tab-reviews" class="react-aria-Tab" role="tab" tabindex="-1" aria-selected="false" data-key="reviews">Reviews</div>
+			</div>
+			<div id="react-aria-1-tabpanel-details" class="react-aria-TabPanel" role="tabpanel" tabindex="0" aria-labelledby="react-aria-1-tab-details">
+				<p>Lightweight mesh upper with a 6mm drop.</p>
+			</div>
+		</div>
+	</main>
+</body>
+</html>

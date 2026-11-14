@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>menu toggle is not a skip link</title></head>
+<body>
+	<header>
+		<a href="#menu" id="toggle">Menu</a>
+		<nav id="menu" hidden>
+			<a href="/products">Products</a>
+			<a href="/pricing">Pricing</a>
+		</nav>
+	</header>
+	<div class="content">
+		<h1>Welcome</h1>
+		<a href="/start">Get started</a>
+	</div>
+	<script>
+		document.getElementById("toggle").addEventListener("click", (event) => {
+			event.preventDefault();
+			const menu = document.getElementById("menu");
+			menu.hidden = !menu.hidden;
+		});
+	</script>
+</body>
+</html>

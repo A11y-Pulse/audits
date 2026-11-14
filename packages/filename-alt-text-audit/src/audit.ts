@@ -7,13 +7,13 @@ import {
 } from "@a11y-pulse/browser-adaptor";
 import { truncateHtml } from "@a11y-pulse/browser-adaptor/dom";
 import {
-	awaitImageScript,
+	awaitImagesScript,
 	type CollectedImage,
 	collectImagesScript,
 	restoreScrollScript,
 	scrollPositionScript,
 } from "./browser-scripts";
-import { type AltTextMatch, classifyAltText } from "./classify";
+import { type AltTextMatch, type AltTextSignal, classifyAltText } from "./classify";
 import { placeholderWordsFor } from "./placeholder-words";
 import type { FilenameAltTextImage, FilenameAltTextResult } from "./result";
 import { parseSrcset } from "./sources";
@@ -24,8 +24,12 @@ export const DEFAULT_SCREENSHOT_LIMIT = 10;
 
 const SCREENSHOT_CLIP_BUFFER = 10;
 const SCREENSHOT_SETTLE_MS = 33; // ~2 frames at 60fps
-// Long enough for an image near the viewport to arrive, short enough not to stall on a broken one.
+// Long enough for images near the viewport to arrive. One budget covers every image about to be
+// screenshotted, so a page of images that never load costs this once rather than once each.
 const IMAGE_LOAD_TIMEOUT_MS = 2000;
+
+// The alt text cannot be a text alternative, whatever the image shows.
+const FAILED_SIGNALS: ReadonlySet<AltTextSignal> = new Set(["filename-match", "artefact"]);
 
 const STASH_KEY = "__a11yPulseFilenameAltText";
 
@@ -62,8 +66,6 @@ async function screenshotImage(adaptor: BrowserAdaptor, index: number): Promise<
 	const handle = await stashedElementHandle(adaptor, STASH_KEY, index);
 
 	try {
-		await adaptor.evaluate(awaitImageScript, handle, IMAGE_LOAD_TIMEOUT_MS);
-
 		return await captureElementScreenshot(adaptor, handle, {
 			clipBuffer: SCREENSHOT_CLIP_BUFFER,
 			settleDelay: SCREENSHOT_SETTLE_MS,
@@ -84,15 +86,33 @@ async function toImages(
 		classified.map(({ index }) => index),
 	);
 	const images: FilenameAltTextImage[] = [];
+	// An <area> has no box of its own to capture.
+	const toScreenshot = classified
+		.slice(0, screenshotCount)
+		.filter(({ image }) => !image.html.startsWith("<area"));
 
-	for (const [i, { index, image, match }] of classified.entries()) {
+	if (toScreenshot.length > 0) {
+		await adaptor.evaluate(
+			awaitImagesScript,
+			STASH_KEY,
+			toScreenshot.map(({ index }) => index),
+			IMAGE_LOAD_TIMEOUT_MS,
+		);
+	}
+
+	for (const [i, entry] of classified.entries()) {
+		const { index, image, match } = entry;
+
 		images.push({
 			selector: selectors[i]!,
 			html: truncateHtml(image.html),
 			altText: image.altText,
+			altTextSource: image.altTextSource,
 			signal: match?.signal ?? null,
 			matchedSource: match?.source ?? null,
-			...(i < screenshotCount ? { screenshot: await screenshotImage(adaptor, index) } : {}),
+			...(toScreenshot.includes(entry)
+				? { screenshot: await screenshotImage(adaptor, index) }
+				: {}),
 		});
 	}
 
@@ -130,9 +150,9 @@ export async function runFilenameAltTextAudit(
 				: classifyAltText(image.altText, sourcesOf(image, collection.baseUrl), placeholders),
 		}));
 
-		const failed = classified.filter(({ match }) => match?.signal === "filename-match");
+		const failed = classified.filter(({ match }) => match && FAILED_SIGNALS.has(match.signal));
 		const needsReview = classified.filter(
-			({ match }) => match !== null && match.signal !== "filename-match",
+			({ match }) => match !== null && !FAILED_SIGNALS.has(match.signal),
 		);
 		const passed = classified.filter(({ match }) => match === null);
 

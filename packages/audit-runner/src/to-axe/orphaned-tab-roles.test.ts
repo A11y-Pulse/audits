@@ -3,7 +3,11 @@ import type {
 	OrphanedTabRolesResult,
 } from "@a11y-pulse/orphaned-tab-roles-audit";
 import { describe, expect, it } from "vitest";
-import { ORPHANED_TAB_ROLES_AUDIT_ID, orphanedTabRolesToAxe } from "./orphaned-tab-roles";
+import {
+	ORPHANED_TAB_ROLES_AUDIT_ID,
+	ORPHANED_TAB_ROLES_EVIDENCE_CHECK_ID,
+	orphanedTabRolesToAxe,
+} from "./orphaned-tab-roles";
 
 function element(overrides: Partial<OrphanedTabRolesElement> = {}): OrphanedTabRolesElement {
 	return { selector: "#a", html: "<button>", role: "tab", finding: null, ...overrides };
@@ -90,5 +94,32 @@ describe("orphanedTabRolesToAxe", () => {
 
 		expect(output.inapplicable[0]?.id).toBe(ORPHANED_TAB_ROLES_AUDIT_ID);
 		expect(output.violations).toEqual([]);
+	});
+
+	it("carries the tab list and what aria-controls names as structured evidence", () => {
+		const controls = [{ id: "panel-9", found: false, role: null, tag: null }];
+		const output = orphanedTabRolesToAxe(
+			result(
+				[
+					element({
+						role: "tab",
+						finding: "tab-without-panel",
+						tablist: "#tabs",
+						controls: controls as OrphanedTabRolesElement["controls"],
+					}),
+				],
+				[],
+				[],
+			),
+		);
+		const check = output.violations[0]?.nodes[0]?.any[0];
+
+		expect(check?.id).toBe(ORPHANED_TAB_ROLES_EVIDENCE_CHECK_ID);
+		expect(check?.data).toEqual({
+			role: "tab",
+			reason: "tab-without-panel",
+			tablist: "#tabs",
+			controls,
+		});
 	});
 });

@@ -20,8 +20,17 @@ export type SuspiciousNameElement = {
 	/** What makes the name code or a placeholder, or null when nothing does. */
 	signal: NameSignal | null;
 
-	/** The matched attribute for `attribute-match`, the matched word for `role-word`. */
+	/**
+	 * The matched attribute for `attribute-match`, the matched word for `role-word`, the matched
+	 * token for an `artefact` that is a template token, and null otherwise.
+	 */
 	evidence: string | null;
+
+	/**
+	 * Selector for the `<label>` or `aria-labelledby` target the name was read from, when the name
+	 * was flagged and came from another element. Null otherwise.
+	 */
+	labelSelector: string | null;
 
 	/** The success criterion the element's name falls under, or null for best practice. */
 	criterion: WcagCriterion | null;
@@ -43,7 +52,10 @@ export type SuspiciousNameResult = {
 		failed: number;
 		needsReview: number;
 		passed: number;
-		/** Named elements past `elementLimit`, which were not checked. */
+		/**
+		 * Elements past `elementLimit`, which were not checked. Counted from their attributes and text
+		 * without the full name computation, so it can be slightly high.
+		 */
 		unchecked: number;
 	};
 };

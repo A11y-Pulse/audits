@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>skip link pulled to the front with a positive tabindex</title></head>
+<body>
+	<header>
+		<a href="/">Logo</a>
+		<nav aria-label="Primary">
+			<a href="/products">Products</a>
+			<a href="/pricing">Pricing</a>
+		</nav>
+		<!-- Last in the header's markup, first in the tab order. -->
+		<a href="#main" tabindex="1">Skip to content</a>
+	</header>
+	<main id="main" tabindex="-1">
+		<h1>Main content</h1>
+		<a href="/more">More</a>
+	</main>
+</body>
+</html>

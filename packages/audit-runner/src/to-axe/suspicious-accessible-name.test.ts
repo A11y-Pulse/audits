@@ -17,6 +17,7 @@ function element(overrides: Partial<SuspiciousNameElement> = {}): SuspiciousName
 		role: "button",
 		signal: null,
 		evidence: null,
+		labelSelector: null,
 		criterion: "2.4.6",
 		...overrides,
 	};
@@ -145,5 +146,29 @@ describe("suspiciousAccessibleNameToAxe", () => {
 			},
 		]);
 		expect(output.violations).toEqual([]);
+	});
+
+	it("carries the name, where it came from and what it matched as structured evidence", () => {
+		const output = suspiciousAccessibleNameToAxe(
+			result([
+				element({
+					name: "btn-submit",
+					signal: "attribute-match",
+					evidence: "id",
+					labelSelector: "#submit-label",
+				}),
+			]),
+		);
+		const check = output.violations[0]?.nodes[0]?.any[0];
+
+		expect(check?.id).toBe("suspicious-accessible-name-evidence");
+		expect(check?.data).toMatchObject({
+			name: "btn-submit",
+			reason: "attribute-match",
+			matched: "id",
+			labelSelector: "#submit-label",
+		});
+		expect(check?.data).toHaveProperty("nameSource");
+		expect(check?.data).toHaveProperty("role");
 	});
 });

@@ -23,18 +23,43 @@ async function toElements(
 	adaptor: BrowserAdaptor,
 	classified: readonly Classified[],
 ): Promise<OrphanedTabRolesElement[]> {
-	const selectors = await stashedElementSelectors(
-		adaptor,
-		STASH_KEY,
-		classified.map(({ index }) => index),
-	);
+	const tablists = [
+		...new Set(
+			classified.flatMap(({ element }) =>
+				typeof element.tablist === "number" ? [element.tablist] : [],
+			),
+		),
+	];
+	const selectors = await stashedElementSelectors(adaptor, STASH_KEY, [
+		...classified.map(({ index }) => index),
+		...tablists,
+	]);
+	const tablistSelector = (index: number) =>
+		selectors[classified.length + tablists.indexOf(index)]!;
 
-	return classified.map(({ element, finding }, i) => ({
-		selector: selectors[i]!,
-		html: truncateHtml(element.html),
-		role: element.role,
-		finding,
-	}));
+	return classified.map(({ element, finding }, i) => {
+		const reported: OrphanedTabRolesElement = {
+			selector: selectors[i]!,
+			html: truncateHtml(element.html),
+			role: element.role,
+			finding,
+		};
+
+		if (element.role === "tab") {
+			reported.tablist =
+				typeof element.tablist === "number" ? tablistSelector(element.tablist) : null;
+		}
+
+		if (element.controlsTargets?.length) {
+			reported.controls = element.controlsTargets;
+		}
+
+		if (finding === "tab-used-as-link" && element.href) {
+			reported.href = element.href;
+		}
+
+		return reported;
+	});
 }
 
 /**
