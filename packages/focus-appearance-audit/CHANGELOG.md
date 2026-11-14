@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.7.0
+
+### Minor Changes
+
+- [#110](https://github.com/A11y-Pulse/audits/pull/110) [`49fc92c`](https://github.com/A11y-Pulse/audits/commit/49fc92c7b8541247facf8cccfefb25af760f16bb) Thanks [@wildlyinaccurate](https://github.com/wildlyinaccurate)! - Check the contrast of focus indicators (WCAG 1.4.11 Non-text Contrast).
+  
+  - `@a11y-pulse/focus-appearance-audit`: each element whose indicator can be measured gains `indicatorContrast`: the ratio, the two colours, what they were compared against and how they were found. The indicator is compared with the colours next to it, as 1.4.11 asks, not with how the element looked before focus: an outline or box-shadow outside the element with the background behind the element; an inset shadow or an outline pulled inside by a negative `outline-offset` with the element's own fill; a border with either; a background fill with the surroundings; an indicator found only in the screenshots with the unchanged pixels next to it. Text colour is never measured. Where the unfocused colour of the measured part is known, `stateChangeRatio` gives the contrast between the two states, for information only. The ratio is `null`, with a `reason`, for translucent colours, when too little changed, when what is next to the indicator has no single colour, and when a weak indicator was still transitioning in; over an image or gradient, or for an element positioned over other content, the screenshots are used. The browser's default focus ring is not measured, however it was found. `summary.lowContrastIndicators` counts indicators under the new `MIN_INDICATOR_CONTRAST` (3), less those whose only change is one colour that `colorOnly` measured; the new `hasLowContrastIndicator` is the test. `passed` is unaffected.
+  - `@a11y-pulse/tab-orchestrator`: when styles are read, a tab stop's `activeElement` also carries `backdrop` (the first opaque background colour behind the element, or `null` when it cannot be told from the ancestors: behind an image or translucent colour, or for an element positioned out of the flow) and `animating` (a transition or animation was running on or around it). `outline-offset` joins `FOCUS_STYLE_PROPERTIES`.
+  - `@a11y-pulse/audit-runner`: new `focusIndicatorContrastToAxe` mapping for the `focus-indicator-contrast` audit. An element whose only focus change is one colour is left to `focus-color-only` when that audit measured the change, and reported here when it could not.
+
+- [#110](https://github.com/A11y-Pulse/audits/pull/110) [`49fc92c`](https://github.com/A11y-Pulse/audits/commit/49fc92c7b8541247facf8cccfefb25af760f16bb) Thanks [@wildlyinaccurate](https://github.com/wildlyinaccurate)! - Fix focus appearance false passes and false failures.
+  
+  - `@a11y-pulse/focus-appearance-audit`:
+    - A focused element that draws nothing itself (fully transparent, clipped to a pixel or positioned off the page, as the real input of a custom checkbox, radio or switch usually is) no longer passes on the browser's default outline. Its label, or else its nearest visible ancestor, is compared with and without focus instead; `measuredOn` says which.
+    - Outlines, borders and box-shadows drawn in a fully transparent colour (`outline: 2px solid transparent`) and pseudo-elements that generate no content are no longer counted as indicators.
+    - The text caret is hidden in the screenshots on every engine. A text field that shows only its caret on focus is reported with `detectionMethod: "caret"` and `needsReview: "caret"`.
+    - Before an element fails, the styles of its three nearest ancestors and its labels are compared, so an indicator on a `:focus-within` wrapper or a label passes; `indicatorOn` says where it was found. A wrapper that holds other tab stops too (an input group) does not say which of them has focus, and one with a CSS animation running differs from one read to the next regardless: an element with nothing else to show is reported with `needsReview: "shared-indicator"` or `needsReview: "animating"` instead of passing.
+    - For a hidden input with a label, the screenshots also take in the input's nearest visible ancestor, so an indicator drawn on a sibling box away from the label is found.
+    - CSS transitions are given up to half a second to finish before each screenshot, so an indicator that fades in is compared in its final state.
+    - An element that stays covered by other content while it is measured is reported with `needsReview: "obstructed"` instead of failing.
+    - `colorOnly` now also covers an existing border, an existing outline or the background changing colour alone, and gains `property` and `backgroundColor`. A background that is see-through in one state is measured against the colour behind the element.
+    - New `changedProperties` on style passes, `summary.needsReview` and `summary.reachedScreenshotLimit`. `summary.passed` and `summary.failed` no longer include elements that need review.
+    - New `screenshotLimit` option (default 50) caps how many elements keep their screenshots.
+  - `@a11y-pulse/tab-orchestrator`: an unfocused pair photographs the label or nearest visible ancestor of an element that draws nothing itself, hides the text caret, and reports `clipTarget`, `unpainted`, `obstructed`, `caretHidden`, `context` (the surrounding elements' styles with and without focus, each marked `shared` or `animating` where that applies) and `background`. With a label as the target, the pair also covers the element's nearest visible ancestor. Running transitions are waited for, and a capture that fails part-way puts the page back and returns focus before rethrowing. `opacity` joins `FOCUS_STYLE_PROPERTIES`.
+  - `@a11y-pulse/audit-runner`: `focus-appearance` reports caret-only text fields, covered elements, and elements whose only indicator is on a shared or animating container as `incomplete`, and `focus-color-only` names which colour changed and what it is seen against.
+
+### Patch Changes
+
+- Updated dependencies [[`5cf6dbf`](https://github.com/A11y-Pulse/audits/commit/5cf6dbf56202ec788db07adc21b9b674d6eb8ae3), [`49fc92c`](https://github.com/A11y-Pulse/audits/commit/49fc92c7b8541247facf8cccfefb25af760f16bb), [`49fc92c`](https://github.com/A11y-Pulse/audits/commit/49fc92c7b8541247facf8cccfefb25af760f16bb), [`49fc92c`](https://github.com/A11y-Pulse/audits/commit/49fc92c7b8541247facf8cccfefb25af760f16bb), [`49fc92c`](https://github.com/A11y-Pulse/audits/commit/49fc92c7b8541247facf8cccfefb25af760f16bb), [`49fc92c`](https://github.com/A11y-Pulse/audits/commit/49fc92c7b8541247facf8cccfefb25af760f16bb), [`49fc92c`](https://github.com/A11y-Pulse/audits/commit/49fc92c7b8541247facf8cccfefb25af760f16bb), [`49fc92c`](https://github.com/A11y-Pulse/audits/commit/49fc92c7b8541247facf8cccfefb25af760f16bb)]:
+  - @a11y-pulse/browser-adaptor@0.10.0
+  - @a11y-pulse/tab-orchestrator@0.10.0
+
 ## 0.6.0
 
 ### Minor Changes
