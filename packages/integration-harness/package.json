@@ -24,7 +24,7 @@
 	},
 	"devDependencies": {
 		"@a11y-pulse/browser-adaptor": "*",
-		"playwright-core": "^1.64.1",
+		"playwright-core": "^1.65.0",
 		"puppeteer": "^25.16.0",
 		"vitest": "^5.0.5"
 	}
