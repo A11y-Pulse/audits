@@ -23,6 +23,8 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run build
+      - name: Smoke-test the built CLI
+        run: node packages/audit-runner/dist/cli.js --help
       - run: npm run typecheck
       - run: npm run test:unit
 

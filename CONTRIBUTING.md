@@ -57,7 +57,9 @@ Published packages version independently with [Changesets](https://github.com/ch
 - Tooling-only changes (root TypeScript, Biome, GitHub Actions) do **not** need a changeset and must not publish.
 - Dependabot PRs that bump a package's production dependencies (`pixelmatch`, `pngjs`, …) need a `patch` changeset on that package.
 
-After merge to `main`, the Release workflow opens a Version PR when changesets exist. Merging that PR publishes to npm via trusted publishing (`release.yml`).
+After merge to `main`, and once the CI workflow has passed for that commit, the Release workflow opens a Version PR when changesets exist. Merging that PR publishes to npm via trusted publishing (`release.yml`).
+
+The Release workflow only acts on a commit that is still the tip of `main` when its CI finishes. If another pull request is merged while CI is running for the Version PR's merge, that release run is skipped, and the newer commit's run opens a fresh Version PR instead of publishing (or does nothing, if it carried no changeset). Nothing is lost: the versions are published the next time the workflow runs with no changesets pending. To publish without waiting, check that CI has passed for the tip of `main`, then start the Release workflow by hand from the Actions tab (**Run workflow**, branch `main`). A manual run is refused from any other branch, and does not itself wait for CI.
 
 ## Opening a pull request
 
