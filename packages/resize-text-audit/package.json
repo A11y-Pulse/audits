@@ -1,6 +1,6 @@
 {
 	"name": "@a11y-pulse/resize-text-audit",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "WCAG 1.4.4 Resize Text audit that emulates 200% zoom and detects text that becomes clipped or overlapping.",
 	"type": "module",
 	"license": "SEE LICENSE IN LICENSE.md",

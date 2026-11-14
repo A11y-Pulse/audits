@@ -1,6 +1,6 @@
 {
 	"name": "@a11y-pulse/unreachable-controls-audit",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "WCAG 2.1.1 Keyboard and 4.1.2 Name, Role, Value audit that tabs through a page and flags click targets the keyboard never reaches, and focusable click targets that expose no role.",
 	"type": "module",
 	"license": "SEE LICENSE IN LICENSE.md",
