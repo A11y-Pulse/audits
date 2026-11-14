@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Two-step verification</title>
+</head>
+<body>
+<main>
+	<h1>Two-step verification</h1>
+
+	<!-- Sends whatever is pasted straight away, by every route a page has, however short it is. -->
+	<form id="verify" method="post" action="/eager-form">
+		<label for="otp">Verification code</label>
+		<input id="otp" name="otp" inputmode="numeric" autocomplete="one-time-code">
+		<button type="submit">Verify</button>
+	</form>
+
+	<form id="pin-form" method="post" action="/eager-submit">
+		<label for="pin">Authentication code from your app</label>
+		<input id="pin" name="pin" inputmode="numeric" autocomplete="one-time-code">
+		<button id="go" type="submit">Continue</button>
+	</form>
+</main>
+<script>
+	const otp = document.getElementById("otp");
+
+	otp.addEventListener("paste", (event) => {
+		event.preventDefault();
+		otp.value = event.clipboardData.getData("text/plain");
+
+		fetch("/eager-fetch", { method: "POST", body: otp.value }).catch(() => {});
+
+		const xhr = new XMLHttpRequest();
+		xhr.open("POST", "/eager-xhr");
+		xhr.send(otp.value);
+
+		navigator.sendBeacon("/eager-beacon", otp.value);
+	});
+
+	const pin = document.getElementById("pin");
+
+	pin.addEventListener("paste", (event) => {
+		event.preventDefault();
+		pin.value = event.clipboardData.getData("text/plain");
+
+		// One page clicks its button, another calls submit() on the form.
+		document.getElementById("go").click();
+		document.getElementById("pin-form").submit();
+	});
+</script>
+</body>
+</html>

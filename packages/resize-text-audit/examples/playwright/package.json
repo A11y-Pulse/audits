@@ -1,0 +1,12 @@
+{
+	"name": "resize-text-audit-playwright-example",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"start": "node index.mjs"
+	},
+	"dependencies": {
+		"@a11y-pulse/resize-text-audit": "file:../..",
+		"playwright": "^1.63.0"
+	}
+}

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Lantern Pictures</title>
+		<style>
+			body { margin: 0; font: 16px/1.5 system-ui, sans-serif; }
+			main { max-width: 760px; margin: 0 auto; padding: 16px; }
+			.viewport { overflow: hidden; width: 760px; height: 280px; }
+			.track { display: flex; width: 2280px; transition: transform 80ms ease-out; }
+			.slide { flex: 0 0 760px; height: 280px; box-sizing: border-box; padding: 32px; color: #fff; background: #3a2d5c; }
+			.slide a { color: #fff; }
+		</style>
+	</head>
+	<body>
+		<main>
+			<h1>Now showing</h1>
+			<section aria-label="Featured films" id="featured">
+				<div class="viewport" id="films">
+					<div class="track" id="films-track">
+						<div class="slide"><h2>The Long Tide</h2><a href="/films/long-tide/trailer">Play trailer</a></div>
+						<div class="slide"><h2>Paper Kites</h2><a href="/films/paper-kites/trailer">Play trailer</a></div>
+						<div class="slide"><h2>Night Ferry</h2><a href="/films/night-ferry/trailer">Play trailer</a></div>
+					</div>
+				</div>
+				<p>
+					<a href="https://play.example/store/lantern">Play Store</a> ·
+					<a href="/stop-motion">Stop-motion season</a> ·
+					<button type="button" id="trailer-button">Play trailer</button>
+				</p>
+			</section>
+		</main>
+		<script>
+			const track = document.getElementById("films-track");
+			let index = 0;
+
+			setInterval(() => {
+				index = (index + 1) % 3;
+				track.style.transform = `translateX(${-760 * index}px)`;
+			}, 250);
+		</script>
+	</body>
+</html>

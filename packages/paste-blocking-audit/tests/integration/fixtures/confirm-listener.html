@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Create an account</title>
+</head>
+<body>
+<main>
+	<h1>Create an account</h1>
+	<form id="register" method="post" action="/register">
+		<label for="email">Email address</label>
+		<input id="email" type="email" name="email" autocomplete="email">
+
+		<label for="new-password">Choose a password</label>
+		<input id="new-password" type="password" name="password" autocomplete="new-password">
+
+		<label for="confirm-password">Type your password again</label>
+		<input id="confirm-password" type="password" name="confirm" autocomplete="new-password">
+
+		<button type="submit">Create account</button>
+	</form>
+</main>
+<script>
+	// "Make sure you typed it correctly": the usual reason given for refusing a paste.
+	document.getElementById("confirm-password").addEventListener("paste", (event) => {
+		event.preventDefault();
+	});
+</script>
+</body>
+</html>

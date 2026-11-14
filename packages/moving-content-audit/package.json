@@ -1,0 +1,61 @@
+{
+	"name": "@a11y-pulse/moving-content-audit",
+	"version": "0.1.0",
+	"description": "WCAG 2.2.2 Pause, Stop, Hide audit that watches a page for content that keeps moving on its own for more than five seconds and looks for a way to pause it.",
+	"type": "module",
+	"license": "SEE LICENSE IN LICENSE.md",
+	"author": "A11y Pulse",
+	"homepage": "https://github.com/A11y-Pulse/audits/tree/main/packages/moving-content-audit#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/A11y-Pulse/audits.git",
+		"directory": "packages/moving-content-audit"
+	},
+	"bugs": {
+		"url": "https://github.com/A11y-Pulse/audits/issues"
+	},
+	"keywords": [
+		"accessibility",
+		"a11y",
+		"wcag",
+		"pause-stop-hide",
+		"animation",
+		"carousel",
+		"audit"
+	],
+	"engines": {
+		"node": ">=22"
+	},
+	"exports": {
+		".": {
+			"source": "./src/index.ts",
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
+	},
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE.md"
+	],
+	"scripts": {
+		"build": "tsup && tsc -p tsconfig.build.json",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check",
+		"lint:fix": "biome check --fix",
+		"test:unit": "vitest run",
+		"test:integration": "vitest run --config vitest.integration.config.ts",
+		"test": "npm run typecheck && npm run test:unit",
+		"prepublishOnly": "npm run build"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"dependencies": {
+		"@a11y-pulse/browser-adaptor": "*"
+	},
+	"devDependencies": {
+		"playwright-core": "^1.64.1",
+		"puppeteer": "^25.16.0"
+	}
+}

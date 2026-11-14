@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Resize text: text only the narrow layout renders</title>
+		<style>
+			body {
+				margin: 24px;
+				font: 16px/1.5 sans-serif;
+			}
+			/* Not rendered at full size, so there is nothing to compare the zoomed layout with. */
+			#notice {
+				display: none;
+			}
+			@media (max-width: 700px) {
+				#notice {
+					display: block;
+					height: 30px;
+					overflow: hidden;
+					background: #fec;
+				}
+			}
+			#notice p {
+				margin: 0;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="notice">
+			<p id="notice-text">
+				Orders placed before two in the afternoon are sent the same day, and anything placed later
+				goes out on the next working day. Collection is free from any of our shops.
+			</p>
+		</div>
+		<h1>Delivery</h1>
+		<p>Choose a delivery option at the checkout.</p>
+	</body>
+</html>

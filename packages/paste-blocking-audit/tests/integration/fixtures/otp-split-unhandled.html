@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Enter your code</title>
+</head>
+<body>
+<main>
+	<h1>Enter the code we sent you</h1>
+	<form id="verify" method="post" action="/verify">
+		<fieldset>
+			<legend>6-digit code</legend>
+			<div class="boxes">
+				<div class="box"><input id="d1" class="digit" inputmode="numeric" maxlength="1" aria-label="Digit 1"></div>
+				<div class="box"><input id="d2" class="digit" inputmode="numeric" maxlength="1" aria-label="Digit 2"></div>
+				<div class="box"><input id="d3" class="digit" inputmode="numeric" maxlength="1" aria-label="Digit 3"></div>
+				<div class="box"><input id="d4" class="digit" inputmode="numeric" maxlength="1" aria-label="Digit 4"></div>
+				<div class="box"><input id="d5" class="digit" inputmode="numeric" maxlength="1" aria-label="Digit 5"></div>
+				<div class="box"><input id="d6" class="digit" inputmode="numeric" maxlength="1" aria-label="Digit 6"></div>
+			</div>
+		</fieldset>
+		<button type="submit">Verify</button>
+	</form>
+</main>
+<script>
+	const digits = Array.from(document.querySelectorAll(".digit"));
+
+	// Moves on after each typed digit, but a pasted code lands in one box and is cut to one digit.
+	digits.forEach((digit, index) => {
+		digit.addEventListener("input", () => {
+			if (digit.value && digits[index + 1]) {
+				digits[index + 1].focus();
+			}
+		});
+	});
+</script>
+</body>
+</html>

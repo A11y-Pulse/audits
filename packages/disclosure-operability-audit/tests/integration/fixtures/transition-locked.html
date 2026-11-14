@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Product details</title>
+<style>
+	body { font: 16px/1.5 system-ui, sans-serif; margin: 2rem; max-width: 40rem; }
+	button { font: inherit; }
+	.collapse { display: none; }
+	.collapse.show { display: block; }
+	.collapsing { display: block; height: 0; overflow: hidden; transition: height 0.35s ease; }
+</style>
+</head>
+<body>
+<main>
+	<h1>Product details</h1>
+	<!-- Modelled on a collapse plugin: while the panel is animating, further toggles are ignored. -->
+	<button id="specs-toggle" type="button" aria-expanded="false" aria-controls="specs">Specifications</button>
+	<div id="specs" class="collapse"><p>Weight 310g. Waterproof to 10,000mm. Packs into its own pocket.</p></div>
+</main>
+<script>
+	const toggle = document.getElementById("specs-toggle");
+	const panel = document.getElementById("specs");
+	let transitioning = false;
+
+	toggle.addEventListener("click", () => {
+		if (transitioning) {
+			return;
+		}
+
+		const open = !panel.classList.contains("show");
+
+		transitioning = true;
+		toggle.setAttribute("aria-expanded", String(open));
+
+		if (open) {
+			panel.classList.remove("collapse");
+			panel.classList.add("collapsing");
+			panel.style.height = `${panel.scrollHeight}px`;
+		} else {
+			panel.style.height = `${panel.getBoundingClientRect().height}px`;
+			panel.offsetHeight;
+			panel.classList.add("collapsing");
+			panel.classList.remove("collapse", "show");
+			panel.style.height = "";
+		}
+
+		panel.addEventListener(
+			"transitionend",
+			() => {
+				panel.classList.remove("collapsing");
+				panel.classList.add("collapse");
+				panel.classList.toggle("show", open);
+				panel.style.height = "";
+				transitioning = false;
+			},
+			{ once: true },
+		);
+	});
+</script>
+</body>
+</html>

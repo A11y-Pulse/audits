@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Coastline Kayaks</title>
+		<style>
+			body { margin: 0; font: 16px/1.5 system-ui, sans-serif; }
+			main { max-width: 760px; margin: 0 auto; padding: 16px; }
+			video { display: block; width: 480px; height: 270px; background: #000; }
+			.trips { margin-bottom: 500px; }
+		</style>
+	</head>
+	<body>
+		<main>
+			<h1>Coastline Kayaks</h1>
+			<video id="background" autoplay muted playsinline></video>
+			<p class="trips">Guided half-day trips leave from the boat ramp at 9am and 1pm.</p>
+			<video id="tour" autoplay muted playsinline controls></video>
+			<a href="/book">Book a trip</a>
+		</main>
+		<script>
+			// A stream drawn on a canvas stands in for a video file, so the fixture needs no codec.
+			const canvas = document.createElement("canvas");
+			canvas.width = 160;
+			canvas.height = 90;
+			const context = canvas.getContext("2d");
+			let frame = 0;
+
+			setInterval(() => {
+				context.fillStyle = `hsl(${(frame * 12) % 360} 70% 45%)`;
+				context.fillRect(0, 0, 160, 90);
+				context.fillStyle = "#fff";
+				context.fillRect((frame * 6) % 160, 30, 20, 30);
+				frame++;
+			}, 40);
+
+			const stream = canvas.captureStream(25);
+
+			for (const video of document.querySelectorAll("video")) {
+				video.srcObject = stream;
+				video.play();
+			}
+		</script>
+	</body>
+</html>

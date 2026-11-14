@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Comments</title>
+<style>
+	body { font: 16px/1.5 system-ui, sans-serif; margin: 2rem; }
+	button { font: inherit; }
+	[hidden] { display: none; }
+</style>
+</head>
+<body>
+<main>
+	<h1>Comments</h1>
+	<div id="thread">
+		<button id="show-replies" type="button" aria-expanded="false">Show 3 replies</button>
+	</div>
+	<button id="sort" type="button" aria-expanded="false" aria-controls="sort-options">Sort</button>
+	<ul id="sort-options" hidden><li>Newest</li><li>Oldest</li></ul>
+</main>
+<script>
+	// Replaces itself with the replies, as a "load more" button does.
+	document.getElementById("show-replies").addEventListener("click", () => {
+		document.getElementById("thread").innerHTML =
+			"<ul><li>Agreed.</li><li>Same here.</li><li>Thanks for sharing.</li></ul>";
+	});
+
+	const sort = document.getElementById("sort");
+
+	sort.addEventListener("click", () => {
+		const open = sort.getAttribute("aria-expanded") !== "true";
+
+		sort.setAttribute("aria-expanded", String(open));
+		document.getElementById("sort-options").hidden = !open;
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>a click listener on every element</title>
+<style>body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; } #close-banner { cursor: pointer; }</style></head><body>
+<header><a id="home" href="#home">Ridgeline Outfitters</a></header>
+<div id="banner"><span id="banner-text">Free shipping this week</span> <span id="close-banner">×</span></div>
+<div id="open-chat" onclick="void 0">Chat with us</div>
+<h1 id="title">Tents</h1>
+<p id="intro">Shelter for every season.</p>
+<ul id="list">
+	<li id="item-1">Summit 3</li><li id="item-2">Meadow 4</li><li id="item-3">Ridge 2</li>
+	<li id="item-4">Alpine 1</li><li id="item-5">Basecamp 6</li><li id="item-6">Trail 2</li>
+</ul>
+<p id="p-1">Two-pole dome.</p><p id="p-2">Tunnel design.</p><p id="p-3">Geodesic frame.</p>
+<p id="p-4">Single wall.</p><p id="p-5">Family size.</p><p id="p-6">Ultralight.</p>
+<p id="p-7">Three season.</p><p id="p-8">Four season.</p><p id="p-9">Free standing.</p>
+<p id="p-10">Vestibule included.</p>
+<footer><a id="contact" href="#contact">Contact</a></footer>
+<script>
+	// What a click-tracking or session-replay script that instruments each element does. Written by
+	// hand: no such script is installed here.
+	for (const element of document.querySelectorAll("body *")) {
+		element.addEventListener("click", () => {});
+	}
+</script>
+</body></html>

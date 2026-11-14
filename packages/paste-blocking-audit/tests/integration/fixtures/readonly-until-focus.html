@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sign in</title>
+</head>
+<body>
+<main>
+	<h1>Sign in</h1>
+	<form id="login" method="post" action="/login">
+		<label for="email">Email address</label>
+		<input id="email" type="email" name="email" autocomplete="username" readonly onfocus="this.removeAttribute('readonly')">
+
+		<label for="password">Password</label>
+		<input id="password" type="password" name="password" readonly>
+
+		<button type="submit">Sign in</button>
+	</form>
+
+	<h2>Welcome back</h2>
+	<form id="returning" method="post" action="/login">
+		<label for="saved-email">Signed in as</label>
+		<input id="saved-email" type="email" name="email" value="sam@example.com" readonly>
+
+		<label for="saved-password">Password</label>
+		<input id="saved-password" type="password" name="password" autocomplete="current-password">
+
+		<button type="submit">Sign in</button>
+	</form>
+</main>
+<script>
+	// Kept read-only until focus so that the browser and password managers do not autofill it.
+	const password = document.getElementById("password");
+
+	password.addEventListener("focus", () => {
+		password.readOnly = false;
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>storefront</title>
+<style>
+	body { margin: 0; font: 16px/1.5 sans-serif; }
+	header, main, footer { padding: 16px; }
+	nav ul { display: flex; gap: 16px; list-style: none; padding: 0; }
+	.products { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; list-style: none; padding: 0; }
+	.card { border: 1px solid #999; padding: 12px; }
+	.card-link, .swatch, .sort, .chip { cursor: pointer; }
+	.swatch { display: inline-block; width: 24px; height: 24px; border-radius: 50%; background: #246; }
+	th { text-align: left; padding: 4px 12px; }
+</style></head><body>
+<header>
+	<a id="logo" href="#home">Ridgeline</a>
+	<nav aria-label="Main"><ul>
+		<li><a id="nav-tents" href="#tents">Tents</a></li>
+		<li><a id="nav-packs" href="#packs">Packs</a></li>
+		<li><span id="nav-sale" class="chip" onclick="location.hash = 'sale'">Sale</span></li>
+	</ul></nav>
+</header>
+<main id="main">
+	<h1>Tents</h1>
+	<p>Every tent ships free. <em>Returns within 30 days.</em></p>
+	<ul id="products" class="products">
+		<li class="card">
+			<div id="card-1" class="card-link"><h2>Ridgeline 2</h2><p>$349</p></div>
+			<span id="swatch-1" class="swatch" role="button" aria-label="Show in blue"></span>
+			<button id="add-1" type="button">Add to basket</button>
+		</li>
+		<li id="card-2" class="card">
+			<h2><a id="card-2-link" href="#summit">Summit 3</a></h2><p>$529</p>
+			<button id="add-2" type="button">Add to basket</button>
+		</li>
+		<li class="card">
+			<h2><a id="card-3-link" href="#meadow">Meadow 4</a></h2><p>$619</p>
+			<div id="rating-3" tabindex="0">Rated 4.5 out of 5</div>
+			<button id="add-3" type="button">Add to basket</button>
+		</li>
+	</ul>
+	<table>
+		<thead><tr><th id="sort-name" class="sort">Name</th><th id="sort-price" scope="col"><button id="sort-price-button" type="button">Price</button></th></tr></thead>
+		<tbody><tr><td>Ridgeline 2</td><td>$349</td></tr><tr><td>Summit 3</td><td>$529</td></tr></tbody>
+	</table>
+</main>
+<footer><a id="terms" href="#terms">Terms</a></footer>
+<script>
+	document.getElementById("card-1").addEventListener("click", () => {});
+	document.getElementById("card-2").addEventListener("click", () => {});
+	document.getElementById("sort-name").addEventListener("click", () => {});
+	// Analytics, listening on the whole of main.
+	document.getElementById("main").addEventListener("click", () => {});
+</script>
+</body></html>

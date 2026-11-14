@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Resize text: fixed-height card</title>
+		<style>
+			body {
+				margin: 0;
+				font: 16px/1.5 sans-serif;
+			}
+			main {
+				padding: 24px 0;
+			}
+			/* Two rows of topics fit at full size. At 200% they wrap to four rows, and the fixed
+			   height cuts through the third and hides the fourth. */
+			#topics {
+				box-sizing: border-box;
+				width: 40vw;
+				height: 150px;
+				padding: 16px;
+				overflow: hidden;
+				background: #eef;
+			}
+			#topics h2 {
+				margin: 0 0 8px;
+				font-size: 20px;
+				line-height: 30px;
+			}
+			#topics ul {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 8px;
+				margin: 0;
+				padding: 0;
+				list-style: none;
+			}
+			#topics a {
+				display: block;
+				width: 100px;
+				height: 32px;
+				line-height: 32px;
+				text-align: center;
+				background: #fff;
+			}
+		</style>
+	</head>
+	<body>
+		<main>
+			<h1>Help centre</h1>
+			<p>Search our guides or pick a topic to get started.</p>
+			<section id="topics" aria-labelledby="topics-title">
+				<h2 id="topics-title">Topics</h2>
+				<ul>
+					<li><a id="t1" href="#">Billing</a></li>
+					<li><a id="t2" href="#">Delivery</a></li>
+					<li><a id="t3" href="#">Returns</a></li>
+					<li><a id="t4" href="#">Accounts</a></li>
+					<li><a id="t5" href="#">Privacy</a></li>
+					<li><a id="t6" href="#">Security</a></li>
+					<li><a id="t7" href="#">Gift cards</a></li>
+					<li><a id="t8" href="#">Contact</a></li>
+				</ul>
+			</section>
+		</main>
+	</body>
+</html>

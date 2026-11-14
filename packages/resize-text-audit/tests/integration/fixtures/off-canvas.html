@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Resize text: menu that moves off-canvas</title>
+		<style>
+			body {
+				margin: 0;
+				font: 16px/1.5 sans-serif;
+			}
+			.page {
+				position: relative;
+				overflow: hidden;
+				min-height: 100vh;
+			}
+			#menu {
+				display: flex;
+				gap: 24px;
+				padding: 16px 24px;
+				background: #223;
+			}
+			#menu a {
+				color: #fff;
+			}
+			#toggle {
+				display: none;
+				margin: 16px 24px;
+			}
+			/* The narrow layout parks the menu off to the left until the button opens it, and swaps
+			   the layout 250ms after the resize, as a debounced handler would. */
+			.narrow #menu {
+				position: absolute;
+				top: 0;
+				left: 0;
+				width: 240px;
+				flex-direction: column;
+				transform: translateX(-100%);
+			}
+			.narrow #toggle {
+				display: block;
+			}
+			main {
+				padding: 24px;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="page">
+			<nav id="menu" aria-label="Main">
+				<a href="#">Timetables</a>
+				<a href="#">Tickets and fares</a>
+				<a href="#">Service updates</a>
+				<a href="#">Accessibility</a>
+			</nav>
+			<button id="toggle" type="button" aria-expanded="false" aria-controls="menu">Menu</button>
+			<main>
+				<h1>Plan your journey</h1>
+				<p>Buses, trains and ferries across the region, with live departure times.</p>
+			</main>
+		</div>
+		<script>
+			let timer;
+
+			function apply() {
+				document.body.classList.toggle("narrow", window.innerWidth <= 700);
+			}
+
+			window.addEventListener("resize", () => {
+				clearTimeout(timer);
+				timer = setTimeout(apply, 250);
+			});
+			apply();
+		</script>
+	</body>
+</html>

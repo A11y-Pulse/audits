@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Resize text: an ellipsis on the wrapper of a link</title>
+		<style>
+			body {
+				margin: 24px;
+				font: 16px/1.5 sans-serif;
+			}
+			#files {
+				display: flex;
+				margin: 0;
+				padding: 0;
+				list-style: none;
+			}
+			/* The cell truncates, not the link inside it: at 200% each title is cut short with an
+			   ellipsis, and the hidden rest of it lies under the next cell. */
+			.cell {
+				flex: 0 0 22vw;
+				min-width: 0;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Recent files</h1>
+		<ul id="files">
+			<li class="cell"><a id="file-report" href="#">Quarterly sales report draft</a></li>
+			<li class="cell"><a id="file-budget" href="#">Marketing budget for next year</a></li>
+			<li class="cell"><a id="file-notes" href="#">Notes from the planning day</a></li>
+		</ul>
+	</body>
+</html>

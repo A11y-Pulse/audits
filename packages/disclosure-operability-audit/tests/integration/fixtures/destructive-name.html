@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Account settings</title>
+<style>
+	body { font: 16px/1.5 system-ui, sans-serif; margin: 2rem; max-width: 40rem; }
+	button { font: inherit; display: block; margin-top: 1rem; }
+	[hidden] { display: none; }
+</style>
+</head>
+<body>
+<main>
+	<h1>Account settings</h1>
+
+	<!-- Handlers that act at once and show nothing: each call is counted. -->
+	<button id="delete-account" type="button" aria-expanded="false">Delete account</button>
+	<button id="sign-out" type="button" aria-expanded="false" aria-label="Sign out"><svg width="16" height="16" aria-hidden="true"><rect width="16" height="16"/></svg></button>
+	<button id="remove-card" type="button" aria-expanded="false" aria-labelledby="remove-label card-label"><span id="remove-label">Remove</span></button>
+	<p id="card-label">Visa ending 4242</p>
+
+	<!-- An ordinary name, and a handler with no visible effect. -->
+	<button id="notifications" type="button" aria-expanded="false">Notifications</button>
+
+	<!-- Only aria-controls: nothing says this is a disclosure. -->
+	<button id="export" type="button" aria-controls="export-status">Export my data</button>
+	<p id="export-status" hidden>Your export has started.</p>
+
+	<!-- An ordinary disclosure, to show the page is still audited. -->
+	<button id="privacy-toggle" type="button" aria-expanded="false" aria-controls="privacy">Privacy options</button>
+	<div id="privacy" hidden><p>Choose who can see your profile.</p></div>
+</main>
+<script>
+	window.__fixture = {};
+
+	for (const id of ["delete-account", "sign-out", "remove-card", "notifications", "export"]) {
+		window.__fixture[id] = 0;
+		document.getElementById(id).addEventListener("click", () => {
+			window.__fixture[id]++;
+		});
+	}
+
+	const privacy = document.getElementById("privacy-toggle");
+
+	privacy.addEventListener("click", () => {
+		const open = privacy.getAttribute("aria-expanded") !== "true";
+
+		privacy.setAttribute("aria-expanded", String(open));
+		document.getElementById("privacy").hidden = !open;
+	});
+</script>
+</body>
+</html>

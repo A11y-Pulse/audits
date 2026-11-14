@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Hillcrest School</title>
+		<style>
+			body { margin: 0; font: 16px/1.5 system-ui, sans-serif; }
+			main { max-width: 760px; margin: 0 auto; padding: 16px; }
+			.slideshow { position: relative; width: 760px; height: 260px; }
+			.slideshow figure { position: absolute; inset: 0; margin: 0; opacity: 0; transition: opacity 100ms; color: #fff; padding: 24px; box-sizing: border-box; }
+			.slideshow figure.is-active { opacity: 1; }
+			.slideshow figure:nth-child(1) { background: #5b2a86; }
+			.slideshow figure:nth-child(2) { background: #2a6f86; }
+			.notices { margin-bottom: 600px; }
+		</style>
+	</head>
+	<body>
+		<main>
+			<h1>Hillcrest School</h1>
+			<div class="slideshow" id="slideshow">
+				<figure class="is-active"><figcaption>Year 6 camp at the lake</figcaption></figure>
+				<figure><figcaption>Science fair winners</figcaption></figure>
+			</div>
+			<p class="notices">Term dates and newsletters are on the notices page.</p>
+			<button type="button" id="motion-toggle">Turn off animations</button>
+		</main>
+		<script>
+			const slides = document.querySelectorAll(".slideshow figure");
+			let active = 0;
+
+			setInterval(() => {
+				slides[active].classList.remove("is-active");
+				active = (active + 1) % slides.length;
+				slides[active].classList.add("is-active");
+			}, 250);
+		</script>
+	</body>
+</html>

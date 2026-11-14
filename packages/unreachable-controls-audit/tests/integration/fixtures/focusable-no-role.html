@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>focusable click targets without a role</title>
+<style>body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; } .pointer { cursor: pointer; } .scroll { height: 60px; overflow: auto; }</style></head><body>
+<div id="buy" class="pointer" tabindex="0">Buy now</div>
+<div id="save" tabindex="0" onclick="void 0">Save for later</div>
+<div id="terms" class="scroll" tabindex="0"><p>Terms and conditions.</p><p>Returns within 30 days.</p><p>Delivery in 2 to 3 working days.</p><p>Warranty for two years.</p></div>
+<div id="hint" class="pointer" tabindex="0">Hover for a hint</div>
+<div id="named" tabindex="0" role="button" onclick="void 0">Named</div>
+<script>
+	const buy = document.getElementById("buy");
+	buy.addEventListener("click", () => {});
+	buy.addEventListener("keydown", () => {});
+</script>
+</body></html>

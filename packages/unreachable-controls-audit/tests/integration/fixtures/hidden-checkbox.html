@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>labels of hidden checkboxes</title>
+<style>body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; } .hide { display: none; } .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); } label { display: block; padding: 8px; cursor: pointer; }</style></head><body>
+<!-- display: none takes the checkbox out of the tab order, so only clicking the label toggles it. -->
+<input id="gift" class="hide" type="checkbox"><label id="gift-label" for="gift">Gift wrap</label>
+<!-- Visually hidden but still focusable. -->
+<input id="news" class="sr-only" type="checkbox"><label id="news-label" for="news">Send me news</label>
+<label id="terms-label"><input id="terms" type="checkbox"> I accept the terms</label>
+<input id="old" class="hide" type="checkbox" disabled><label id="old-label" for="old">Unavailable</label>
+</body></html>

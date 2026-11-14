@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Outdoor store</title>
+<style>
+	body { font: 16px/1.5 system-ui, sans-serif; margin: 0; }
+	nav ul { list-style: none; margin: 0; padding: 0; }
+	.bar { display: flex; gap: 1rem; background: #123; padding: 0.5rem 1rem; }
+	.bar > li { position: relative; }
+	.bar button { font: inherit; background: none; border: 0; color: #fff; padding: 0.5rem; }
+	.panel { display: none; position: absolute; top: 100%; left: 0; background: #fff; border: 1px solid #888; padding: 0.5rem 1rem; width: 12rem; }
+	.panel.open { display: block; }
+	main { padding: 2rem; }
+</style>
+</head>
+<body>
+<header>
+	<nav aria-label="Main">
+		<ul class="bar">
+			<li id="tents-item">
+				<button id="menu-tents" type="button" aria-expanded="false" aria-haspopup="true" aria-controls="tents-panel">Tents</button>
+				<ul id="tents-panel" class="panel">
+					<li><a href="/tents/solo">Solo tents</a></li>
+					<li><a href="/tents/family">Family tents</a></li>
+				</ul>
+			</li>
+			<li id="packs-item">
+				<button id="menu-packs" type="button" aria-expanded="false" aria-haspopup="true" aria-controls="packs-panel">Backpacks</button>
+				<ul id="packs-panel" class="panel">
+					<li><a href="/packs/day">Day packs</a></li>
+					<li><a href="/packs/multi-day">Multi-day packs</a></li>
+				</ul>
+			</li>
+		</ul>
+	</nav>
+</header>
+<main>
+	<h1>Summer sale</h1>
+	<p>Up to 30% off selected tents and packs.</p>
+</main>
+<script>
+	function setOpen(button, panel, open) {
+		button.setAttribute("aria-expanded", String(open));
+		panel.classList.toggle("open", open);
+	}
+
+	// Tents: pointer hover only.
+	{
+		const item = document.getElementById("tents-item");
+		const button = document.getElementById("menu-tents");
+		const panel = document.getElementById("tents-panel");
+
+		item.addEventListener("mouseenter", () => setOpen(button, panel, true));
+		item.addEventListener("mouseleave", () => setOpen(button, panel, false));
+	}
+
+	// Backpacks: hover, and the button toggles it too.
+	{
+		const item = document.getElementById("packs-item");
+		const button = document.getElementById("menu-packs");
+		const panel = document.getElementById("packs-panel");
+
+		item.addEventListener("mouseenter", () => setOpen(button, panel, true));
+		item.addEventListener("mouseleave", () => setOpen(button, panel, false));
+		button.addEventListener("click", () =>
+			setOpen(button, panel, button.getAttribute("aria-expanded") !== "true"),
+		);
+	}
+</script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>click targets that are not missing tab stops</title>
+<style>body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; } .pointer { cursor: pointer; } .backdrop { position: fixed; inset: 0; background: rgb(0 0 0 / 30%); } .dialog { position: fixed; top: 300px; left: 80px; padding: 24px; background: #fff; } .hidden { display: none; }</style></head><body>
+<div id="decor" class="pointer" aria-hidden="true" onclick="void 0">★</div>
+<div id="off" class="pointer" role="button" aria-disabled="true" onclick="void 0">Sold out</div>
+<div id="gone" class="pointer hidden" onclick="void 0">Hidden</div>
+<div id="inert-wrap" inert><div id="inert" class="pointer" onclick="void 0">Inert</div></div>
+<button id="parked" type="button" tabindex="-1" onclick="void 0">Parked</button>
+<a id="inner-link" href="#x"><span id="inner" class="pointer" onclick="void 0">Inside a link</span></a>
+<!-- Clicking the backdrop closes the dialog, which its Close button also does. -->
+<div id="backdrop" class="backdrop"></div>
+<div class="dialog" role="dialog" aria-modal="true" aria-label="Sign up">
+	<p>Get 10% off your first order.</p>
+	<button id="close" type="button">Close</button>
+</div>
+<script>
+	document.getElementById("backdrop").onclick = () => {};
+</script>
+</body></html>

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>hidden controls and their replacements</title>
+<style>body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; } .hide { display: none; } label { display: block; padding: 8px; } .chosen-single { display: inline-block; border: 1px solid #767676; padding: 4px 8px; } .box { display: inline-block; width: 16px; height: 16px; border: 1px solid #767676; }</style></head><body>
+<form>
+	<!-- A hand-written approximation of what Chosen and Select2 render (neither is installed here):
+	     the native select is hidden and a focusable widget right after it takes its place. -->
+	<label id="country-label" for="country">Country</label>
+	<select id="country" class="hide"><option>Aotearoa New Zealand</option><option>Australia</option></select>
+	<div id="country-chosen" class="chosen-container"><span class="chosen-single" role="combobox" tabindex="0" aria-expanded="false">Aotearoa New Zealand</span></div>
+
+	<!-- The checkbox itself has no display: none; the wrapper around it does. Only the label works. -->
+	<span class="hide"><input id="gift" type="checkbox"></span>
+	<label id="gift-label" for="gift">Gift wrap</label>
+
+	<!-- A hidden checkbox replaced by a focusable custom one named by the same label. -->
+	<input id="news" class="hide" type="checkbox">
+	<span id="news-box" class="box" role="checkbox" tabindex="0" aria-checked="false" aria-labelledby="news-label"></span>
+	<label id="news-label" for="news">Send me news</label>
+
+	<button id="save" type="button">Save</button>
+</form>
+</body></html>
