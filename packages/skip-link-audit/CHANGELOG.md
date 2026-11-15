@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.3.0
+
+### Minor Changes
+
+- [#112](https://github.com/A11y-Pulse/audits/pull/112) [`7cce2b9`](https://github.com/A11y-Pulse/audits/commit/7cce2b9d752fc7fb122555016b05f75fff250402) Thanks [@wildlyinaccurate](https://github.com/wildlyinaccurate)! - Reduce false results from the skip link audit.
+  
+  - Skip links whose target has nothing focusable inside (`<h1 id>`, an empty `<a id>`) now pass when the next Tab lands after the target.
+  - Menu toggles and other in-page links are no longer treated as skip links: a link without skip wording counts only when its target is the page's main content (a heading, the `main` landmark or around it, or a conventional id such as `content`), is rendered and is not a navigation block. Links with `aria-expanded`, `role="tab"` or `role="button"` are never activated.
+  - Skip wording is matched on whole words in the link's text and `aria-label`, and "go to" verbs need a content or navigation noun, so "Popular posts" or "Aller au panier" no longer count. `class` and `id` only count when they are a skip token such as `skip-link`.
+  - Script-driven skip links whose fragment matches nothing are activated and pass when focus moves to later content.
+  - Same-document links written as `/page#main` or an absolute URL are recognised.
+  - A target that is not rendered is reported as `target-hidden`, and fragments no longer resolve to form controls or meta tags that share the name.
+  - Skip links that can never receive focus are reported under the new `unreachable` field.
+  - Results now carry the link text, the target, and where focus went after Enter and after the follow-up Tab.
+  - The URL, `:target` and scroll position are restored after each activation, and when the audit ends focus is dropped and the next Tab press starts from the first tab stop again, whether or not a skip link was found. The history entry added by following a fragment link remains as a forward entry.
+
+### Patch Changes
+
+- Updated dependencies [[`5cf6dbf`](https://github.com/A11y-Pulse/audits/commit/5cf6dbf56202ec788db07adc21b9b674d6eb8ae3), [`49fc92c`](https://github.com/A11y-Pulse/audits/commit/49fc92c7b8541247facf8cccfefb25af760f16bb), [`49fc92c`](https://github.com/A11y-Pulse/audits/commit/49fc92c7b8541247facf8cccfefb25af760f16bb)]:
+  - @a11y-pulse/browser-adaptor@0.10.0
+
 ## 0.2.0
 
 ### Minor Changes

@@ -1,5 +1,49 @@
 # Changelog
 
+## 0.10.0
+
+### Minor Changes
+
+- [#113](https://github.com/A11y-Pulse/audits/pull/113) [`5cf6dbf`](https://github.com/A11y-Pulse/audits/commit/5cf6dbf56202ec788db07adc21b9b674d6eb8ae3) Thanks [@wildlyinaccurate](https://github.com/wildlyinaccurate)! - Add `@a11y-pulse/disclosure-operability-audit`, an audit for WCAG 2.1.1 Keyboard and 4.1.2 Name, Role, Value. It finds disclosure triggers (elements with `aria-expanded`), operates each with Enter and Space, and checks that it opens, updates `aria-expanded` and closes again. A trigger that a click or hover operates and the keyboard does not, or that shows content without updating its state, is a failure; unresponsive triggers, a state that changes with no content seen, popups only a click closes and triggers that open on focus are reported for review. Links that leave the page, submit buttons, text fields, checkboxes, radio buttons, composite-widget items and controls named for an action such as "Delete" or "Sign out" are never activated. A key is only pressed while the trigger holds keyboard focus, form submissions and navigations to another page are stopped while the audit runs, at most 20 triggers are operated, and each is put back as it was found along with focus and scrolling.
+  
+  `@a11y-pulse/browser-adaptor`: `KeyName` now includes `"Space"`, which both built-in adaptors already press.
+
+- [#110](https://github.com/A11y-Pulse/audits/pull/110) [`49fc92c`](https://github.com/A11y-Pulse/audits/commit/49fc92c7b8541247facf8cccfefb25af760f16bb) Thanks [@wildlyinaccurate](https://github.com/wildlyinaccurate)! - Harden the shared tab loop, so that pages which used to cut a session short, hang it or leave the page altered are audited in full.
+  
+  - `@a11y-pulse/tab-orchestrator`:
+    - A session starts at the first tab stop whatever was focused beforehand (an `autofocus` field, or where an earlier session stopped), and leaves the page ready to start from the top again.
+    - A Tab press that leaves nothing focused no longer ends the session when the element it reached blurred itself or was removed. A focusable `<body>` is a tab stop. Tabbable content in a shadow root after a date input or media player is no longer skipped.
+    - A focus cycle through controls the page re-renders on every lap is recognised as a revisit. A re-rendered node only counts as the one it replaced when it has the same id, href, name, label and text, so a list that swaps its next page into the same place is tabbed through to the end.
+    - New `maxTabPresses` (default 4096) and `maxDuration` options end a session with the new end reason `limit`.
+    - A consumer that throws is detached and ended as `failed` on its own; the others finish, and `run()` then rejects. The new `failures` property lists who threw.
+    - Navigation is detected without a `contextSignals` consumer, and wherever in the loop the document goes away.
+    - The context observer is uninstalled when the session ends: `window.open`, form submission and the History API work as before. A soft URL change is reported once, not again each time the page re-asserts the same URL.
+    - `TabSessionStats.dialogsDismissed` and `ContextChangeSignals.openedDialog` report native dialogs raised on focus.
+  - `@a11y-pulse/browser-adaptor`:
+    - `PuppeteerAdaptor` and `PlaywrightAdaptor` dismiss native dialogs, so an `alert` on focus cannot hang an audit, and count them through the new optional `BrowserAdaptor.takeDismissedDialogs`. **This changes the default behaviour of both adaptors:** with the default `dismissDialogs: true` they dismiss dialogs for as long as a tab session runs (through the new optional `BrowserAdaptor.startDismissingDialogs`), answering each dialog only after any `dialog` listener of your own has been called. Outside a session they leave dialogs alone, and a dialog still open when a session starts is closed then. Pass `dismissDialogs: "always"` to dismiss for the page's lifetime, which the audit runner does, or `false` to opt out.
+    - `truncateHtml` reads an input's type from its own `type` attribute, so text such as `type=submit` inside another attribute cannot stop a password's `value` being redacted.
+    - `getSelector` prefixes each shadow host (`site-footer >>> a.link`) so a selector for an element in a shadow root can no longer resolve to a different element in the light DOM. New `resolveSelector` turns a selector back into its element.
+    - `truncateHtml` finds the end of the opening tag when an attribute contains `>`, never cuts through a character reference or surrogate pair, trims `data:` URIs, and redacts the `value` of text-entry inputs.
+    - `PlaywrightAdaptor.evaluate` falls back to calling the page function by handle when the page's Content-Security-Policy refuses `new Function`.
+  - `@a11y-pulse/keyboard-trap-audit`: find cycle members named by a shadow-root selector instead of throwing on it.
+
+### Patch Changes
+
+- [#110](https://github.com/A11y-Pulse/audits/pull/110) [`49fc92c`](https://github.com/A11y-Pulse/audits/commit/49fc92c7b8541247facf8cccfefb25af760f16bb) Thanks [@wildlyinaccurate](https://github.com/wildlyinaccurate)! - Speed up the shared tab pass. On a 200-link page a pass with no captures drops from about 8.0s to 3.3s, and one that captures an unfocused pair on every stop from about 34s to 23s.
+  
+  - `@a11y-pulse/tab-orchestrator`:
+    - The page scripts for each step travel as one composed function, so a stop that nobody captures takes two `adaptor.evaluate()` calls instead of five to eight, and an unfocused pair three more instead of seven. (These are calls on the adaptor; the driver beneath may make more than one round trip for each.) An adaptor whose `evaluate()` does not run a composed function is detected at session start and gets one call per script, with the same results. The new `composeScripts` option turns composing off.
+    - The composed function is built when a session first sends one, not when the package is imported, so a host that forbids building code from strings can still import the package and gets one call per script.
+    - A composed stop script that never comes back (a page whose timers and animation frames have both been stopped) is abandoned after the longest its waits could take plus three seconds, and the session carries on one script at a time. The waits inside the page end on a timer or an animation frame, whichever fires.
+    - A capture is always of the element its stop was measured on, even if the page has moved focus on before a consumer asks for it.
+    - `screenshotSettleDelay` is now the longest the session waits after a Tab press rather than a fixed pause. The wait ends after one animation frame unless the page set a timer for the press that comes due within the delay, or a transition, animation or smooth scroll is still moving the focused element. To tell which timers a focus handler set, the session wraps `window.setTimeout` while it runs and restores it when it ends. A capture is still never taken sooner than the full delay after the press.
+    - Computed styles are only read when a consumer declares `baselineStyles` or `unfocusedPair`; other consumers get empty records in `ActiveElementInfo.styles`.
+    - The element handle is only fetched on a stop where a consumer captures something, and the obscurer marker is only cleared when one was set.
+    - A fully covered element whose cover is see-through is no longer measured a second time after 250ms, since it passes either way.
+  - `@a11y-pulse/browser-adaptor`:
+    - `PuppeteerAdaptor` and `PlaywrightAdaptor` no longer wait two animation frames before a CDP screenshot. Chromium renders a frame of the page as it stands for each capture, so the wait only cost time. The wait is kept where the capture goes through the driver's own screenshot API.
+    - `getSelector` counts each candidate selector once per call and uses the browser's cached class collections, which makes it cheaper on large documents without changing what it returns.
+
 ## 0.9.0
 
 ### Minor Changes
