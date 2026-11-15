@@ -29,40 +29,30 @@ A collection of audits that are designed to complement static analysis tools lik
 | Success criterion | A11y-Pulse/audits | axe-core | pa11y (HTML_CodeSniffer) |
 | --- | --- | --- | --- |
 | [1.1.1 Non-text Content](https://www.w3.org/WAI/WCAG22/Understanding/non-text-content) (A) | ✅ | 🟡<sup>1</sup> | ➖<sup>2</sup> |
-| [1.3.1 Info and Relationships](https://www.w3.org/WAI/WCAG22/Understanding/info-and-relationships) (A) | ✅ | 🟡<sup>6</sup> | ❔<sup>14</sup> |
 | [1.4.1 Use of Color](https://www.w3.org/WAI/WCAG22/Understanding/use-of-color) (A) | ✅ | 🟡<sup>3</sup> | ➖<sup>2</sup> |
-| [1.4.4 Resize Text](https://www.w3.org/WAI/WCAG22/Understanding/resize-text) (AA) | ✅ | 🟡<sup>7</sup> | ❔<sup>14</sup> |
+| [1.4.4 Resize Text](https://www.w3.org/WAI/WCAG22/Understanding/resize-text) (AA) | ✅ | 🟡<sup>4</sup> | ➖<sup>2</sup> |
 | [1.4.10 Reflow](https://www.w3.org/WAI/WCAG22/Understanding/reflow) (AA) | ✅ | ❌ | ➖<sup>2</sup> |
-| [1.4.11 Non-text Contrast](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast) (AA) | ✅<sup>12</sup> | ❌ | ❔<sup>14</sup> |
-| [1.4.12 Text Spacing](https://www.w3.org/WAI/WCAG22/Understanding/text-spacing) (AA) | ✅ | 🟡<sup>4</sup> | ➖<sup>2</sup> |
-| [2.1.1 Keyboard](https://www.w3.org/WAI/WCAG22/Understanding/keyboard) (A) | ✅ | 🟡<sup>8</sup> | ❔<sup>14</sup> |
-| [2.1.2 No Keyboard Trap](https://www.w3.org/WAI/WCAG22/Understanding/no-keyboard-trap) (A) | 🟡<sup>13</sup> | ❌ | ➖<sup>2</sup> |
-| [2.2.2 Pause, Stop, Hide](https://www.w3.org/WAI/WCAG22/Understanding/pause-stop-hide) (A) | ✅ | 🟡<sup>9</sup> | ❔<sup>14</sup> |
-| [2.4.1 Bypass Blocks](https://www.w3.org/WAI/WCAG22/Understanding/bypass-blocks) (A) | ✅ | 🟡<sup>5</sup> | ➖<sup>2</sup> |
-| [2.4.3 Focus Order](https://www.w3.org/WAI/WCAG22/Understanding/focus-order) (A) | 🟡<sup>13</sup> | ❌ | ❔<sup>14</sup> |
-| [2.4.4 Link Purpose (In Context)](https://www.w3.org/WAI/WCAG22/Understanding/link-purpose-in-context) (A) | ✅ | 🟡<sup>10</sup> | ❔<sup>14</sup> |
+| [1.4.11 Non-text Contrast](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast) (AA) | ✅ | ❌ | ➖<sup>2</sup> |
+| [1.4.12 Text Spacing](https://www.w3.org/WAI/WCAG22/Understanding/text-spacing) (AA) | ✅ | 🟡<sup>5</sup> | ➖<sup>2</sup> |
+| [2.1.1 Keyboard](https://www.w3.org/WAI/WCAG22/Understanding/keyboard) (A) | ✅ | 🟡<sup>6</sup> | ➖<sup>2</sup> |
+| [2.1.2 No Keyboard Trap](https://www.w3.org/WAI/WCAG22/Understanding/no-keyboard-trap) (A) | ✅ | ❌ | ➖<sup>2</sup> |
+| [2.2.2 Pause, Stop, Hide](https://www.w3.org/WAI/WCAG22/Understanding/pause-stop-hide) (A) | ✅ | 🟡<sup>7</sup> | ➖<sup>2</sup> |
+| [2.4.1 Bypass Blocks](https://www.w3.org/WAI/WCAG22/Understanding/bypass-blocks) (A) | ✅ | 🟡<sup>8</sup> | ➖<sup>2</sup> |
 | [2.4.6 Headings and Labels](https://www.w3.org/WAI/WCAG22/Understanding/headings-and-labels) (AA) | ✅ | ❌ | ➖<sup>2</sup> |
 | [2.4.7 Focus Visible](https://www.w3.org/WAI/WCAG22/Understanding/focus-visible) (AA) | ✅ | ❌ | ➖<sup>2</sup> |
 | [2.4.11 Focus Not Obscured](https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum) (AA) | ✅ | ❌ | ❌ |
 | [3.2.1 On Focus](https://www.w3.org/WAI/WCAG22/Understanding/on-focus) (A) | ✅ | ❌ | ➖<sup>2</sup> |
-| [3.3.8 Accessible Authentication](https://www.w3.org/WAI/WCAG22/Understanding/accessible-authentication-minimum) (AA) | 🟡<sup>13</sup> | ❌ | ❌ |
-| [4.1.2 Name, Role, Value](https://www.w3.org/WAI/WCAG22/Understanding/name-role-value) (A) | ✅ | 🟡<sup>11</sup> | ❔<sup>14</sup> |
+| [3.3.8 Accessible Authentication](https://www.w3.org/WAI/WCAG22/Understanding/accessible-authentication-minimum) (AA) | ✅ | ❌ | ❌ |
 
 <sup>
 1. The `image-alt` audit and its relatives only check that a text alternative exists.<br />
 2. Manual review only: emits a note asking a human to check the criterion.<br />
 3. The `link-in-text-block` audit only checks that links are distinguishable from the surrounding text.<br />
-4. The `avoid-inline-spacing` audit only flags inline `!important` spacing declarations.<br />
-5. The `bypass` audit only checks that a bypass mechanism exists, not that it works.<br />
-6. The audits for this criterion check lists, tables and required ARIA parents and children, not whether tabs and tab panels are paired.<br />
-7. The `meta-viewport` audit only checks that the viewport tag does not disable zooming, not what the page looks like once zoomed.<br />
-8. The `scrollable-region-focusable`, `frame-focusable-content` and `server-side-image-map` audits only check that scrollable regions and frames can be reached and that no server-side image map is used, not other controls.<br />
-9. The `blink` and `marquee` audits only flag those two elements, not carousels or animations.<br />
-10. The `link-name` audit only checks that a link has a name, not what the name is.<br />
-11. The audits for this criterion check that controls have names and that ARIA attributes are valid, not that a control built from a `div` has a role or that a disclosure's state changes when it is operated.<br />
-12. Focus indicators only: the contrast of other controls and graphics is not measured.<br />
-13. Reported for human review only: these audits collect the evidence but never fail a page on their own.<br />
-14. Not verified for this table.<br />
+4. The `meta-viewport` audit only checks that zooming is not disabled.<br />
+5. The `avoid-inline-spacing` audit only flags inline `!important` spacing declarations.<br />
+6. The `scrollable-region-focusable` audit and its relatives only check scrollable regions and frames.<br />
+7. The `blink` and `marquee` audits only flag those two elements.<br />
+8. The `bypass` audit only checks that a bypass mechanism exists, not that it works.<br />
 </sup>
 
 ## Quick Start
