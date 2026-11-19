@@ -49,6 +49,6 @@
 		"@a11y-pulse/focus-not-obscured-audit": "*",
 		"happy-dom": "^21.0.4",
 		"playwright-core": "^1.65.0",
-		"puppeteer": "^25.16.0"
+		"puppeteer": "^25.17.0"
 	}
 }

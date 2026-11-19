@@ -69,7 +69,7 @@
 	},
 	"peerDependencies": {
 		"playwright-core": ">=1.40",
-		"puppeteer": "^25.16.0"
+		"puppeteer": "^25.17.0"
 	},
 	"peerDependenciesMeta": {
 		"playwright-core": {
@@ -82,6 +82,6 @@
 	"devDependencies": {
 		"happy-dom": "^21.0.4",
 		"playwright-core": "^1.65.0",
-		"puppeteer": "^25.16.0"
+		"puppeteer": "^25.17.0"
 	}
 }

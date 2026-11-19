@@ -74,7 +74,7 @@
 		"@a11y-pulse/text-spacing-audit": "*",
 		"@a11y-pulse/unreachable-controls-audit": "*",
 		"axe-core": "^4.14.0",
-		"puppeteer": "^25.16.0"
+		"puppeteer": "^25.17.0"
 	},
 	"peerDependencies": {
 		"playwright-core": ">=1.40"
