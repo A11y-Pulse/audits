@@ -35,7 +35,7 @@
 	"devDependencies": {
 		"@a11y-pulse/browser-adaptor": "*",
 		"@a11y-pulse/tab-orchestrator": "*",
-		"playwright-core": "^1.65.0",
+		"playwright-core": "^1.65.1",
 		"puppeteer": "^25.17.0",
 		"vitest": "^5.1.0"
 	}

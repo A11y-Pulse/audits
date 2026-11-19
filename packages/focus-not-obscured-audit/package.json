@@ -55,7 +55,7 @@
 		"@a11y-pulse/tab-orchestrator": "*"
 	},
 	"devDependencies": {
-		"playwright-core": "^1.65.0",
+		"playwright-core": "^1.65.1",
 		"puppeteer": "^25.17.0"
 	}
 }
