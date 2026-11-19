@@ -16,7 +16,12 @@ import {
 const PAGE_URL = "https://example.test/";
 
 function session(): TabSessionHandle {
-	return { disconnect: vi.fn(), ensureUnfocusedPair: vi.fn(), screenshotClip: vi.fn() };
+	return {
+		disconnect: vi.fn(),
+		ensureUnfocusedPair: vi.fn(),
+		screenshotClip: vi.fn(),
+		screenshotContext: vi.fn(),
+	};
 }
 
 function stop(index: number): ActiveElementInfo {

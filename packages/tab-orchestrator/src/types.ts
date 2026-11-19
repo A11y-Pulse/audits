@@ -149,13 +149,21 @@ export type PairContext = {
 	animating?: true;
 };
 
-export type TabStopSnapshot = {
+type CapabilityFields = {
+	contextSignals: ContextChangeDrain;
+	obscuring: ObscuredMeasurement;
+};
+
+type PromisedFields<C extends Capability> = "contextSignals" extends C
+	? "contextSignals"
+	: C & keyof CapabilityFields;
+
+export type TabStopSnapshot<C extends Capability = never> = {
 	tabIndex: number;
 	activeElement: ActiveElementInfo;
 	baselineStyles?: StyleSnapshot;
-	contextSignals?: ContextChangeDrain;
-	obscuring?: ObscuredMeasurement;
-};
+} & Partial<CapabilityFields> &
+	Pick<CapabilityFields, PromisedFields<C>>;
 
 export type ContextChangeDrain = {
 	signals: ContextChangeSignals;
@@ -281,10 +289,9 @@ export type TabSessionHandle = {
 	/**
 	 * Screenshot a strip the width of the viewport around the currently focused element, with the
 	 * element's box outlined, so that an element hidden behind something can still be located.
-	 * Requires the `screenshot` capability. Not cached: each call is a capture. Optional only so
-	 * that a hand-written handle need not supply it; a session's own handle always does.
+	 * Requires the `screenshot` capability. Not cached: each call is a capture.
 	 */
-	screenshotContext?(): Promise<Uint8Array>;
+	screenshotContext(): Promise<Uint8Array>;
 };
 
 /** What a session did, for monitoring its cost. */
@@ -308,9 +315,13 @@ export type ConsumerFailure = {
 	error: unknown;
 };
 
-export type TabConsumer = {
-	readonly capabilities: ReadonlySet<Capability>;
+/**
+ * `C` names the capabilities the consumer declares, so its snapshots carry their fields. Without
+ * it, the consumer may declare any capabilities and is promised none of their fields.
+ */
+export type TabConsumer<C extends Capability = never> = {
+	readonly capabilities: ReadonlySet<[C] extends [never] ? Capability : C>;
 	onSessionStart?(session: TabSessionHandle): void | Promise<void>;
-	onTabStop(snapshot: TabStopSnapshot, session: TabSessionHandle): void | Promise<void>;
+	onTabStop(snapshot: TabStopSnapshot<C>, session: TabSessionHandle): void | Promise<void>;
 	onSessionEnd?(reason: SessionEndReason, detail: SessionEndDetail): void;
 };

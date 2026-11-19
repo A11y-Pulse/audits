@@ -1,10 +1,12 @@
 /**
  * IMPORTANT: Functions in this file are serialized and injected into the audited page, so they must
- * not reference any symbols outside their own scope. This also means they cannot share code, so any
- * common logic (like descending into shadow roots) must be duplicated.
+ * not reference any symbols outside their own scope. The only code they share is what
+ * `withHelpers` gives them; any other common logic (like descending into shadow roots) must be
+ * duplicated.
  */
 
 import type { Rect } from "@a11y-pulse/browser-adaptor";
+import { withHelpers } from "./compose-script";
 import type { StyleSnapshot } from "./types";
 
 export {
@@ -32,22 +34,10 @@ export type BaselinePayload = {
 	entries: BaselineElementEntry[];
 };
 
-/**
- * Find up to `limit` focusable elements and mark them with `markerAttr` and a unique index. Then
- * return a snapshot of their styles to use as a baseline.
- */
-export function baselineScript(
-	props: string[],
-	markerAttr: string,
-	limit: number,
-): BaselinePayload {
-	// Bound oversized computed values (data-URI background images can run to hundreds of KB) while
-	// preserving inequality via the length and a fingerprint of the full value. Must be
-	// byte-identical to the copy in probeActiveElementScript, or every oversized value would "change"
-	// on focus and produce a false style-check pass.
-	const truncateValue = (value: string): string => {
-		const MAX_STYLE_VALUE_LENGTH = 512;
+export function readStyleSnapshot(el: Element, props: string[]): StyleSnapshot {
+	const MAX_STYLE_VALUE_LENGTH = 512;
 
+	const truncate = (value: string): string => {
 		if (value.length <= MAX_STYLE_VALUE_LENGTH) {
 			return value;
 		}
@@ -61,135 +51,141 @@ export function baselineScript(
 		return `${value.slice(0, MAX_STYLE_VALUE_LENGTH)}#len=${value.length}#h=${hash.toString(36)}`;
 	};
 
-	const snapshot = (el: Element): StyleSnapshot => {
-		const read = (pseudo: string | undefined): Record<string, string> => {
-			// No consumer wants styles: skip the computed-style reads altogether.
-			if (props.length === 0) {
-				return {};
-			}
+	const read = (pseudo: string | undefined): Record<string, string> => {
+		// No consumer wants styles: skip the computed-style reads altogether.
+		if (props.length === 0) {
+			return {};
+		}
 
-			const cs = getComputedStyle(el, pseudo);
-			const out: Record<string, string> = {};
+		const cs = getComputedStyle(el, pseudo);
+		const out: Record<string, string> = {};
 
-			for (const prop of props) {
-				out[prop] = truncateValue(cs.getPropertyValue(prop));
-			}
+		for (const prop of props) {
+			out[prop] = truncate(cs.getPropertyValue(prop));
+		}
 
-			if (pseudo) {
-				out.content = truncateValue(cs.getPropertyValue("content"));
-			}
+		if (pseudo) {
+			out.content = truncate(cs.getPropertyValue("content"));
+		}
 
-			return out;
-		};
-
-		return {
-			element: read(undefined),
-			before: read("::before"),
-			after: read("::after"),
-		};
+		return out;
 	};
 
-	const candidates: Element[] = [];
-	const focusableSelector = [
-		"a[href]",
-		"button",
-		"input",
-		"select",
-		"textarea",
-		"[tabindex]",
-		'[contenteditable=""]',
-		'[contenteditable="true"]',
-	].join(", ");
-
-	// Collect focusable candidates in document order, descending into open shadow roots.
-	const collect = (root: Document | ShadowRoot): void => {
-		for (const el of Array.from(root.querySelectorAll("*"))) {
-			if (el.matches(focusableSelector)) {
-				candidates.push(el);
-			}
-
-			if (el.shadowRoot) {
-				collect(el.shadowRoot);
-			}
-		}
+	return {
+		element: read(undefined),
+		before: read("::before"),
+		after: read("::after"),
 	};
-
-	collect(document);
-
-	const styles: StyleSnapshot[] = [];
-	const styleIndexByKey = new Map<string, number>();
-	const entries: BaselineElementEntry[] = [];
-	let idx = 0;
-
-	for (const el of candidates) {
-		if (idx >= limit) {
-			break;
-		}
-
-		if (el.hasAttribute("disabled")) {
-			continue;
-		}
-
-		if ((el as HTMLElement).tabIndex < 0) {
-			// Skip elements that are focusable but not in the tab order (negative tabindex). The audit
-			// tabs through the page, so it never lands on them, and counting them would waste the
-			// element-limit budget.
-			continue;
-		}
-
-		// Skip non-visible elements so they don't consume the marker budget (e.g. links inside a closed
-		// mega-menu). checkVisibility sees hiding applied by ancestors, which per-element computed
-		// styles don't (`display` doesn't inherit); fall back to the element's own styles where it's
-		// unavailable.
-		const visibilityCheck = el as Element & {
-			checkVisibility?: (options?: { checkVisibilityCSS?: boolean }) => boolean;
-		};
-
-		if (typeof visibilityCheck.checkVisibility === "function") {
-			if (!visibilityCheck.checkVisibility({ checkVisibilityCSS: true })) {
-				continue;
-			}
-		} else {
-			const cs = getComputedStyle(el);
-
-			if (cs.display === "none" || cs.visibility === "hidden") {
-				continue;
-			}
-		}
-
-		// Mark before measuring: the probe reads styles and rects while the marker is present, so the
-		// baseline must be captured in the same DOM state.
-		el.setAttribute(markerAttr, String(idx));
-
-		const rect = el.getBoundingClientRect();
-
-		// Intern the snapshot: the JSON key is deterministic because every snapshot is built with the
-		// same property insertion order.
-		const snap = snapshot(el);
-		const key = JSON.stringify(snap);
-		let styleIndex = styleIndexByKey.get(key);
-
-		if (styleIndex === undefined) {
-			styleIndex = styles.length;
-			styles.push(snap);
-			styleIndexByKey.set(key, styleIndex);
-		}
-
-		entries.push({
-			index: idx,
-			styleIndex,
-			rect: {
-				x: rect.left + window.scrollX,
-				y: rect.top + window.scrollY,
-				width: rect.width,
-				height: rect.height,
-			},
-		});
-		idx++;
-	}
-
-	return { styles, entries };
 }
+
+/**
+ * Find up to `limit` focusable elements and mark them with `markerAttr` and a unique index. Then
+ * return a snapshot of their styles to use as a baseline.
+ */
+export const baselineScript = withHelpers(
+	[readStyleSnapshot],
+	function baselineScript(props: string[], markerAttr: string, limit: number): BaselinePayload {
+		const candidates: Element[] = [];
+		const focusableSelector = [
+			"a[href]",
+			"button",
+			"input",
+			"select",
+			"textarea",
+			"[tabindex]",
+			'[contenteditable=""]',
+			'[contenteditable="true"]',
+		].join(", ");
+
+		// Collect focusable candidates in document order, descending into open shadow roots.
+		const collect = (root: Document | ShadowRoot): void => {
+			for (const el of Array.from(root.querySelectorAll("*"))) {
+				if (el.matches(focusableSelector)) {
+					candidates.push(el);
+				}
+
+				if (el.shadowRoot) {
+					collect(el.shadowRoot);
+				}
+			}
+		};
+
+		collect(document);
+
+		const marked: Element[] = [];
+
+		for (const el of candidates) {
+			if (marked.length >= limit) {
+				break;
+			}
+
+			if (el.hasAttribute("disabled")) {
+				continue;
+			}
+
+			if ((el as HTMLElement).tabIndex < 0) {
+				continue;
+			}
+
+			const visibilityCheck = el as Element & {
+				checkVisibility?: (options?: { checkVisibilityCSS?: boolean }) => boolean;
+			};
+
+			if (typeof visibilityCheck.checkVisibility === "function") {
+				if (!visibilityCheck.checkVisibility({ checkVisibilityCSS: true })) {
+					continue;
+				}
+			} else {
+				const cs = getComputedStyle(el);
+
+				if (cs.display === "none" || cs.visibility === "hidden") {
+					continue;
+				}
+			}
+
+			el.setAttribute(markerAttr, String(marked.length));
+			marked.push(el);
+		}
+
+		const keyOf = (snap: StyleSnapshot): string =>
+			JSON.stringify(
+				[snap.element, snap.before, snap.after].map((values) =>
+					Object.keys(values)
+						.sort()
+						.map((prop) => [prop, values[prop]]),
+				),
+			);
+
+		const styles: StyleSnapshot[] = [];
+		const styleIndexByKey = new Map<string, number>();
+
+		const entries = marked.map((el, index): BaselineElementEntry => {
+			const rect = el.getBoundingClientRect();
+			const snap = readStyleSnapshot(el, props);
+			const key = keyOf(snap);
+			let styleIndex = styleIndexByKey.get(key);
+
+			if (styleIndex === undefined) {
+				styleIndex = styles.length;
+				styles.push(snap);
+				styleIndexByKey.set(key, styleIndex);
+			}
+
+			return {
+				index,
+				styleIndex,
+				rect: {
+					x: rect.left + window.scrollX,
+					y: rect.top + window.scrollY,
+					width: rect.width,
+					height: rect.height,
+				},
+			};
+		});
+
+		return { styles, entries };
+	},
+);
 
 /** Every element that can be a sequential focus stop, before tabindex, state and visibility. */
 export const TABBABLE_SELECTOR = [
@@ -855,221 +851,180 @@ export type ActiveElementBase = {
  * Read the currently focused element (descending open shadow roots), returning its marker index,
  * opening-tag HTML (marker attribute stripped), focus-relevant styles, and page-relative rect.
  */
-export function probeActiveElementScript(props: string[], markerAttr: string): ActiveElementBase {
-	let el = document.activeElement;
+export const probeActiveElementScript = withHelpers(
+	[readStyleSnapshot],
+	function probeActiveElementScript(props: string[], markerAttr: string): ActiveElementBase {
+		let el = document.activeElement;
 
-	while (el?.shadowRoot?.activeElement) {
-		el = el.shadowRoot.activeElement;
-	}
-
-	// <body> is the active element whenever nothing is focused. It only matches :focus when it has
-	// really taken focus, which a focusable or editable <body> does as a tab stop of its own.
-	let bodyFocused = false;
-
-	try {
-		bodyFocused = el === document.body && el.matches(":focus");
-	} catch {}
-
-	if (!el || (el === document.body && !bodyFocused)) {
-		return {
-			index: null,
-			isBody: true,
-			isIframe: false,
-			html: "",
-			styles: { element: {}, before: {}, after: {} },
-			rect: { x: 0, y: 0, width: 0, height: 0 },
-		};
-	}
-
-	// Must be byte-identical to the copy in baselineScript: snapshots from the two scripts are
-	// compared for equality, so they have to truncate oversized values the same way.
-	const truncateValue = (value: string): string => {
-		const MAX_STYLE_VALUE_LENGTH = 512;
-
-		if (value.length <= MAX_STYLE_VALUE_LENGTH) {
-			return value;
+		while (el?.shadowRoot?.activeElement) {
+			el = el.shadowRoot.activeElement;
 		}
 
-		let hash = 5381;
+		// <body> is the active element whenever nothing is focused. It only matches :focus when it has
+		// really taken focus, which a focusable or editable <body> does as a tab stop of its own.
+		let bodyFocused = false;
 
-		for (let i = 0; i < value.length; i++) {
-			hash = ((hash * 33) ^ value.charCodeAt(i)) >>> 0;
+		try {
+			bodyFocused = el === document.body && el.matches(":focus");
+		} catch {}
+
+		if (!el || (el === document.body && !bodyFocused)) {
+			return {
+				index: null,
+				isBody: true,
+				isIframe: false,
+				html: "",
+				styles: { element: {}, before: {}, after: {} },
+				rect: { x: 0, y: 0, width: 0, height: 0 },
+			};
 		}
 
-		return `${value.slice(0, MAX_STYLE_VALUE_LENGTH)}#len=${value.length}#h=${hash.toString(36)}`;
-	};
+		const idxAttr = el.getAttribute(markerAttr);
+		const rect = el.getBoundingClientRect();
 
-	const read = (pseudo: string | undefined): Record<string, string> => {
-		// No consumer wants styles: skip the computed-style reads altogether.
-		if (props.length === 0) {
-			return {};
-		}
+		if (idxAttr !== null && typeof WeakRef === "function") {
+			// Must be byte-identical to the copy in markActiveElementScript: both write the same registry.
+			const placeOf = (element: Element): string => {
+				const path: string[] = [];
 
-		const cs = getComputedStyle(el as Element, pseudo);
-		const out: Record<string, string> = {};
+				for (let node: Element | null = element; node; ) {
+					const parent: Element | null = node.parentElement;
+					const siblings = parent ? Array.from(parent.children) : [];
+					path.push(`${node.nodeName}:${siblings.indexOf(node)}`);
+					node = parent ?? ((node.getRootNode() as ShadowRoot).host as Element | undefined) ?? null;
+				}
 
-		for (const prop of props) {
-			out[prop] = truncateValue(cs.getPropertyValue(prop));
-		}
+				const rect = element.getBoundingClientRect();
 
-		if (pseudo) {
-			out.content = truncateValue(cs.getPropertyValue("content"));
-		}
+				// What the element is, as well as where: a page that swaps in new content where the old
+				// stood (the next page of a list) has put a different element there, not the same one.
+				const identity = [
+					element.id,
+					element.getAttribute("href") ?? "",
+					element.getAttribute("name") ?? "",
+					element.getAttribute("aria-label") ?? "",
+					(element.textContent ?? "").replace(/\s+/g, " ").trim().slice(0, 200),
+				];
 
-		return out;
-	};
+				return [
+					path.join("/"),
+					Math.round(rect.left + window.scrollX),
+					Math.round(rect.top + window.scrollY),
+					Math.round(rect.width),
+					Math.round(rect.height),
+					JSON.stringify(identity),
+				].join("|");
+			};
 
-	const idxAttr = el.getAttribute(markerAttr);
-	const rect = el.getBoundingClientRect();
+			const win = window as SeenWindow;
+			win.__a11yPulseSeen ??= { byElement: new WeakMap(), byPlace: new Map() };
 
-	if (idxAttr !== null && typeof WeakRef === "function") {
-		// Must be byte-identical to the copy in markActiveElementScript: both write the same registry.
-		const placeOf = (element: Element): string => {
-			const path: string[] = [];
-
-			for (let node: Element | null = element; node; ) {
-				const parent: Element | null = node.parentElement;
-				const siblings = parent ? Array.from(parent.children) : [];
-				path.push(`${node.nodeName}:${siblings.indexOf(node)}`);
-				node = parent ?? ((node.getRootNode() as ShadowRoot).host as Element | undefined) ?? null;
+			if (!win.__a11yPulseSeen.byElement.has(el)) {
+				win.__a11yPulseSeen.byElement.set(el, Number(idxAttr));
+				win.__a11yPulseSeen.byPlace.set(placeOf(el), {
+					index: Number(idxAttr),
+					ref: new WeakRef(el),
+				});
 			}
-
-			const rect = element.getBoundingClientRect();
-
-			// What the element is, as well as where: a page that swaps in new content where the old
-			// stood (the next page of a list) has put a different element there, not the same one.
-			const identity = [
-				element.id,
-				element.getAttribute("href") ?? "",
-				element.getAttribute("name") ?? "",
-				element.getAttribute("aria-label") ?? "",
-				(element.textContent ?? "").replace(/\s+/g, " ").trim().slice(0, 200),
-			];
-
-			return [
-				path.join("/"),
-				Math.round(rect.left + window.scrollX),
-				Math.round(rect.top + window.scrollY),
-				Math.round(rect.width),
-				Math.round(rect.height),
-				JSON.stringify(identity),
-			].join("|");
-		};
-
-		const win = window as SeenWindow;
-		win.__a11yPulseSeen ??= { byElement: new WeakMap(), byPlace: new Map() };
-
-		if (!win.__a11yPulseSeen.byElement.has(el)) {
-			win.__a11yPulseSeen.byElement.set(el, Number(idxAttr));
-			win.__a11yPulseSeen.byPlace.set(placeOf(el), {
-				index: Number(idxAttr),
-				ref: new WeakRef(el),
-			});
 		}
-	}
 
-	// Walks out through shadow roots, so content inside a fixed host (a chat launcher) counts too.
-	let pinned = false;
+		// Walks out through shadow roots, so content inside a fixed host (a chat launcher) counts too.
+		let pinned = false;
 
-	for (let node: Element | null = el; node && !pinned; ) {
-		const { position } = getComputedStyle(node);
-		pinned = position === "fixed" || position === "sticky";
-		node = node.parentElement ?? (node.getRootNode() as ShadowRoot).host ?? null;
-	}
+		for (let node: Element | null = el; node && !pinned; ) {
+			const { position } = getComputedStyle(node);
+			pinned = position === "fixed" || position === "sticky";
+			node = node.parentElement ?? (node.getRootNode() as ShadowRoot).host ?? null;
+		}
 
-	// What an outline or shadow drawn around the element is seen against. An unpainted canvas is white.
-	let backdrop: string | null | undefined;
+		// What an outline or shadow drawn around the element is seen against. An unpainted canvas is white.
+		let backdrop: string | null | undefined;
 
-	if (props.length > 0) {
-		backdrop = "rgb(255, 255, 255)";
+		if (props.length > 0) {
+			backdrop = "rgb(255, 255, 255)";
 
-		for (
-			let node: Element | null = el;
-			node;
-			node =
-				node.parentElement ??
-				((node.getRootNode() as ShadowRoot).host as Element | undefined) ??
-				null
-		) {
-			const cs = getComputedStyle(node);
+			for (
+				let node: Element | null = el;
+				node;
+				node =
+					node.parentElement ??
+					((node.getRootNode() as ShadowRoot).host as Element | undefined) ??
+					null
+			) {
+				const cs = getComputedStyle(node);
 
-			if (node !== el) {
-				if (cs.backgroundImage !== "none" && cs.backgroundImage !== "") {
+				if (node !== el) {
+					if (cs.backgroundImage !== "none" && cs.backgroundImage !== "") {
+						backdrop = null;
+						break;
+					}
+
+					const color = cs.backgroundColor.replace(/\s+/g, "");
+
+					if (
+						color !== "" &&
+						color !== "transparent" &&
+						!/^rgba\(.*,0\)$/.test(color) &&
+						!/\/0\)$/.test(color)
+					) {
+						backdrop = /^rgb\(/.test(color) ? cs.backgroundColor : null;
+						break;
+					}
+				}
+
+				// A see-through box taken out of the flow is painted over whatever lies beneath it (a link
+				// placed over a hero image that is its sibling), which its ancestors say nothing about.
+				if (cs.position === "absolute" || cs.position === "fixed" || cs.position === "sticky") {
 					backdrop = null;
 					break;
 				}
-
-				const color = cs.backgroundColor.replace(/\s+/g, "");
-
-				if (
-					color !== "" &&
-					color !== "transparent" &&
-					!/^rgba\(.*,0\)$/.test(color) &&
-					!/\/0\)$/.test(color)
-				) {
-					backdrop = /^rgb\(/.test(color) ? cs.backgroundColor : null;
-					break;
-				}
-			}
-
-			// A see-through box taken out of the flow is painted over whatever lies beneath it (a link
-			// placed over a hero image that is its sibling), which its ancestors say nothing about.
-			if (cs.position === "absolute" || cs.position === "fixed" || cs.position === "sticky") {
-				backdrop = null;
-				break;
 			}
 		}
-	}
 
-	let animating: boolean | undefined;
+		let animating: boolean | undefined;
 
-	if (props.length > 0 && typeof el.getAnimations === "function") {
-		const parent = el.parentElement;
-		const around = [
-			el,
-			...Array.from((el as HTMLInputElement).labels ?? []),
-			parent,
-			parent?.parentElement,
-		];
+		if (props.length > 0 && typeof el.getAnimations === "function") {
+			const parent = el.parentElement;
+			const around = [
+				el,
+				...Array.from((el as HTMLInputElement).labels ?? []),
+				parent,
+				parent?.parentElement,
+			];
 
-		animating = around.some(
-			(node) =>
-				node instanceof Element &&
-				node !== document.body &&
-				node !== document.documentElement &&
-				node
-					.getAnimations({ subtree: true })
-					.some((animation) => animation.playState === "running"),
-		);
-	}
+			animating = around.some(
+				(node) =>
+					node instanceof Element &&
+					node !== document.body &&
+					node !== document.documentElement &&
+					node
+						.getAnimations({ subtree: true })
+						.some((animation) => animation.playState === "running"),
+			);
+		}
 
-	// Shallow clone so only the opening tag is serialised, not the whole subtree; drop the internal
-	// marker attribute so it never leaks into the snippet.
-	const openingTag = el.cloneNode(false) as Element;
-	openingTag.removeAttribute(markerAttr);
+		const openingTag = el.cloneNode(false) as Element;
+		openingTag.removeAttribute(markerAttr);
 
-	return {
-		...(backdrop === undefined ? {} : { backdrop }),
-		...(animating === undefined ? {} : { animating }),
-		index: idxAttr === null ? null : Number(idxAttr),
-		isBody: false,
-		isIframe: el.tagName === "IFRAME",
-		html: openingTag.outerHTML,
-		styles: {
-			element: read(undefined),
-			before: read("::before"),
-			after: read("::after"),
-		},
-		rect: {
-			x: rect.left + window.scrollX,
-			y: rect.top + window.scrollY,
-			width: rect.width,
-			height: rect.height,
-		},
-		pinned,
-		inDialog: el.closest("dialog[open], [role='dialog'], [role='alertdialog']") !== null,
-	};
-}
+		return {
+			...(backdrop === undefined ? {} : { backdrop }),
+			...(animating === undefined ? {} : { animating }),
+			index: idxAttr === null ? null : Number(idxAttr),
+			isBody: false,
+			isIframe: el.tagName === "IFRAME",
+			html: openingTag.outerHTML,
+			styles: readStyleSnapshot(el, props),
+			rect: {
+				x: rect.left + window.scrollX,
+				y: rect.top + window.scrollY,
+				width: rect.width,
+				height: rect.height,
+			},
+			pinned,
+			inDialog: el.closest("dialog[open], [role='dialog'], [role='alertdialog']") !== null,
+		};
+	},
+);
 
 export function activeElementHandleScript(): Element | null {
 	let el = document.activeElement;
@@ -1126,51 +1081,180 @@ export function focusScript(el: Element | null): void {
  * Read focus-relevant computed styles from a given element. Unlike `probeActiveElementScript`, this
  * does not use `document.activeElement`, so it still works after the node has been blurred.
  */
-export function elementStylesScript(el: Element | null, props: string[]): StyleSnapshot {
-	if (!el) {
-		return { element: {}, before: {}, after: {} };
-	}
-
-	// Must be byte-identical to the copies in baselineScript and probeActiveElementScript: snapshots
-	// from the scripts are compared for equality, so they have to truncate oversized values the same
-	// way.
-	const truncateValue = (value: string): string => {
-		const MAX_STYLE_VALUE_LENGTH = 512;
-
-		if (value.length <= MAX_STYLE_VALUE_LENGTH) {
-			return value;
+export const elementStylesScript = withHelpers(
+	[readStyleSnapshot],
+	function elementStylesScript(el: Element | null, props: string[]): StyleSnapshot {
+		if (!el) {
+			return { element: {}, before: {}, after: {} };
 		}
 
-		let hash = 5381;
+		return readStyleSnapshot(el, props);
+	},
+);
 
-		for (let i = 0; i < value.length; i++) {
-			hash = ((hash * 33) ^ value.charCodeAt(i)) >>> 0;
+export type PairContextEntry = {
+	kind: "ancestor" | "label";
+	/** The element's own tag, without its children. */
+	html: string;
+	styles: StyleSnapshot;
+	/** It holds a tab stop other than the focused element. */
+	shared?: boolean;
+	/** A CSS animation that is not a transition is running on it. */
+	animating?: boolean;
+};
+
+export type PairContextPayload = {
+	entries: PairContextEntry[];
+	/** The first opaque background colour behind the element, or null when an image comes first. */
+	background: string | null;
+};
+
+/**
+ * Read the focus-relevant styles of what surrounds an element: its nearest ancestors (a
+ * `:focus-within` wrapper draws the indicator there) and its labels.
+ */
+export const pairContextScript = withHelpers(
+	[readStyleSnapshot],
+	function pairContextScript(
+		el: Element | null,
+		props: string[],
+		ancestorLimit: number,
+	): PairContextPayload {
+		if (!el) {
+			return { entries: [], background: null };
 		}
 
-		return `${value.slice(0, MAX_STYLE_VALUE_LENGTH)}#len=${value.length}#h=${hash.toString(36)}`;
-	};
+		const parentOf = (node: Element): Element | null =>
+			node.parentElement ??
+			((node.getRootNode() as ShadowRoot).host as Element | undefined) ??
+			null;
 
-	const read = (pseudo: string | undefined): Record<string, string> => {
-		const cs = getComputedStyle(el, pseudo);
-		const out: Record<string, string> = {};
+		const tagOf = (node: Element): string => {
+			const html = (node.cloneNode(false) as Element).outerHTML;
 
-		for (const prop of props) {
-			out[prop] = truncateValue(cs.getPropertyValue(prop));
+			return html.length > 300 ? `${html.slice(0, 300)}...` : html;
+		};
+
+		const TABBABLE =
+			'a[href], area[href], button, input:not([type="hidden"]), select, textarea, summary, iframe, audio[controls], video[controls], [contenteditable]:not([contenteditable="false"]), [tabindex]';
+
+		/** Whether `node` holds something the Tab key stops on, other than the focused element. */
+		const holdsAnotherTabStop = (node: Element): boolean => {
+			for (const candidate of Array.from(node.querySelectorAll(TABBABLE))) {
+				if (candidate === el || candidate.contains(el)) {
+					continue;
+				}
+
+				const tabindex = candidate.getAttribute("tabindex");
+
+				if (
+					(tabindex !== null && Number.parseInt(tabindex, 10) < 0) ||
+					(candidate as HTMLButtonElement).disabled === true ||
+					candidate.closest("[inert]") !== null
+				) {
+					continue;
+				}
+
+				// Radio buttons of one group share a single tab stop.
+				if (
+					el.tagName === "INPUT" &&
+					candidate.tagName === "INPUT" &&
+					(el as HTMLInputElement).type === "radio" &&
+					(candidate as HTMLInputElement).type === "radio" &&
+					(el as HTMLInputElement).name !== "" &&
+					(candidate as HTMLInputElement).name === (el as HTMLInputElement).name &&
+					(candidate as HTMLInputElement).form === (el as HTMLInputElement).form
+				) {
+					continue;
+				}
+
+				const style = getComputedStyle(candidate);
+
+				if (style.display === "none" || style.visibility === "hidden") {
+					continue;
+				}
+
+				return true;
+			}
+
+			return false;
+		};
+
+		/** A running animation that is not a transition: it changes styles whether or not focus moves. */
+		const isAnimating = (node: Element): boolean => {
+			if (typeof node.getAnimations !== "function") {
+				return false;
+			}
+
+			return node
+				.getAnimations()
+				.some(
+					(animation) =>
+						animation.playState === "running" &&
+						!(typeof CSSTransition === "function" && animation instanceof CSSTransition),
+				);
+		};
+
+		const entry = (kind: "ancestor" | "label", node: Element): PairContextEntry => ({
+			kind,
+			html: tagOf(node),
+			styles: readStyleSnapshot(node, props),
+			...(holdsAnotherTabStop(node) ? { shared: true } : {}),
+			...(isAnimating(node) ? { animating: true } : {}),
+		});
+
+		const entries: PairContextEntry[] = [];
+		const seen = new Set<Element>([el]);
+
+		if (props.length > 0) {
+			let ancestor = parentOf(el);
+
+			for (
+				let depth = 0;
+				depth < ancestorLimit &&
+				ancestor &&
+				ancestor !== document.body &&
+				ancestor !== document.documentElement;
+				depth++
+			) {
+				seen.add(ancestor);
+				entries.push(entry("ancestor", ancestor));
+				ancestor = parentOf(ancestor);
+			}
+
+			for (const label of Array.from((el as HTMLInputElement).labels ?? []) as Element[]) {
+				if (!seen.has(label)) {
+					seen.add(label);
+					entries.push(entry("label", label));
+				}
+			}
 		}
 
-		if (pseudo) {
-			out.content = truncateValue(cs.getPropertyValue("content"));
+		let background: string | null = null;
+
+		for (let node: Element | null = el; node; node = parentOf(node)) {
+			const cs = getComputedStyle(node);
+
+			if (cs.backgroundImage !== "none" && cs.backgroundImage !== "") {
+				break;
+			}
+
+			const color = cs.backgroundColor.replace(/\s+/g, "");
+
+			if (
+				color !== "" &&
+				color !== "transparent" &&
+				!/^rgba\(.*,0\)$/.test(color) &&
+				!/\/0\)$/.test(color)
+			) {
+				background = cs.backgroundColor;
+				break;
+			}
 		}
 
-		return out;
-	};
-
-	return {
-		element: read(undefined),
-		before: read("::before"),
-		after: read("::after"),
-	};
-}
+		return { entries, background };
+	},
+);
 
 /**
  * Remove the marker attribute from all elements, blur the active element, and scroll back to the
@@ -1940,7 +2024,7 @@ type ContextEvent = {
 };
 
 type ContextObserverState = {
-	baselineHref: string;
+	lastHref: string;
 	/** What the page did since the last drain. */
 	events: ContextEvent[];
 	focusIns: Element[];
@@ -1965,6 +2049,7 @@ type ContextObserverState = {
 	pendingUrlOwner: ContextEventOwner | null;
 	/** The form behind the submission the last drain reported, for selector resolution. */
 	lastForm: Element | null;
+	attributed: Element | null;
 	installed: boolean;
 	/** Puts back everything the observer wrapped or listened to. */
 	uninstall: () => void;
@@ -1987,7 +2072,7 @@ export function installContextObserverScript(): void {
 	}
 
 	const state: ContextObserverState = {
-		baselineHref: location.href,
+		lastHref: location.href,
 		events: [],
 		focusIns: [],
 		timerOwner: null,
@@ -1996,6 +2081,7 @@ export function installContextObserverScript(): void {
 		ownedRan: 0,
 		pendingUrlOwner: null,
 		lastForm: null,
+		attributed: null,
 		installed: true,
 		uninstall: () => {},
 	};
@@ -2162,16 +2248,16 @@ export function installContextObserverScript(): void {
 	undo.push(() => document.removeEventListener("focus", onFocus, true));
 
 	const noteSoftNav = (): void => {
-		if (location.href !== state.baselineHref) {
+		if (location.href !== state.lastHref) {
 			state.events.push({
 				kind: "url",
-				from: state.baselineHref,
+				from: state.lastHref,
 				url: location.href,
 				owner: currentOwner() ?? state.pendingUrlOwner,
 			});
 			// Later changes are measured from here, so a History API call that leaves the URL as it
 			// now is does not report this change a second time.
-			state.baselineHref = location.href;
+			state.lastHref = location.href;
 		}
 
 		state.pendingUrlOwner = null;
@@ -2279,11 +2365,8 @@ export function uninstallContextObserverScript(): void {
 	state.focusIns = [];
 	state.events = [];
 	state.lastForm = null;
+	state.attributed = null;
 	delete window.__a11yContextObserver;
-
-	for (const marked of Array.from(document.querySelectorAll("[data-a11y-ctx-attr]"))) {
-		marked.removeAttribute("data-a11y-ctx-attr");
-	}
 }
 
 /** What the page did, as far as the context observer saw it. */
@@ -2346,9 +2429,6 @@ export function drainContextObserverScript(
 	markerAttr: string,
 	final = false,
 ): DrainContextObserverResult {
-	// Must be a string literal inside this function: it is serialized into the page.
-	const attributedAttr = "data-a11y-ctx-attr";
-
 	const none = (): ContextEventSummary => ({
 		openedWindow: false,
 		submittedForm: false,
@@ -2382,16 +2462,13 @@ export function drainContextObserverScript(
 		return empty;
 	}
 
-	for (const marked of Array.from(document.querySelectorAll(`[${attributedAttr}]`))) {
-		marked.removeAttribute(attributedAttr);
-	}
-
 	const events = state.events.slice();
 	const focusIns = state.focusIns.slice();
 
 	state.events = [];
 	state.focusIns = [];
 	state.lastForm = null;
+	state.attributed = null;
 
 	let active = document.activeElement;
 
@@ -2405,7 +2482,6 @@ export function drainContextObserverScript(
 	const openingHtml = (node: Element): string => {
 		const clone = node.cloneNode(false) as Element;
 		clone.removeAttribute(markerAttr);
-		clone.removeAttribute(attributedAttr);
 
 		return clone.outerHTML;
 	};
@@ -2604,7 +2680,7 @@ export function drainContextObserverScript(
 	if (intended && bodyOrNone) {
 		focusRemoved = true;
 		attributedHtml = openingHtml(intended);
-		intended.setAttribute(attributedAttr, "1");
+		state.attributed = intended;
 		hasAttributed = true;
 	} else if (intended && active && intended !== active) {
 		const same = composedContains(intended, active) || composedContains(active, intended);
@@ -2614,7 +2690,7 @@ export function drainContextObserverScript(
 		} else {
 			redirect = same ? "same-subtree" : "outside";
 			attributedHtml = openingHtml(intended);
-			intended.setAttribute(attributedAttr, "1");
+			state.attributed = intended;
 			hasAttributed = true;
 		}
 	}
@@ -2716,7 +2792,7 @@ export function awaitOwnedTimersScript(maxMs: number): Promise<void> {
 }
 
 export function attributedHandleScript(): Element | null {
-	return document.querySelector("[data-a11y-ctx-attr]");
+	return window.__a11yContextObserver?.attributed ?? null;
 }
 
 /** The form behind the submission the last drain reported, if any. */
@@ -2725,17 +2801,14 @@ export function submittedFormHandleScript(): Element | null {
 }
 
 export function clearAttributedScript(): void {
-	for (const marked of Array.from(document.querySelectorAll("[data-a11y-ctx-attr]"))) {
-		marked.removeAttribute("data-a11y-ctx-attr");
+	const state = window.__a11yContextObserver;
+
+	if (state) {
+		state.attributed = null;
 	}
 }
 
-/**
- * Drop focusin history accumulated after drain (e.g. pixel-diff blur/refocus) so the next tab stop
- * does not mis-attribute F55 or redirects. What a timer has done for an element other than the
- * focused one is kept: the blur and refocus cannot have caused it.
- */
-export function clearContextFocusInsScript(): void {
+export function forgetPairCaptureEffectsScript(): void {
 	const state = window.__a11yContextObserver;
 
 	if (state) {
@@ -2745,12 +2818,14 @@ export function clearContextFocusInsScript(): void {
 			active = active.shadowRoot.activeElement;
 		}
 
-		state.focusIns = [];
-		state.events = state.events.filter((event) => {
+		const ownedByAnotherElement = (event: ContextEvent): boolean => {
 			const owner = event.owner?.el ?? null;
 
 			return owner !== null && owner !== active;
-		});
+		};
+
+		state.focusIns = [];
+		state.events = state.events.filter(ownedByAnotherElement);
 	}
 }
 

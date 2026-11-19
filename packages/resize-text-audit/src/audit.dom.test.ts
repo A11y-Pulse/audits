@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { asEvaluate } from "@a11y-pulse/integration-harness/fake-evaluate";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ResizeTextAuditAdaptor } from "./adaptor";
 import { runResizeTextAudit } from "./audit";
@@ -64,18 +65,15 @@ function executingAdaptor(layouts: { full: Layout; zoomed: Layout }): ResizeText
 			viewport = next;
 			applyLayout(next.width < 1280 ? layouts.zoomed : layouts.full);
 		},
-		evaluate: async <T>(
-			fn: (...args: never[]) => T | Promise<T>,
-			...args: unknown[]
-		): Promise<T> => {
-			const result = await (fn as (...fnArgs: unknown[]) => T | Promise<T>)(...args);
+		evaluate: asEvaluate(async (fn, ...args) => {
+			const result = await (fn as (...fnArgs: unknown[]) => unknown)(...args);
 
 			stylesAfter[fn.name] = Array.from(document.querySelectorAll("style[data-a11y-pulse]")).map(
 				(style) => style.getAttribute("data-a11y-pulse") ?? "",
 			);
 
 			return result;
-		},
+		}),
 		screenshotClip: async (clip) => {
 			clips.push(clip);
 

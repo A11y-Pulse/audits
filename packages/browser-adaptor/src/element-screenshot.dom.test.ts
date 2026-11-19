@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { BrowserAdaptor } from "./adaptor";
+import type { BrowserAdaptor, PageFunction } from "./adaptor";
 import {
 	captureElementScreenshot,
 	elementRectScript,
@@ -219,7 +219,7 @@ describe("captureElementScreenshot", () => {
 
 		return {
 			calls,
-			evaluate: (async (fn, ...args) => {
+			evaluate: (async (fn: PageFunction, ...args: unknown[]) => {
 				calls.push(fn);
 
 				if (fn === needsCentringScript) {

@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+	attributedHandleScript,
 	awaitOwnedTimersScript,
 	baselineScript,
 	blurredStopScript,
@@ -16,6 +17,7 @@ import {
 	leavingScript,
 	markActiveElementScript,
 	measureObscuringScript,
+	pairContextScript,
 	probeActiveElementScript,
 	removeTabObserverScript,
 	settleScript,
@@ -26,6 +28,10 @@ import {
 } from "./browser-scripts";
 
 const MARKER = "data-test-idx";
+
+function fromSource<F>(fn: F): F {
+	return new Function(`return (${String(fn)})`)() as F;
+}
 
 /** Run `action` the way a focus handler on `el` would: while its focus event is being dispatched. */
 function onFocusOf(el: HTMLElement, action: () => void): void {
@@ -215,6 +221,25 @@ describe("baseline snapshot DOM state", () => {
 		expect(markerSeenDuringReads.length).toBeGreaterThan(0);
 		expect(markerSeenDuringReads.every(Boolean)).toBe(true);
 	});
+
+	it("marks every element before it measures any, as the probe finds them", () => {
+		const markedDuringReads: number[] = [];
+		vi.stubGlobal("getComputedStyle", () => ({
+			display: "inline-block",
+			visibility: "visible",
+			getPropertyValue: () => {
+				markedDuringReads.push(document.querySelectorAll(`[${MARKER}]`).length);
+
+				return "none";
+			},
+		}));
+		document.body.innerHTML = "<button>a</button><button>b</button><button>c</button>";
+
+		baselineScript(["outline-width"], MARKER, 10);
+
+		expect(markedDuringReads.length).toBeGreaterThan(0);
+		expect(markedDuringReads.every((count) => count === 3)).toBe(true);
+	});
 });
 
 describe("snapshot value truncation", () => {
@@ -273,6 +298,28 @@ describe("snapshot value truncation", () => {
 		expect(probed.styles.element["background-image"]).toBe(
 			payload.styles[0]?.element["background-image"],
 		);
+	});
+
+	it("truncates identically in every script that reads styles, each run as the page runs it", () => {
+		const long = `url(data:image/png;base64,${"C".repeat(20000)})`;
+		stubComputedStyle((_el, prop) => (prop === "background-image" ? long : "none"));
+		document.body.innerHTML = "<div><button>x</button></div>";
+		const button = document.querySelector("button") as HTMLElement;
+		const props = ["background-image"];
+
+		const baseline = fromSource(baselineScript)(props, MARKER, 10);
+		button.focus();
+		const values = [
+			baseline.styles[0]?.element["background-image"],
+			fromSource(probeActiveElementScript)(props, MARKER).styles.element["background-image"],
+			fromSource(elementStylesScript)(button, props).element["background-image"],
+			fromSource(pairContextScript)(button, props, 1).entries[0]?.styles.element[
+				"background-image"
+			],
+		];
+
+		expect(values[0]?.startsWith(`${long.slice(0, 512)}#len=${long.length}#h=`)).toBe(true);
+		expect(values).toEqual([values[0], values[0], values[0], values[0]]);
 	});
 });
 
@@ -925,17 +972,19 @@ describe("uninstallContextObserverScript", () => {
 		window.open = open;
 	});
 
-	it("removes the marker left on an attributed element", () => {
+	it("holds the attributed element without marking it in the page, and lets go of it", () => {
 		document.body.innerHTML = '<input id="a">';
 		installContextObserverScript();
 		const a = document.querySelector("#a") as HTMLInputElement;
 		a.dispatchEvent(new FocusEvent("focus", { bubbles: false }));
 		a.blur();
 		expect(drainContextObserverScript(MARKER).hasAttributed).toBe(true);
+		expect(attributedHandleScript()).toBe(a);
+		expect(a.outerHTML).toBe('<input id="a">');
 
 		uninstallContextObserverScript();
 
-		expect(document.querySelector("[data-a11y-ctx-attr]")).toBeNull();
+		expect(attributedHandleScript()).toBeNull();
 	});
 
 	it("can be installed again afterwards", () => {

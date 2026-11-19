@@ -66,7 +66,7 @@ function recount(result: ContextChangeOnFocusResult): void {
  */
 export function createContextChangeOnFocusAudit(
 	options: ContextChangeOnFocusOptions = {},
-): TabConsumer & { result: ContextChangeOnFocusResult } {
+): TabConsumer<"contextSignals" | "screenshot"> & { result: ContextChangeOnFocusResult } {
 	const resolved = resolveOptions(options);
 	const result = emptyResult();
 	let checked = 0;
@@ -145,12 +145,6 @@ export function createContextChangeOnFocusAudit(
 			checked++;
 
 			const drain = snapshot.contextSignals;
-
-			if (drain === undefined) {
-				// Should not happen: this consumer declares the "contextSignals" capability, so the
-				// orchestrator always populates it.
-				return;
-			}
 
 			lastTabIndex = snapshot.tabIndex;
 			absorbLate(drain.late, snapshot.tabIndex);

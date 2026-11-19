@@ -47,7 +47,7 @@ import {
 	submittedFormHandleScript,
 	uninstallContextObserverScript,
 } from "./browser-scripts";
-import { composeScript, type ScriptContext, type ScriptParts } from "./compose-script";
+import { composeScript, type ScriptContext } from "./compose-script";
 import { forgetStopElementScript, rememberStopElementScript } from "./stop-element";
 
 /** What a composed script answers with, which nothing else evaluated in a page would. */
@@ -178,7 +178,7 @@ export type TabStopArgs = {
 	nextMarker: number;
 	previousIndex: number | null;
 	wantContext: boolean;
-	baselineHref: string | null;
+	lastHref: string | null;
 	wantObscuring: boolean;
 	obscurerAttr: string;
 	obscuringRecheckDelayMs: number;
@@ -201,12 +201,12 @@ export type TabStopResult =
 			raw: DrainContextObserverResult | null;
 			/** Selector of the form `raw` says was submitted, when there is one. */
 			formSelector: string | null;
-			baselineHref: string | null;
+			lastHref: string | null;
 	  }
-	| { kind: "iframe"; html: string; baselineHref: string | null }
-	| { kind: "held"; index: number; held: HeldFocus; baselineHref: string | null }
+	| { kind: "iframe"; html: string; lastHref: string | null }
+	| { kind: "held"; index: number; held: HeldFocus; lastHref: string | null }
 	/** The element was stopped on before. Host side only; in the page it comes back as a stop. */
-	| { kind: "revisit"; index: number; baselineHref: string | null }
+	| { kind: "revisit"; index: number; lastHref: string | null }
 	| {
 			kind: "stop";
 			base: ActiveElementBase;
@@ -220,7 +220,7 @@ export type TabStopResult =
 			/** Selector of the form `raw` says was submitted, when there is one. */
 			formSelector: string | null;
 			obscuring: TabStopObscuring | null;
-			baselineHref: string | null;
+			lastHref: string | null;
 			/** The focused element. Host side only: a page cannot hand an element back. */
 			ref: ElementRef | null;
 	  };
@@ -231,34 +231,39 @@ export type TabStopHost = {
 	visited(index: number): boolean;
 };
 
+const tabStopParts = {
+	settle: settleScript,
+	hasFocus: hasFocusScript,
+	probe: probeActiveElementScript,
+	locationHref: locationHrefScript,
+	drain: drainContextObserverScript,
+	documentReplaced: documentReplacedScript,
+	leaving: leavingScript,
+	stayed: stayedScript,
+	blurredStop: blurredStopScript,
+	mark: markActiveElementScript,
+	heldFocus: heldFocusScript,
+	activeHandle: activeElementHandleScript,
+	getSelector,
+	attributedHandle: attributedHandleScript,
+	submittedFormHandle: submittedFormHandleScript,
+	measureObscuring: measureObscuringScript,
+	obscurerHandle: obscurerHandleScript,
+	clearObscurer: clearObscurerScript,
+	rememberStopElement: rememberStopElementScript,
+};
+
 /**
  * Everything read after one Tab press: whether the page still has focus, what is focused, whether
  * the document was replaced, and, for an element that counts as a new stop, its selector, the
  * context observer's signals and how much of it is covered.
  */
 export const tabStopScript = composeScript(
-	{
-		settle: settleScript,
-		hasFocus: hasFocusScript,
-		probe: probeActiveElementScript,
-		locationHref: locationHrefScript,
-		drain: drainContextObserverScript,
-		documentReplaced: documentReplacedScript,
-		leaving: leavingScript,
-		stayed: stayedScript,
-		blurredStop: blurredStopScript,
-		mark: markActiveElementScript,
-		heldFocus: heldFocusScript,
-		activeHandle: activeElementHandleScript,
-		getSelector,
-		attributedHandle: attributedHandleScript,
-		submittedFormHandle: submittedFormHandleScript,
-		measureObscuring: measureObscuringScript,
-		obscurerHandle: obscurerHandleScript,
-		clearObscurer: clearObscurerScript,
-		rememberStopElement: rememberStopElementScript,
-	},
-	async (ctx: ScriptContext<ScriptParts, TabStopHost>, a: TabStopArgs): Promise<TabStopResult> => {
+	tabStopParts,
+	async (
+		ctx: ScriptContext<typeof tabStopParts, TabStopHost>,
+		a: TabStopArgs,
+	): Promise<TabStopResult> => {
 		// Selector of an element the context observer is holding on to, or null if that fails.
 		const heldSelector = async (
 			part: "attributedHandle" | "submittedFormHandle",
@@ -322,7 +327,7 @@ export const tabStopScript = composeScript(
 		// Navigation is checked before anything acts on a <body> probe: a freshly loaded document
 		// has nothing focused either, and would otherwise read as the tab order having run out.
 		let raw: DrainContextObserverResult | null = null;
-		let baselineHref = a.baselineHref;
+		let lastHref = a.lastHref;
 
 		if (a.wantContext) {
 			let href: string;
@@ -337,7 +342,7 @@ export const tabStopScript = composeScript(
 				throw error;
 			}
 
-			if (baselineHref !== null && href !== baselineHref) {
+			if (lastHref !== null && href !== lastHref) {
 				// The URL changed. The observer's own record says whether that was the History API;
 				// anything else, or no observer left to ask, is a full navigation.
 				try {
@@ -350,7 +355,7 @@ export const tabStopScript = composeScript(
 					return { kind: "navigation" };
 				}
 
-				baselineHref = href;
+				lastHref = href;
 			}
 		} else {
 			// Without the context observer there is no soft-navigation record to consult, but the tab
@@ -414,11 +419,11 @@ export const tabStopScript = composeScript(
 				}
 			}
 
-			return { kind: "body", blurredStop, raw, formSelector, baselineHref };
+			return { kind: "body", blurredStop, raw, formSelector, lastHref };
 		}
 
 		if (base.isIframe) {
-			return { kind: "iframe", html: base.html, baselineHref };
+			return { kind: "iframe", html: base.html, lastHref };
 		}
 
 		let index = base.index;
@@ -430,11 +435,11 @@ export const tabStopScript = composeScript(
 		if (index === a.previousIndex) {
 			const held: HeldFocus = await ctx.call("heldFocus", a.tabbableSelector);
 
-			return { kind: "held", index, held, baselineHref };
+			return { kind: "held", index, held, lastHref };
 		}
 
 		if (ctx.host?.visited(index)) {
-			return { kind: "revisit", index, baselineHref };
+			return { kind: "revisit", index, lastHref };
 		}
 
 		const el = await ctx.handle("activeHandle");
@@ -557,7 +562,7 @@ export const tabStopScript = composeScript(
 				attributedSelector,
 				formSelector,
 				obscuring,
-				baselineHref,
+				lastHref,
 				ref: ctx.host === null ? null : el,
 			};
 		} catch (error) {

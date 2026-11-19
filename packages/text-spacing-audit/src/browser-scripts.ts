@@ -1354,9 +1354,7 @@ export async function restoreAndVerifyScript(): Promise<RestorePayload> {
 	const removeLeftovers = (): void => {
 		try {
 			state?.removeStyles();
-		} catch {
-			// Removal is best effort: this function must not throw.
-		}
+		} catch {}
 
 		try {
 			for (const el of Array.from(

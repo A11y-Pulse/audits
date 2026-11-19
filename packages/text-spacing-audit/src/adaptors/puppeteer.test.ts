@@ -6,7 +6,7 @@ describe("PuppeteerAdaptor", () => {
 	it("evaluate delegates to page.evaluate()", async () => {
 		const evaluate = vi.fn(async () => 7);
 		const page = { evaluate } as unknown as Page;
-		const fn = () => 7;
+		const fn = (_arg: string) => 7;
 
 		await expect(new PuppeteerAdaptor(page).evaluate(fn, "arg")).resolves.toBe(7);
 		expect(evaluate).toHaveBeenCalledWith(fn, "arg");

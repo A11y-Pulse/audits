@@ -1,5 +1,12 @@
 import type { CDPSession, Dialog, JSHandle, KeyInput, Page } from "puppeteer";
-import type { BrowserAdaptor, ElementRef, KeyName, Rect } from "../adaptor";
+import type {
+	BrowserAdaptor,
+	ElementRef,
+	EvaluateArgs,
+	KeyName,
+	PageFunction,
+	Rect,
+} from "../adaptor";
 import { nextPaintScript } from "../paint";
 
 // Keep track of the CDP session for each page so that we can reuse it. The session is kept
@@ -205,13 +212,12 @@ export class PuppeteerAdaptor implements BrowserAdaptor {
 		return count;
 	}
 
-	evaluate<T>(
-		// biome-ignore lint/suspicious/noExplicitAny: the page-evaluated fn accepts arbitrary serialised args and element handles.
-		fn: (...args: any[]) => T | Promise<T>,
-		...args: unknown[]
-	): Promise<T> {
+	evaluate<F extends PageFunction>(
+		fn: F,
+		...args: EvaluateArgs<Parameters<F>>
+	): Promise<Awaited<ReturnType<F>>> {
 		// Puppeteer resolves any JSHandle passed as an arg to the live element.
-		return this.page.evaluate(fn as never, ...(args as never[])) as Promise<T>;
+		return this.page.evaluate(fn as never, ...(args as never[])) as Promise<Awaited<ReturnType<F>>>;
 	}
 
 	evaluateHandle(fn: () => Element | null): Promise<ElementRef> {

@@ -1,5 +1,12 @@
 import type { CDPSession, Dialog, JSHandle, Page } from "playwright-core";
-import type { BrowserAdaptor, ElementRef, KeyName, Rect } from "../adaptor";
+import type {
+	BrowserAdaptor,
+	ElementRef,
+	EvaluateArgs,
+	KeyName,
+	PageFunction,
+	Rect,
+} from "../adaptor";
 import { nextPaintScript } from "../paint";
 
 // The CDP session for each page, shared by focus emulation and clipped screenshots. A fresh adaptor
@@ -173,18 +180,17 @@ export class PlaywrightAdaptor implements BrowserAdaptor {
 		return count;
 	}
 
-	async evaluate<T>(
-		// biome-ignore lint/suspicious/noExplicitAny: the page-evaluated fn accepts arbitrary serialised args and element handles.
-		fn: (...args: any[]) => T | Promise<T>,
-		...args: unknown[]
-	): Promise<T> {
+	async evaluate<F extends PageFunction>(
+		fn: F,
+		...args: EvaluateArgs<Parameters<F>>
+	): Promise<Awaited<ReturnType<F>>> {
 		try {
 			// Playwright takes a single argument, so the function source and its args travel packed
 			// into one tuple. Handles nested in that tuple are still resolved to live elements.
 			return (await this.page.evaluate(
 				([source, packed]) => new Function(`return (${source})`)()(...(packed as unknown[])),
 				[fn.toString(), args] as [string, unknown[]],
-			)) as T;
+			)) as Awaited<ReturnType<F>>;
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
 
@@ -193,7 +199,7 @@ export class PlaywrightAdaptor implements BrowserAdaptor {
 			}
 
 			try {
-				return await this.evaluateWithoutEval<T>(fn, args);
+				return (await this.evaluateWithoutEval(fn.toString(), args)) as Awaited<ReturnType<F>>;
 			} catch (fallbackError) {
 				const fallbackMessage =
 					fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
@@ -216,18 +222,14 @@ export class PlaywrightAdaptor implements BrowserAdaptor {
 	 * function is then called by handle. It costs two more round trips than the packed call, so it
 	 * is only taken once that one has been refused.
 	 */
-	private async evaluateWithoutEval<T>(
-		// biome-ignore lint/suspicious/noExplicitAny: the page-evaluated fn accepts arbitrary serialised args and element handles.
-		fn: (...args: any[]) => T | Promise<T>,
-		args: unknown[],
-	): Promise<T> {
-		const handle = await this.page.evaluateHandle(`(${fn.toString()})`);
+	private async evaluateWithoutEval(source: string, args: unknown[]): Promise<unknown> {
+		const handle = await this.page.evaluateHandle(`(${source})`);
 
 		try {
-			return (await handle.evaluate(
+			return await handle.evaluate(
 				(pageFn, packed) => (pageFn as (...values: unknown[]) => unknown)(...(packed as unknown[])),
 				args,
-			)) as T;
+			);
 		} finally {
 			await handle.dispose().catch(() => {});
 		}

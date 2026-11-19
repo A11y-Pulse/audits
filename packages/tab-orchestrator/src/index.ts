@@ -10,7 +10,12 @@ export {
 	DEFAULT_SCREENSHOT_SETTLE_DELAY,
 	DEFAULT_TIMEOUT,
 } from "./audit-scaffold";
-export type { ActiveElementBase, BaselinePayload, MeasureObscuringResult } from "./browser-scripts";
+export type {
+	ActiveElementBase,
+	BaselinePayload,
+	MeasureObscuringResult,
+	PairContextPayload,
+} from "./browser-scripts";
 export {
 	activeElementHandleScript,
 	baselineScript,
@@ -29,6 +34,7 @@ export {
 	needsCentringScript,
 	obscurerHandleScript,
 	pageDimensionsScript,
+	pairContextScript,
 	probeActiveElementScript,
 	removeTabObserverScript,
 	resetFocusStartScript,
@@ -46,11 +52,10 @@ export {
 	OBSCURER_ATTR,
 	OBSCURING_RECHECK_DELAY_MS,
 } from "./orchestrator";
-export type { PairContextPayload, PairTarget } from "./pair-scripts";
+export type { PairTarget } from "./pair-scripts";
 export {
 	endPairScript,
 	hideCaretScript,
-	pairContextScript,
 	pairRectScript,
 	pairTargetHandleScript,
 	pairTargetScript,

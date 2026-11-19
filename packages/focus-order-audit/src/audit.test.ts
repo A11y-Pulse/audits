@@ -25,6 +25,7 @@ const session: TabSessionHandle = {
 	disconnect: vi.fn(),
 	ensureUnfocusedPair: vi.fn(),
 	screenshotClip: vi.fn(),
+	screenshotContext: vi.fn(),
 };
 
 function stop(index: number, y: number, extra: Partial<ActiveElementInfo> = {}): ActiveElementInfo {

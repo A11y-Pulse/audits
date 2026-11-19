@@ -18,6 +18,13 @@ export type KeyName =
  */
 export type ElementRef = unknown;
 
+export type PageFunction = (...args: never[]) => unknown;
+
+/** What the host passes for a page function's parameters: an `ElementRef` wherever it takes a node. */
+export type EvaluateArgs<A extends unknown[]> = {
+	[K in keyof A]: A[K] extends Node | null | undefined ? ElementRef : A[K];
+};
+
 /**
  * A framework-specific adaptor that provides the primitives needed by tab-loop audits. An adaptor
  * wraps a single page in a web browser.
@@ -26,11 +33,10 @@ export interface BrowserAdaptor {
 	/**
 	 * Run `fn` in the page context, passing in any serialisable `args`
 	 */
-	evaluate<T>(
-		// biome-ignore lint/suspicious/noExplicitAny: `fn` accepts arbitrary serialised arguments
-		fn: (...args: any[]) => T | Promise<T>,
-		...args: unknown[]
-	): Promise<T>;
+	evaluate<F extends PageFunction>(
+		fn: F,
+		...args: EvaluateArgs<Parameters<F>>
+	): Promise<Awaited<ReturnType<F>>>;
 
 	/**
 	 * Return an opaque handle to an element in the page

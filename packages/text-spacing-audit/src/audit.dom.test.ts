@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { asEvaluate } from "@a11y-pulse/integration-harness/fake-evaluate";
 import { afterEach, describe, expect, it } from "vitest";
 import type { TextSpacingAuditAdaptor } from "./adaptor";
 import { runTextSpacingAudit } from "./audit";
@@ -26,18 +27,15 @@ function executingAdaptor(): TextSpacingAuditAdaptor & { stylesAfter: Record<str
 
 	return {
 		stylesAfter,
-		evaluate: async <T>(
-			fn: (...args: never[]) => T | Promise<T>,
-			...args: unknown[]
-		): Promise<T> => {
-			const result = await (fn as (...fnArgs: unknown[]) => T | Promise<T>)(...args);
+		evaluate: asEvaluate(async (fn, ...args) => {
+			const result = await (fn as (...fnArgs: unknown[]) => unknown)(...args);
 
 			stylesAfter[fn.name] = Array.from(document.querySelectorAll("style[data-a11y-pulse]")).map(
 				(style) => style.getAttribute("data-a11y-pulse") ?? "",
 			);
 
 			return result;
-		},
+		}),
 		screenshotClip: async () => new Uint8Array([1, 2, 3]),
 	};
 }

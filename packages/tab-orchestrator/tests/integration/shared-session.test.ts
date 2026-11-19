@@ -13,6 +13,8 @@ import {
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { createTabOrchestrator } from "../../src/orchestrator";
 
+const TAB_OFF_THE_PAGE = 1;
+
 let server: FixtureServer;
 
 beforeAll(async () => {
@@ -83,7 +85,7 @@ describeEachEngine<BrowserAdaptor>(
 			// focus-not-obscured for the element hidden behind the sticky footer.
 			expect(clips).toBe(4);
 			const tabs = keyPresses.filter((key) => key === "Tab").length;
-			expect(tabs).toBe(obscured.result.elements.length + 1);
+			expect(tabs).toBe(obscured.result.elements.length + TAB_OFF_THE_PAGE);
 
 			await close();
 		});

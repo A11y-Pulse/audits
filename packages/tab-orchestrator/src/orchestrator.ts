@@ -6,10 +6,10 @@ import {
 	attributedHandleScript,
 	type ContextEventSummary,
 	clearAttributedScript,
-	clearContextFocusInsScript,
 	type DrainContextObserverResult,
 	documentReplacedScript,
 	drainContextObserverScript,
+	forgetPairCaptureEffectsScript,
 	hasFocusScript,
 	landedHrefScript,
 	probeActiveElementScript,
@@ -379,18 +379,12 @@ export function createTabOrchestrator(
 			// Late and ownerless context changes read at a point where no consumer was notified
 			// (focus on the body with nothing to attribute), kept for the next notification.
 			let carried: Pick<ContextChangeDrain, "late" | "unattributed"> = {};
-			// Captured when observers are installed and re-armed after every
-			// detected soft URL change, so repeated soft navigations across stops
-			// compare against the most recent href rather than the original load.
-			let baselineHref: string | null = null;
+			let lastHref: string | null = null;
 
 			const remainingHas = (capability: Capability): boolean =>
 				[...attached].some((c) => c.capabilities.has(capability));
 
-			// Decided once from who is attached at session start; never re-checked,
-			// so the observer stays installed even after every declarer disconnects
-			// (it is only uninstalled when the session is torn down, and skipped per-stop until then).
-			const contextSignalsWanted = remainingHas("contextSignals");
+			const contextObserverInstalled = remainingHas("contextSignals");
 
 			// Computed styles are only read for consumers that compare them.
 			const wantedStyleProps = (): string[] =>
@@ -605,7 +599,7 @@ export function createTabOrchestrator(
 
 				if (
 					ending === null ||
-					!contextSignalsWanted ||
+					!contextObserverInstalled ||
 					ending.reason === "navigation" ||
 					ending.reason === "failed" ||
 					!ending.consumers.some((consumer) => consumer.capabilities.has("contextSignals"))
@@ -688,11 +682,72 @@ export function createTabOrchestrator(
 				}
 			};
 
-			/**
-			 * Whether the page reports focus, re-asserting focus reporting once
-			 * before answering no.
-			 */
-			async function documentHasFocus(): Promise<boolean> {
+			const cleanUp = async (script: () => void): Promise<void> => {
+				try {
+					await adaptor.evaluate(script);
+				} catch (error) {
+					if (!isContextDestroyedError(error)) {
+						throw error;
+					}
+				}
+			};
+
+			const notifyContextConsumers = async (
+				snapshot: TabStopSnapshot<"contextSignals">,
+			): Promise<void> => {
+				for (const consumer of [...attached].filter((candidate) =>
+					candidate.capabilities.has("contextSignals"),
+				)) {
+					await notify(consumer, () => consumer.onTabStop(snapshot, handleFor(consumer)));
+				}
+			};
+
+			const reportFocusRemoval = async (
+				raw: DrainContextObserverResult,
+				openedDialog: boolean,
+				formSelector: string | null,
+			): Promise<void> => {
+				const attributedRef = await adaptor.evaluateHandle(attributedHandleScript);
+
+				try {
+					const selector = await adaptor.evaluate(getSelector, attributedRef);
+					const html = truncateHtml(raw.attributedHtml ?? "");
+					const contextSignals = toContextDrain(
+						raw,
+						openedDialog,
+						{ selector, html },
+						formSelector,
+					);
+
+					mergeCarried(contextSignals, carried);
+					carried = {};
+					lastStop = { selector, html };
+
+					// The blurred element is still in the page, so a `screenshot` declarer can capture it.
+					stopElement.ref = attributedRef;
+					stopElement.active = true;
+
+					await notifyContextConsumers({
+						tabIndex: ++stats.tabStops,
+						activeElement: {
+							index: null,
+							isBody: false,
+							isIframe: false,
+							selector,
+							html,
+							styles: { element: {}, before: {}, after: {} },
+							rect: { x: 0, y: 0, width: 0, height: 0 },
+						},
+						contextSignals,
+					});
+				} finally {
+					stopElement.ref ??= attributedRef;
+					await adaptor.evaluate(clearAttributedScript);
+					await releaseStopElement();
+				}
+			};
+
+			async function ensureDocumentFocus(): Promise<boolean> {
 				if (await adaptor.evaluate(hasFocusScript)) {
 					return true;
 				}
@@ -774,7 +829,7 @@ export function createTabOrchestrator(
 					styleProps: wantedStyleProps(),
 					markerAttr: MARKER_ATTR,
 					markerLimit,
-					wantContext: contextSignalsWanted,
+					wantContext: contextObserverInstalled,
 				};
 				let opening: SessionStartResult | undefined;
 
@@ -810,8 +865,8 @@ export function createTabOrchestrator(
 					}
 				}
 
-				if (contextSignalsWanted) {
-					baselineHref = opening.href;
+				if (contextObserverInstalled) {
+					lastHref = opening.href;
 				}
 
 				for (const consumer of [...attached]) {
@@ -851,7 +906,7 @@ export function createTabOrchestrator(
 						break;
 					}
 
-					if (!(await documentHasFocus())) {
+					if (!(await ensureDocumentFocus())) {
 						end("lostFocus");
 						break;
 					}
@@ -886,7 +941,7 @@ export function createTabOrchestrator(
 						nextMarker,
 						previousIndex,
 						wantContext,
-						baselineHref,
+						lastHref,
 						wantObscuring: remainingHas("obscuring"),
 						obscurerAttr: OBSCURER_ATTR,
 						obscuringRecheckDelayMs: OBSCURING_RECHECK_DELAY_MS,
@@ -974,7 +1029,7 @@ export function createTabOrchestrator(
 						break;
 					}
 
-					baselineHref = step.baselineHref;
+					lastHref = step.lastHref;
 
 					if (step.kind === "body") {
 						const blurredStop = step.blurredStop;
@@ -988,69 +1043,7 @@ export function createTabOrchestrator(
 						const raw = step.raw;
 
 						if (wantContext && raw?.hasAttributed) {
-							const attributedRef = await adaptor.evaluateHandle(attributedHandleScript);
-
-							try {
-								const selector = await adaptor.evaluate(getSelector, attributedRef);
-
-								const activeElement: ActiveElementInfo = {
-									index: null,
-									isBody: false,
-									isIframe: false,
-									selector,
-									html: truncateHtml(raw.attributedHtml ?? ""),
-									styles: { element: {}, before: {}, after: {} },
-									rect: { x: 0, y: 0, width: 0, height: 0 },
-								};
-
-								const contextSignals = toContextDrain(
-									raw,
-									openedDialog,
-									{ selector, html: activeElement.html },
-									step.formSelector ?? null,
-								);
-
-								mergeCarried(contextSignals, carried);
-								carried = {};
-
-								const snapshot: TabStopSnapshot = {
-									tabIndex: ++stats.tabStops,
-									activeElement,
-									contextSignals,
-								};
-
-								lastStop = { selector, html: activeElement.html };
-
-								// This synthetic stop has no live focused element (it
-								// already blurred itself before this notification is
-								// built, by definition of F55), so capabilities that
-								// need one (`unfocusedPair`, `baselineStyles`,
-								// `obscuring`) have nothing to meaningfully act on.
-								// Only consumers that declared `contextSignals` (the
-								// capability this whole synthetic-stop mechanism exists
-								// to serve) are notified; unlike every other stop in
-								// this file, uniform notification is wrong here because
-								// there is no element for the other capabilities to
-								// read from.
-								const recipients = [...attached].filter((consumer) =>
-									consumer.capabilities.has("contextSignals"),
-								);
-
-								// The blurred element is still in the page, so a
-								// `screenshot` declarer can capture it.
-								stopElement.ref = attributedRef;
-								stopElement.active = true;
-
-								for (const consumer of recipients) {
-									await notify(consumer, () => consumer.onTabStop(snapshot, handleFor(consumer)));
-								}
-							} finally {
-								// Guaranteed even if a recipient's onTabStop throws, so the
-								// `data-a11y-ctx-attr` DOM marker never survives past this stop.
-								stopElement.ref ??= attributedRef;
-								await adaptor.evaluate(clearAttributedScript);
-								await releaseStopElement();
-							}
+							await reportFocusRemoval(raw, openedDialog, step.formSelector ?? null);
 						} else if (wantContext && raw) {
 							// Nobody is notified of this stop, so what the drain had to say about earlier
 							// stops, or about no stop at all, waits for the next notification.
@@ -1199,7 +1192,13 @@ export function createTabOrchestrator(
 										mergeCarried(contextSignals, carried);
 										carried = {};
 
-										const snapshot: TabStopSnapshot = {
+										stopElement.pending = null;
+										stopElement.active = true;
+
+										// As for an element that dropped focus altogether: only the consumers
+										// this notification exists for are told, since the element focus is on
+										// has been a stop already.
+										await notifyContextConsumers({
 											tabIndex: ++stats.tabStops,
 											activeElement: {
 												...base,
@@ -1208,21 +1207,7 @@ export function createTabOrchestrator(
 												selector,
 											},
 											contextSignals,
-										};
-
-										stopElement.pending = null;
-										stopElement.active = true;
-
-										// As for an element that dropped focus altogether: only the consumers
-										// this notification exists for are told, since the element focus is on
-										// has been a stop already.
-										for (const consumer of [...attached].filter((candidate) =>
-											candidate.capabilities.has("contextSignals"),
-										)) {
-											await notify(consumer, () =>
-												consumer.onTabStop(snapshot, handleFor(consumer)),
-											);
-										}
+										});
 									}
 								}
 							} catch (error) {
@@ -1230,11 +1215,8 @@ export function createTabOrchestrator(
 									throw error;
 								}
 							} finally {
-								try {
-									await adaptor.evaluate(clearAttributedScript);
-								} catch {}
-
 								await releaseStopElement();
+								await cleanUp(clearAttributedScript);
 							}
 						}
 
@@ -1324,28 +1306,15 @@ export function createTabOrchestrator(
 							break;
 						}
 					} finally {
-						try {
-							if (pairByStop.current !== null) {
-								await pairByStop.current;
-
-								if (contextSignalsWanted) {
-									// ensureUnfocusedPair blurred and re-focused the element to
-									// capture the unfocused screenshot; drop that noise so the
-									// next drain doesn't misread it as a real focus-removal or
-									// redirect.
-									await adaptor.evaluate(clearContextFocusInsScript);
-
-									if (lastHasAttributed) {
-										await adaptor.evaluate(clearAttributedScript);
-									}
-								}
-							}
-						} catch {
-							// Capture errors already surface through the consumer that
-							// awaited; still dispose the handle below.
-						}
-
 						await releaseStopElement();
+
+						if (pairByStop.current !== null && contextObserverInstalled) {
+							await cleanUp(forgetPairCaptureEffectsScript);
+
+							if (lastHasAttributed) {
+								await cleanUp(clearAttributedScript);
+							}
+						}
 					}
 				}
 			} catch (error) {
@@ -1373,7 +1342,7 @@ export function createTabOrchestrator(
 						adaptor,
 						sessionEndScript,
 						{ composed: resolved.composed },
-						{ markerAttr: MARKER_ATTR, wantContext: contextSignalsWanted },
+						{ markerAttr: MARKER_ATTR, wantContext: contextObserverInstalled },
 					);
 				} catch {}
 

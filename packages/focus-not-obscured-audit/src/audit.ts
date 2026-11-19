@@ -104,7 +104,7 @@ function spread<T>(items: T[], limit: number): T[] {
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
-export type FocusNotObscuredAudit = TabConsumer & {
+export type FocusNotObscuredAudit = TabConsumer<"obscuring" | "screenshot"> & {
 	result: FocusNotObscuredResult;
 
 	/**
@@ -235,18 +235,11 @@ export function createFocusNotObscuredAudit(
 			checked++;
 
 			const measurement = snapshot.obscuring;
-
-			if (measurement === undefined) {
-				// Should not happen: this consumer declares the "obscuring" capability, so the orchestrator
-				// always populates it.
-				return;
-			}
-
 			const bucket = classifyObscuring(measurement);
 
 			const screenshot =
 				bucket !== "pass" && screenshotsTaken < resolved.screenshotLimit
-					? await (session.screenshotContext?.() ?? session.screenshotClip())
+					? await session.screenshotContext()
 					: undefined;
 
 			if (screenshot) {

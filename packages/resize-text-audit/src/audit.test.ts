@@ -1,3 +1,4 @@
+import { asEvaluate } from "@a11y-pulse/integration-harness/fake-evaluate";
 import type {
 	CandidateSnapshot,
 	DescribePayload,
@@ -391,14 +392,11 @@ function scriptedAdaptor(page: ScriptedPage = {}): ResizeTextAuditAdaptor & {
 			viewports.push(next);
 			viewport = next;
 		},
-		evaluate: async <T>(
-			fn: (...fnArgs: never[]) => T | Promise<T>,
-			...fnArgs: unknown[]
-		): Promise<T> => {
+		evaluate: asEvaluate(async (fn, ...fnArgs) => {
 			if (fn.name === "readLayoutFingerprintScript") {
 				const fingerprints = page.fingerprints ?? [STILL];
 
-				return (fingerprints[Math.min(reading++, fingerprints.length - 1)] ?? STILL) as T;
+				return fingerprints[Math.min(reading++, fingerprints.length - 1)] ?? STILL;
 			}
 
 			calls.push(fn.name);
@@ -410,17 +408,17 @@ function scriptedAdaptor(page: ScriptedPage = {}): ResizeTextAuditAdaptor & {
 
 			switch (fn.name) {
 				case "readViewportMetaScript":
-					return (page.meta ?? null) as T;
+					return page.meta ?? null;
 				case "collectBaselineScript":
 					return {
 						candidates: page.baseline ?? [],
 						limitReached: page.limitReached ?? false,
-					} as T;
+					};
 				case "remeasureScript":
 					return {
 						candidates: page.after ?? page.baseline ?? [],
 						limitReached: page.afterLimitReached ?? false,
-					} as T;
+					};
 				case "describeFindingsScript": {
 					const request = fnArgs[0] as DescribeRequest;
 					const payload: DescribePayload = {
@@ -429,14 +427,14 @@ function scriptedAdaptor(page: ScriptedPage = {}): ResizeTextAuditAdaptor & {
 						clippers: (page.clippers ?? []).filter((el) => request.clippers.includes(el.index)),
 					};
 
-					return payload as T;
+					return payload;
 				}
 				case "restoreAndVerifyScript":
-					return { restored: page.restored ?? true } as T;
+					return { restored: page.restored ?? true };
 				default:
 					throw new Error(`unexpected evaluate: ${fn.name}`);
 			}
-		},
+		}),
 		screenshotClip: async (clip) => {
 			calls.push("screenshotClip");
 			screenshotCalls.push(clip);

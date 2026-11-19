@@ -1,9 +1,24 @@
-import type { BrowserAdaptor, ElementRef } from "@a11y-pulse/browser-adaptor";
+import type {
+	BrowserAdaptor,
+	ElementRef,
+	EvaluateArgs,
+	PageFunction,
+} from "@a11y-pulse/browser-adaptor";
 
-// biome-ignore lint/suspicious/noExplicitAny: page scripts take whatever arguments they declare.
-type PageScript = (...args: any[]) => unknown;
+export type ScriptParts = Record<string, PageFunction>;
 
-export type ScriptParts = Record<string, PageScript>;
+export function withHelpers<F extends PageFunction>(helpers: PageFunction[], fn: F): F {
+	const declarations = helpers.map((helper) => `const ${helper.name} = ${helper.toString()};`);
+	const source = `function (...args) {\n${declarations.join("\n")}\nreturn (${fn.toString()})(...args);\n}`;
+	const page = (...args: never[]) => fn(...args);
+
+	Object.defineProperties(page, {
+		name: { value: fn.name },
+		toString: { value: () => source },
+	});
+
+	return page as F;
+}
 
 /**
  * What a composed script's body uses to reach its parts. The same body runs in two places: inside
@@ -15,8 +30,10 @@ export type ScriptContext<P extends ScriptParts, H> = {
 	/** `null` inside the page. On the host, whatever the caller offered that only a host can do. */
 	readonly host: H | null;
 	/** Run the part `name`. Element arguments are elements in the page and handles on the host. */
-	// biome-ignore lint/suspicious/noExplicitAny: each part's own signature says what it returns.
-	call(name: keyof P, ...args: unknown[]): Promise<any>;
+	call<K extends keyof P>(
+		name: K,
+		...args: EvaluateArgs<Parameters<P[K]>>
+	): Promise<Awaited<ReturnType<P[K]>>>;
 	/** Run the part `name`, which returns an element, and keep hold of that element. */
 	handle(name: keyof P): Promise<ElementRef>;
 	/** Let go of an element `handle()` returned. */
@@ -179,7 +196,7 @@ export async function runComposed<P extends ScriptParts, A, R, H>(
 
 	const ctx: ScriptContext<P, H> = {
 		host: options.host ?? ({} as H),
-		call: (name, ...values) => adaptor.evaluate(script.parts[name] as PageScript, ...values),
+		call: (name, ...values) => adaptor.evaluate(script.parts[name], ...values),
 		handle: (name) => adaptor.evaluateHandle(script.parts[name] as () => Element | null),
 		release: (ref) => adaptor.disposeRef(ref),
 		sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),

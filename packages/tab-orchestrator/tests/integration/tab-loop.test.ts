@@ -399,7 +399,7 @@ describeEachEngine<BrowserAdaptor>(
 						),
 						observer: "__a11yContextObserver" in window,
 						markers: document.querySelectorAll(
-							"[data-a11y-focus-idx], [data-a11y-ctx-attr], [data-a11y-pulse-focus-start]",
+							"[data-a11y-focus-idx], [data-a11y-pulse-focus-start]",
 						).length,
 					};
 				});

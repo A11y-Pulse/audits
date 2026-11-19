@@ -1,4 +1,4 @@
-import type { Rect } from "@a11y-pulse/browser-adaptor";
+import type { EvaluateArgs, PageFunction, Rect } from "@a11y-pulse/browser-adaptor";
 
 /**
  * An element handle in the page. This type is adaptor-specific and is opaque to the audit.
@@ -13,11 +13,10 @@ export interface SkipLinkAuditAdaptor {
 	/**
 	 * Run `fn` in the page context, passing in any serialisable `args`
 	 */
-	evaluate<T>(
-		// biome-ignore lint/suspicious/noExplicitAny: `fn` accepts arbitrary serialised arguments
-		fn: (...args: any[]) => T | Promise<T>,
-		...args: unknown[]
-	): Promise<T>;
+	evaluate<F extends PageFunction>(
+		fn: F,
+		...args: EvaluateArgs<Parameters<F>>
+	): Promise<Awaited<ReturnType<F>>>;
 
 	/**
 	 * Return an opaque handle to an element in the page

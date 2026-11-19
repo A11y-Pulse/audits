@@ -1,3 +1,4 @@
+import type { EvaluateArgs, PageFunction } from "@a11y-pulse/browser-adaptor";
 import {
 	PuppeteerAdaptor as BrowserPuppeteerAdaptor,
 	type PuppeteerAdaptorOptions,
@@ -35,11 +36,10 @@ export class PuppeteerAdaptor implements ReflowAuditAdaptor {
 		this.screenshotClipScale = this.browser.screenshotClipScale;
 	}
 
-	evaluate<T>(
-		// biome-ignore lint/suspicious/noExplicitAny: the page-evaluated fn accepts arbitrary serialised args.
-		fn: (...args: any[]) => T | Promise<T>,
-		...args: unknown[]
-	): Promise<T> {
+	evaluate<F extends PageFunction>(
+		fn: F,
+		...args: EvaluateArgs<Parameters<F>>
+	): Promise<Awaited<ReturnType<F>>> {
 		return this.browser.evaluate(fn, ...args);
 	}
 

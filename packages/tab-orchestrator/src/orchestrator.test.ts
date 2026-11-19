@@ -1,25 +1,22 @@
 import type { BrowserAdaptor } from "@a11y-pulse/browser-adaptor";
 import { getSelector } from "@a11y-pulse/browser-adaptor/dom";
+import { createFocusAppearanceAudit } from "@a11y-pulse/focus-appearance-audit";
+import { asDispatch, asEvaluate } from "@a11y-pulse/integration-harness/fake-evaluate";
+import { loopAdaptor, STABLE_HREF } from "@a11y-pulse/integration-harness/fake-tab-adaptor";
 import { describe, expect, it, vi } from "vitest";
 import {
-	activeElementHandleScript,
 	attributedHandleScript,
-	baselineScript,
 	blurScript,
 	clearAttributedScript,
-	clearContextFocusInsScript,
 	clearMarkersScript,
 	clearObscurerScript,
 	documentReplacedScript,
 	drainContextObserverScript,
 	elementRectScript,
-	elementStylesScript,
 	focusScript,
-	hasFocusScript,
-	heldFocusScript,
+	forgetPairCaptureEffectsScript,
 	installContextObserverScript,
 	locationHrefScript,
-	markActiveElementScript,
 	measureObscuringScript,
 	needsCentringScript,
 	obscurerHandleScript,
@@ -122,121 +119,12 @@ function recordingConsumer(
 	return record;
 }
 
-/**
- * Fixed `location.href` returned by `loopAdaptor`'s default handling of `locationHrefScript` so
- * tests that don't care about navigation-via-href never see a diff against the baseline captured at
- * session start (which uses the same default).
- */
-const STABLE_HREF = "https://example.test/";
-
-function loopAdaptor(script: {
-	// Focus state per tab stop, read before that stop's tab press.
-	hasFocus?: boolean[];
-	// Focus state per tab stop after the tab press. Defaults to hasFocus.
-	hasFocusAfterTab?: boolean[];
-	// Whether ensureFocusReporting() restores a page that has lost focus.
-	restoresFocus?: boolean;
-	active?: Array<Omit<ActiveElementInfo, "selector"> | null>;
-	// Why a repeated element held focus. Defaults to a control moving between its own parts.
-	heldFocus?: { prevented: boolean; followed: boolean };
-}): BrowserAdaptor {
-	let activeCall = 0;
-	let dynamicMarker: number | undefined;
-	let stopIndex = -1;
-	let tabbed = false;
-	let postTabReads = 0;
-
-	return {
-		ensureFocusReporting: vi.fn(async () => {}),
-		evaluate: (async (fn, ...args) => {
-			if (fn === markActiveElementScript) {
-				// One unmarked element per script: it keeps the marker it was first given.
-				dynamicMarker ??= args[1] as number;
-
-				return dynamicMarker;
-			}
-
-			if (fn === heldFocusScript) {
-				return script.heldFocus ?? { prevented: false, followed: true };
-			}
-
-			if (fn === baselineScript) {
-				return { styles: [EMPTY_STYLES], entries: [] };
-			}
-
-			if (fn === probeActiveElementScript) {
-				tabbed = false;
-
-				return (
-					script.active?.[activeCall++] ?? {
-						index: null,
-						isBody: true,
-						isIframe: false,
-						html: "",
-						styles: EMPTY_STYLES,
-						rect: { x: 0, y: 0, width: 0, height: 0 },
-					}
-				);
-			}
-
-			if (fn === getSelector) {
-				return "#fake";
-			}
-
-			if (fn === elementStylesScript) {
-				return EMPTY_STYLES;
-			}
-
-			if (fn === clearMarkersScript) {
-				return undefined;
-			}
-
-			if (fn === locationHrefScript) {
-				return STABLE_HREF;
-			}
-
-			if (fn === hasFocusScript) {
-				if (!tabbed) {
-					return script.hasFocus?.[stopIndex + 1] ?? false;
-				}
-
-				// A second read in the same stop only follows a re-assertion.
-				if (postTabReads++ > 0) {
-					return script.restoresFocus ?? false;
-				}
-
-				return script.hasFocusAfterTab?.[stopIndex] ?? script.hasFocus?.[stopIndex] ?? false;
-			}
-
-			return false;
-		}) as BrowserAdaptor["evaluate"],
-		async evaluateHandle(fn) {
-			if (fn === activeElementHandleScript) {
-				return { kind: "active" };
-			}
-
-			return {};
-		},
-		async disposeRef() {},
-		async pressTab() {
-			stopIndex++;
-			tabbed = true;
-			postTabReads = 0;
-		},
-		async pressEnter() {},
-		async pressKey() {},
-		async screenshotClip() {
-			return new Uint8Array([1]);
-		},
-	};
-}
-
 describe("tab loop", () => {
 	it("notifies consumers for each non-iframe tab stop", async () => {
 		const a = recordingConsumer();
 		const orchestrator = createTabOrchestrator(
 			loopAdaptor({
-				hasFocus: [true, true, true],
+				focusBeforeTab: [true, true, true],
 				active: [info(0), info(1)],
 			}),
 			{ screenshotSettleDelay: 0 },
@@ -253,7 +141,7 @@ describe("tab loop", () => {
 		const a = recordingConsumer();
 		const orchestrator = createTabOrchestrator(
 			loopAdaptor({
-				hasFocus: [true, true, true],
+				focusBeforeTab: [true, true, true],
 				active: [info(0, { isIframe: true }), info(1)],
 			}),
 			{ screenshotSettleDelay: 0 },
@@ -269,7 +157,7 @@ describe("tab loop", () => {
 			const consumer = recordingConsumer();
 			const orchestrator = createTabOrchestrator(
 				loopAdaptor({
-					hasFocus: Array(iframeStops + 3).fill(true),
+					focusBeforeTab: Array(iframeStops + 3).fill(true),
 					active: [...Array(iframeStops).fill(info(0, { isIframe: true })), info(1)],
 				}),
 				{ screenshotSettleDelay: 0 },
@@ -293,7 +181,7 @@ describe("tab loop", () => {
 		const a = recordingConsumer();
 		const orchestrator = createTabOrchestrator(
 			loopAdaptor({
-				hasFocus: [true, true, true],
+				focusBeforeTab: [true, true, true],
 				active: [info(0), info(0)],
 			}),
 			{ screenshotSettleDelay: 0 },
@@ -308,7 +196,7 @@ describe("tab loop", () => {
 		const a = recordingConsumer();
 		const orchestrator = createTabOrchestrator(
 			loopAdaptor({
-				hasFocus: Array(6).fill(true),
+				focusBeforeTab: Array(6).fill(true),
 				active: [info(0), info(1), info(1), info(1), info(2)],
 			}),
 			{ screenshotSettleDelay: 0 },
@@ -325,7 +213,7 @@ describe("tab loop", () => {
 		const run = async (consumer: typeof tenRepeats, repeats: number) => {
 			const orchestrator = createTabOrchestrator(
 				loopAdaptor({
-					hasFocus: Array(20).fill(true),
+					focusBeforeTab: Array(20).fill(true),
 					active: [info(0), info(1), ...Array(repeats).fill(info(1)), info(2)],
 				}),
 				{ screenshotSettleDelay: 0 },
@@ -346,7 +234,7 @@ describe("tab loop", () => {
 		const a = recordingConsumer();
 		const orchestrator = createTabOrchestrator(
 			loopAdaptor({
-				hasFocus: Array(20).fill(true),
+				focusBeforeTab: Array(20).fill(true),
 				active: [info(0), ...Array(15).fill(info(1))],
 			}),
 			{ screenshotSettleDelay: 0 },
@@ -362,7 +250,7 @@ describe("tab loop", () => {
 		const a = recordingConsumer();
 		const orchestrator = createTabOrchestrator(
 			loopAdaptor({
-				hasFocus: Array(20).fill(true),
+				focusBeforeTab: Array(20).fill(true),
 				active: [info(0), info(1), info(1)],
 				heldFocus: { prevented: true, followed: true },
 			}),
@@ -378,7 +266,7 @@ describe("tab loop", () => {
 		const a = recordingConsumer();
 		const orchestrator = createTabOrchestrator(
 			loopAdaptor({
-				hasFocus: Array(20).fill(true),
+				focusBeforeTab: Array(20).fill(true),
 				active: [info(0), info(1), info(1)],
 				heldFocus: { prevented: false, followed: false },
 			}),
@@ -396,7 +284,7 @@ describe("tab loop", () => {
 		const unmarked = { ...info(0), index: null };
 		const orchestrator = createTabOrchestrator(
 			loopAdaptor({
-				hasFocus: Array(20).fill(true),
+				focusBeforeTab: Array(20).fill(true),
 				active: [info(0), ...Array(15).fill(unmarked)],
 			}),
 			{ screenshotSettleDelay: 0 },
@@ -411,7 +299,7 @@ describe("tab loop", () => {
 		const a = recordingConsumer();
 		const orchestrator = createTabOrchestrator(
 			loopAdaptor({
-				hasFocus: [true, true, true, true],
+				focusBeforeTab: [true, true, true, true],
 				active: [info(0), info(1), info(2), info(1)],
 			}),
 			{ screenshotSettleDelay: 0 },
@@ -426,7 +314,7 @@ describe("tab loop", () => {
 		const a = recordingConsumer();
 		const orchestrator = createTabOrchestrator(
 			loopAdaptor({
-				hasFocus: [false],
+				focusBeforeTab: [false],
 				active: [info(0)],
 			}),
 			{ screenshotSettleDelay: 0 },
@@ -441,8 +329,8 @@ describe("tab loop", () => {
 		const a = recordingConsumer();
 		const orchestrator = createTabOrchestrator(
 			loopAdaptor({
-				hasFocus: [true, true],
-				hasFocusAfterTab: [false],
+				focusBeforeTab: [true, true],
+				focusAfterTab: [false],
 				active: [info(0), info(1)],
 			}),
 			{ screenshotSettleDelay: 0 },
@@ -455,8 +343,8 @@ describe("tab loop", () => {
 
 	it("re-asserts focus reporting and continues when focus is restored after the tab press", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true, true],
-			hasFocusAfterTab: [false],
+			focusBeforeTab: [true, true, true],
+			focusAfterTab: [false],
 			restoresFocus: true,
 			active: [info(0), info(1)],
 		});
@@ -475,8 +363,8 @@ describe("tab loop", () => {
 		const a = recordingConsumer();
 		const orchestrator = createTabOrchestrator(
 			loopAdaptor({
-				hasFocus: [true, true, true],
-				hasFocusAfterTab: [true, true, false],
+				focusBeforeTab: [true, true, true],
+				focusAfterTab: [true, true, false],
 				active: [info(0), info(1)],
 			}),
 			{ screenshotSettleDelay: 0 },
@@ -494,7 +382,7 @@ describe("tab loop", () => {
 		const b = recordingConsumer();
 		const orchestrator = createTabOrchestrator(
 			loopAdaptor({
-				hasFocus: [true, true, true],
+				focusBeforeTab: [true, true, true],
 				active: [info(0), info(1)],
 			}),
 			{ screenshotSettleDelay: 0 },
@@ -511,7 +399,7 @@ describe("tab loop", () => {
 	it("reports the stops delivered and how the session ended", async () => {
 		const orchestrator = createTabOrchestrator(
 			loopAdaptor({
-				hasFocus: [true, true, true],
+				focusBeforeTab: [true, true, true],
 				active: [info(0), info(1)],
 			}),
 			{ screenshotSettleDelay: 0 },
@@ -533,7 +421,7 @@ describe("tab loop", () => {
 	it("reports no end reason when every consumer disconnects itself", async () => {
 		const orchestrator = createTabOrchestrator(
 			loopAdaptor({
-				hasFocus: [true, true, true],
+				focusBeforeTab: [true, true, true],
 				active: [info(0), info(1)],
 			}),
 			{ screenshotSettleDelay: 0 },
@@ -547,7 +435,7 @@ describe("tab loop", () => {
 
 	it("times screenshot captures", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [info(0)],
 		});
 		adaptor.screenshotClip = async () => {
@@ -573,7 +461,7 @@ describe("tab loop", () => {
 	it("does not execute unfocusedPair when nobody calls ensureUnfocusedPair", async () => {
 		const screenshots: number[] = [];
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [info(0)],
 		});
 		adaptor.screenshotClip = async () => {
@@ -591,9 +479,7 @@ describe("tab loop", () => {
 	});
 
 	it("throws from ensureUnfocusedPair when the consumer did not declare it", async () => {
-		const a = recordingConsumer([], async (_s, _d) => {
-			// session is captured below via a wrapper
-		});
+		const a = recordingConsumer([], async (_s, _d) => {});
 		let thrown: Error | undefined;
 		const wrapped: TabConsumer = {
 			capabilities: new Set(),
@@ -608,7 +494,7 @@ describe("tab loop", () => {
 			},
 		};
 		const orchestrator = createTabOrchestrator(
-			loopAdaptor({ hasFocus: [true, true], active: [info(0)] }),
+			loopAdaptor({ focusBeforeTab: [true, true], active: [info(0)] }),
 			{ screenshotSettleDelay: 0 },
 		);
 		orchestrator.attach(wrapped);
@@ -619,11 +505,11 @@ describe("tab loop", () => {
 	it("captures unfocusedPair once per stop when a declarer calls ensureUnfocusedPair", async () => {
 		const clips: unknown[] = [];
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [info(0)],
 		});
-		const originalEvaluate = adaptor.evaluate.bind(adaptor);
-		adaptor.evaluate = (async (fn, ...args) => {
+		const originalEvaluate = asDispatch(adaptor.evaluate.bind(adaptor));
+		adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 			if (fn === pageDimensionsScript) {
 				return { width: 2000, height: 4000 };
 			}
@@ -641,7 +527,7 @@ describe("tab loop", () => {
 			}
 
 			return originalEvaluate(fn, ...args);
-		}) as BrowserAdaptor["evaluate"];
+		});
 		adaptor.screenshotClip = async (clip) => {
 			clips.push(clip);
 
@@ -672,7 +558,7 @@ describe("tab loop", () => {
 	it("does not capture a screenshot when nobody calls session.screenshotClip", async () => {
 		const screenshots: number[] = [];
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [info(0)],
 		});
 		adaptor.screenshotClip = async () => {
@@ -705,7 +591,7 @@ describe("tab loop", () => {
 			},
 		};
 		const orchestrator = createTabOrchestrator(
-			loopAdaptor({ hasFocus: [true, true], active: [info(0)] }),
+			loopAdaptor({ focusBeforeTab: [true, true], active: [info(0)] }),
 			{ screenshotSettleDelay: 0 },
 		);
 		orchestrator.attach(wrapped);
@@ -716,11 +602,11 @@ describe("tab loop", () => {
 	it("captures a screenshot once per stop when a declarer calls screenshotClip", async () => {
 		const clips: unknown[] = [];
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [info(0)],
 		});
-		const originalEvaluate = adaptor.evaluate.bind(adaptor);
-		adaptor.evaluate = (async (fn, ...args) => {
+		const originalEvaluate = asDispatch(adaptor.evaluate.bind(adaptor));
+		adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 			if (fn === pageDimensionsScript) {
 				return { width: 2000, height: 4000 };
 			}
@@ -730,7 +616,7 @@ describe("tab loop", () => {
 			}
 
 			return originalEvaluate(fn, ...args);
-		}) as BrowserAdaptor["evaluate"];
+		});
 		adaptor.screenshotClip = async (clip) => {
 			clips.push(clip);
 
@@ -760,11 +646,11 @@ describe("tab loop", () => {
 	it("scrolls to center before capture when the element needs centring", async () => {
 		let scrolls = 0;
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [info(0)],
 		});
-		const originalEvaluate = adaptor.evaluate.bind(adaptor);
-		adaptor.evaluate = (async (fn, ...args) => {
+		const originalEvaluate = asDispatch(adaptor.evaluate.bind(adaptor));
+		adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 			if (fn === needsCentringScript) {
 				expect(args[1]).toBe(10);
 
@@ -791,7 +677,7 @@ describe("tab loop", () => {
 			}
 
 			return originalEvaluate(fn, ...args);
-		}) as BrowserAdaptor["evaluate"];
+		});
 		adaptor.screenshotClip = async () => new Uint8Array([1]);
 
 		const a: TabConsumer = {
@@ -818,18 +704,18 @@ describe("tab loop", () => {
 		};
 
 		const adaptor = loopAdaptor({
-			hasFocus: [true],
+			focusBeforeTab: [true],
 			active: [info(0)],
 		});
 		let probeCalls = 0;
 		const evaluate = adaptor.evaluate;
-		adaptor.evaluate = (async (fn, ...args) => {
+		adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 			if (fn === probeActiveElementScript) {
 				probeCalls += 1;
 			}
 
 			return evaluate(fn, ...args);
-		}) as BrowserAdaptor["evaluate"];
+		});
 
 		let releasePressTab!: () => void;
 		adaptor.pressTab = () =>
@@ -862,11 +748,11 @@ describe("tab loop", () => {
 	it("measures obscuring only while a remaining consumer declared it", async () => {
 		const measures: number[] = [];
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true, true],
+			focusBeforeTab: [true, true, true],
 			active: [info(0), info(1)],
 		});
-		const original = adaptor.evaluate.bind(adaptor);
-		adaptor.evaluate = (async (fn, ...args) => {
+		const original = asDispatch(adaptor.evaluate.bind(adaptor));
+		adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 			if (fn === measureObscuringScript) {
 				measures.push(1);
 
@@ -885,7 +771,7 @@ describe("tab loop", () => {
 			}
 
 			return original(fn, ...args);
-		}) as BrowserAdaptor["evaluate"];
+		});
 
 		const obscuring = recordingConsumer(["obscuring"], async (_s, disconnect) => {
 			disconnect();
@@ -906,11 +792,11 @@ describe("tab loop", () => {
 	function coveredAdaptor(cover: { opacity: "opaque" | "semi-transparent" }) {
 		const calls = { measure: 0, clear: 0, obscurerHandle: 0 };
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [info(0)],
 		});
-		const original = adaptor.evaluate.bind(adaptor);
-		adaptor.evaluate = (async (fn, ...args) => {
+		const original = asDispatch(adaptor.evaluate.bind(adaptor));
+		adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 			if (fn === measureObscuringScript) {
 				calls.measure++;
 
@@ -931,7 +817,7 @@ describe("tab loop", () => {
 			}
 
 			return original(fn, ...args);
-		}) as BrowserAdaptor["evaluate"];
+		});
 		adaptor.evaluateHandle = async (fn) => {
 			if (fn === obscurerHandleScript) {
 				calls.obscurerHandle++;
@@ -1000,11 +886,11 @@ describe("tab loop", () => {
 	it("only clears the obscurer marker when a cover was marked", async () => {
 		let clears = 0;
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [info(0)],
 		});
-		const original = adaptor.evaluate.bind(adaptor);
-		adaptor.evaluate = (async (fn, ...args) => {
+		const original = asDispatch(adaptor.evaluate.bind(adaptor));
+		adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 			if (fn === measureObscuringScript) {
 				return {
 					coveredFraction: 0,
@@ -1023,7 +909,7 @@ describe("tab loop", () => {
 			}
 
 			return original(fn, ...args);
-		}) as BrowserAdaptor["evaluate"];
+		});
 		const obscuring = recordingConsumer(["obscuring"]);
 		const orchestrator = createTabOrchestrator(adaptor, { screenshotSettleDelay: 0 });
 		orchestrator.attach(obscuring);
@@ -1035,16 +921,16 @@ describe("tab loop", () => {
 
 	it("asks an adaptor once for a composed script, then sends scripts one by one", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [info(0)],
 		});
-		const original = adaptor.evaluate.bind(adaptor);
+		const original = asDispatch(adaptor.evaluate.bind(adaptor));
 		const seen: unknown[] = [];
-		adaptor.evaluate = (async (fn, ...args) => {
+		adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 			seen.push(fn);
 
 			return original(fn, ...args);
-		}) as BrowserAdaptor["evaluate"];
+		});
 		const a = recordingConsumer();
 		const orchestrator = createTabOrchestrator(adaptor, { screenshotSettleDelay: 0 });
 		orchestrator.attach(a);
@@ -1060,16 +946,16 @@ describe("tab loop", () => {
 
 	it("never sends a composed script when composeScripts is off", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [info(0)],
 		});
-		const original = adaptor.evaluate.bind(adaptor);
+		const original = asDispatch(adaptor.evaluate.bind(adaptor));
 		const seen: unknown[] = [];
-		adaptor.evaluate = (async (fn, ...args) => {
+		adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 			seen.push(fn);
 
 			return original(fn, ...args);
-		}) as BrowserAdaptor["evaluate"];
+		});
 		const a = recordingConsumer();
 		const orchestrator = createTabOrchestrator(adaptor, {
 			screenshotSettleDelay: 0,
@@ -1084,13 +970,13 @@ describe("tab loop", () => {
 
 	it("sends every stop as one composed script once the adaptor has answered one", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true, true],
+			focusBeforeTab: [true, true, true],
 			active: [info(0), info(1)],
 		});
-		const original = adaptor.evaluate.bind(adaptor);
+		const original = asDispatch(adaptor.evaluate.bind(adaptor));
 		const seen: unknown[] = [];
 		const stops = [info(0), info(1)];
-		adaptor.evaluate = (async (fn, ...args) => {
+		adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 			seen.push(fn);
 
 			if (fn === sessionStartScript.pageFunction) {
@@ -1107,7 +993,7 @@ describe("tab loop", () => {
 				const base = stops.shift();
 
 				return base === undefined
-					? { kind: "body", blurredStop: null, raw: null, baselineHref: null }
+					? { kind: "body", blurredStop: null, raw: null, lastHref: null }
 					: {
 							kind: "stop",
 							base,
@@ -1116,13 +1002,13 @@ describe("tab loop", () => {
 							raw: null,
 							drainDestroyed: false,
 							obscuring: null,
-							baselineHref: null,
+							lastHref: null,
 							ref: null,
 						};
 			}
 
 			return original(fn, ...args);
-		}) as BrowserAdaptor["evaluate"];
+		});
 		const handles = vi.fn(async () => ({}));
 		adaptor.evaluateHandle = handles;
 		const a = recordingConsumer();
@@ -1141,20 +1027,20 @@ describe("tab loop", () => {
 	it("notifies remaining consumers with failed and rethrows when pressTab throws", async () => {
 		const a = recordingConsumer();
 		const adaptor = loopAdaptor({
-			hasFocus: [true],
+			focusBeforeTab: [true],
 			active: [info(0)],
 		});
 		adaptor.pressTab = async () => {
 			throw new Error("tab failed");
 		};
 		const evaluate = adaptor.evaluate;
-		adaptor.evaluate = (async (fn, ...args) => {
+		adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 			if (fn === clearMarkersScript) {
 				throw new Error("teardown failed");
 			}
 
 			return evaluate(fn, ...args);
-		}) as BrowserAdaptor["evaluate"];
+		});
 
 		const orchestrator = createTabOrchestrator(adaptor, {
 			screenshotSettleDelay: 0,
@@ -1167,11 +1053,11 @@ describe("tab loop", () => {
 	it("drains context signals before measuring obscuring", async () => {
 		const order: string[] = [];
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [info(0)],
 		});
-		const original = adaptor.evaluate.bind(adaptor);
-		adaptor.evaluate = (async (fn, ...args) => {
+		const original = asDispatch(adaptor.evaluate.bind(adaptor));
+		adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 			if (fn === installContextObserverScript) {
 				order.push("install");
 
@@ -1207,7 +1093,7 @@ describe("tab loop", () => {
 			}
 
 			return original(fn, ...args);
-		}) as BrowserAdaptor["evaluate"];
+		});
 		const orchestrator = createTabOrchestrator(adaptor, {
 			screenshotSettleDelay: 0,
 		});
@@ -1219,11 +1105,11 @@ describe("tab loop", () => {
 	it("does not drain after the last contextSignals consumer disconnects", async () => {
 		let drains = 0;
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true, true],
+			focusBeforeTab: [true, true, true],
 			active: [info(0), info(1)],
 		});
-		const original = adaptor.evaluate.bind(adaptor);
-		adaptor.evaluate = (async (fn, ...args) => {
+		const original = asDispatch(adaptor.evaluate.bind(adaptor));
+		adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 			if (fn === drainContextObserverScript) {
 				drains++;
 
@@ -1244,7 +1130,7 @@ describe("tab loop", () => {
 			}
 
 			return original(fn, ...args);
-		}) as BrowserAdaptor["evaluate"];
+		});
 		const ctx = recordingConsumer(["contextSignals"], async (_s, disconnect) => {
 			disconnect();
 		});
@@ -1260,11 +1146,11 @@ describe("tab loop", () => {
 
 	it("aborts the session after notifying a navigation drain", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true, true],
+			focusBeforeTab: [true, true, true],
 			active: [info(0), info(1)],
 		});
-		const original = adaptor.evaluate.bind(adaptor);
-		adaptor.evaluate = (async (fn, ...args) => {
+		const original = asDispatch(adaptor.evaluate.bind(adaptor));
+		adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 			if (fn === drainContextObserverScript) {
 				return {
 					openedWindow: false,
@@ -1283,7 +1169,7 @@ describe("tab loop", () => {
 			}
 
 			return original(fn, ...args);
-		}) as BrowserAdaptor["evaluate"];
+		});
 		const ctx = recordingConsumer(["contextSignals"]);
 		const orchestrator = createTabOrchestrator(adaptor, {
 			screenshotSettleDelay: 0,
@@ -1297,12 +1183,12 @@ describe("tab loop", () => {
 
 	it("detects navigation via href diff even when the post-navigation probe would otherwise report isBody", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true],
+			focusBeforeTab: [true],
 			active: [],
 		});
-		const original = adaptor.evaluate.bind(adaptor);
+		const original = asDispatch(adaptor.evaluate.bind(adaptor));
 		let hrefCalls = 0;
-		adaptor.evaluate = (async (fn, ...args) => {
+		adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 			if (fn === locationHrefScript) {
 				hrefCalls++;
 
@@ -1327,7 +1213,7 @@ describe("tab loop", () => {
 			}
 
 			return original(fn, ...args);
-		}) as BrowserAdaptor["evaluate"];
+		});
 		const ctx = recordingConsumer(["contextSignals"]);
 		const orchestrator = createTabOrchestrator(adaptor, {
 			screenshotSettleDelay: 0,
@@ -1340,11 +1226,11 @@ describe("tab loop", () => {
 
 	it("classifies navigation when the active-element probe itself throws a destroyed-context error", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true],
+			focusBeforeTab: [true],
 			active: [info(0)],
 		});
-		const original = adaptor.evaluate.bind(adaptor);
-		adaptor.evaluate = (async (fn, ...args) => {
+		const original = asDispatch(adaptor.evaluate.bind(adaptor));
+		adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 			if (fn === probeActiveElementScript) {
 				throw new Error("Execution context was destroyed");
 			}
@@ -1354,7 +1240,7 @@ describe("tab loop", () => {
 			}
 
 			return original(fn, ...args);
-		}) as BrowserAdaptor["evaluate"];
+		});
 		const ctx = recordingConsumer(["contextSignals"]);
 		const orchestrator = createTabOrchestrator(adaptor, {
 			screenshotSettleDelay: 0,
@@ -1367,12 +1253,12 @@ describe("tab loop", () => {
 
 	it("classifies navigation when the context drain call throws a destroyed-context error", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true],
+			focusBeforeTab: [true],
 			active: [info(0)],
 		});
-		const original = adaptor.evaluate.bind(adaptor);
+		const original = asDispatch(adaptor.evaluate.bind(adaptor));
 		let drains = 0;
-		adaptor.evaluate = (async (fn, ...args) => {
+		adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 			if (fn === drainContextObserverScript) {
 				drains++;
 				throw new Error("Execution context was destroyed");
@@ -1383,7 +1269,7 @@ describe("tab loop", () => {
 			}
 
 			return original(fn, ...args);
-		}) as BrowserAdaptor["evaluate"];
+		});
 		const ctx = recordingConsumer(["contextSignals"]);
 		const orchestrator = createTabOrchestrator(adaptor, {
 			screenshotSettleDelay: 0,
@@ -1396,14 +1282,14 @@ describe("tab loop", () => {
 		expect(drains).toBe(1);
 	});
 
-	it("clears context observer noise after ensureUnfocusedPair blur", async () => {
+	function pairCleanupSession(cleanUp: () => undefined = () => undefined) {
 		const order: string[] = [];
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [info(0)],
 		});
-		const original = adaptor.evaluate.bind(adaptor);
-		adaptor.evaluate = (async (fn, ...args) => {
+		const original = asDispatch(adaptor.evaluate.bind(adaptor));
+		adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 			if (fn === drainContextObserverScript) {
 				order.push("drain");
 
@@ -1419,10 +1305,10 @@ describe("tab loop", () => {
 				};
 			}
 
-			if (fn === clearContextFocusInsScript || fn === clearAttributedScript) {
+			if (fn === forgetPairCaptureEffectsScript || fn === clearAttributedScript) {
 				order.push("clear");
 
-				return undefined;
+				return cleanUp();
 			}
 
 			if (fn === installContextObserverScript) {
@@ -1452,7 +1338,7 @@ describe("tab loop", () => {
 			}
 
 			return original(fn, ...args);
-		}) as BrowserAdaptor["evaluate"];
+		});
 		adaptor.screenshotClip = async () => new Uint8Array([1]);
 		const a: TabConsumer = {
 			capabilities: new Set(["contextSignals", "unfocusedPair"]),
@@ -1465,6 +1351,13 @@ describe("tab loop", () => {
 			screenshotSettleDelay: 0,
 		});
 		orchestrator.attach(a);
+
+		return { order, orchestrator };
+	}
+
+	it("clears context observer noise after ensureUnfocusedPair blur", async () => {
+		const { order, orchestrator } = pairCleanupSession();
+
 		await orchestrator.run();
 		// The session's second (and final) loop iteration is the "done tabbing" isBody exit, which also
 		// drains context signals before ending, hence a trailing "drain" with no further
@@ -1474,10 +1367,27 @@ describe("tab loop", () => {
 		expect(order).toEqual(["drain", "pair", "clear", "drain", "drain"]);
 	});
 
+	it("fails the session when the cleanup after a pair capture fails for any reason but navigation", async () => {
+		const { orchestrator } = pairCleanupSession(() => {
+			throw new Error("cleanup bug");
+		});
+
+		await expect(orchestrator.run()).rejects.toThrow("cleanup bug");
+	});
+
+	it("carries on when the page has navigated away from the cleanup after a pair capture", async () => {
+		const { order, orchestrator } = pairCleanupSession(() => {
+			throw new Error("Execution context was destroyed");
+		});
+
+		await expect(orchestrator.run()).resolves.toMatchObject({ endReason: "completed" });
+		expect(order).toEqual(["drain", "pair", "clear", "drain", "drain"]);
+	});
+
 	describe("F55 focus-removal at the isBody exit", () => {
 		it("notifies an attached contextSignals consumer of the attributed element before ending", async () => {
 			const adaptor = loopAdaptor({
-				hasFocus: [true],
+				focusBeforeTab: [true],
 				active: [],
 			});
 			const attributedRef = { kind: "attributed" };
@@ -1488,8 +1398,8 @@ describe("tab loop", () => {
 
 				return {};
 			}) as BrowserAdaptor["evaluateHandle"];
-			const original = adaptor.evaluate.bind(adaptor);
-			adaptor.evaluate = (async (fn, ...args) => {
+			const original = asDispatch(adaptor.evaluate.bind(adaptor));
+			adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 				if (fn === drainContextObserverScript) {
 					return {
 						openedWindow: false,
@@ -1512,7 +1422,7 @@ describe("tab loop", () => {
 				}
 
 				return original(fn, ...args);
-			}) as BrowserAdaptor["evaluate"];
+			});
 
 			const ctx = recordingConsumer(["contextSignals"]);
 			const orchestrator = createTabOrchestrator(adaptor, {
@@ -1532,7 +1442,7 @@ describe("tab loop", () => {
 
 		it("does not notify an attached consumer that did not declare contextSignals, since there is no live element for it to act on", async () => {
 			const adaptor = loopAdaptor({
-				hasFocus: [true],
+				focusBeforeTab: [true],
 				active: [],
 			});
 			const attributedRef = { kind: "attributed" };
@@ -1543,8 +1453,8 @@ describe("tab loop", () => {
 
 				return {};
 			}) as BrowserAdaptor["evaluateHandle"];
-			const original = adaptor.evaluate.bind(adaptor);
-			adaptor.evaluate = (async (fn, ...args) => {
+			const original = asDispatch(adaptor.evaluate.bind(adaptor));
+			adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 				if (fn === drainContextObserverScript) {
 					return {
 						openedWindow: false,
@@ -1567,7 +1477,7 @@ describe("tab loop", () => {
 				}
 
 				return original(fn, ...args);
-			}) as BrowserAdaptor["evaluate"];
+			});
 
 			const ctx = recordingConsumer(["contextSignals"]);
 			const plain = recordingConsumer();
@@ -1585,11 +1495,11 @@ describe("tab loop", () => {
 
 		it("ends silently with zero stops when isBody has nothing attributed (genuine end of tab sequence)", async () => {
 			const adaptor = loopAdaptor({
-				hasFocus: [true],
+				focusBeforeTab: [true],
 				active: [],
 			});
-			const original = adaptor.evaluate.bind(adaptor);
-			adaptor.evaluate = (async (fn, ...args) => {
+			const original = asDispatch(adaptor.evaluate.bind(adaptor));
+			adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 				if (fn === drainContextObserverScript) {
 					return {
 						openedWindow: false,
@@ -1608,7 +1518,7 @@ describe("tab loop", () => {
 				}
 
 				return original(fn, ...args);
-			}) as BrowserAdaptor["evaluate"];
+			});
 
 			const ctx = recordingConsumer(["contextSignals"]);
 			const orchestrator = createTabOrchestrator(adaptor, {
@@ -1624,17 +1534,17 @@ describe("tab loop", () => {
 		it("does not drain at all when no attached consumer declared contextSignals", async () => {
 			let drains = 0;
 			const adaptor = loopAdaptor({
-				hasFocus: [true],
+				focusBeforeTab: [true],
 				active: [],
 			});
-			const original = adaptor.evaluate.bind(adaptor);
-			adaptor.evaluate = (async (fn, ...args) => {
+			const original = asDispatch(adaptor.evaluate.bind(adaptor));
+			adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 				if (fn === drainContextObserverScript) {
 					drains++;
 				}
 
 				return original(fn, ...args);
-			}) as BrowserAdaptor["evaluate"];
+			});
 
 			const plain = recordingConsumer();
 			const orchestrator = createTabOrchestrator(adaptor, {
@@ -1650,11 +1560,11 @@ describe("tab loop", () => {
 
 		it("ends with reason navigation when the isBody-exit drain throws a destroyed-context error", async () => {
 			const adaptor = loopAdaptor({
-				hasFocus: [true],
+				focusBeforeTab: [true],
 				active: [],
 			});
-			const original = adaptor.evaluate.bind(adaptor);
-			adaptor.evaluate = (async (fn, ...args) => {
+			const original = asDispatch(adaptor.evaluate.bind(adaptor));
+			adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 				if (fn === drainContextObserverScript) {
 					throw new Error("Execution context was destroyed");
 				}
@@ -1664,7 +1574,7 @@ describe("tab loop", () => {
 				}
 
 				return original(fn, ...args);
-			}) as BrowserAdaptor["evaluate"];
+			});
 
 			const ctx = recordingConsumer(["contextSignals"]);
 			const orchestrator = createTabOrchestrator(adaptor, {
@@ -1677,44 +1587,9 @@ describe("tab loop", () => {
 			expect(ctx.sessionEnds).toEqual(["navigation"]);
 		});
 
-		/**
-		 * Builds a consumer that mirrors `@a11y-pulse/focus-appearance-audit`'s real `onTabStop`
-		 * closely enough to be a faithful regression test: it declares `unfocusedPair` +
-		 * `baselineStyles` and calls `session.ensureUnfocusedPair()` whenever `snapshot.baselineStyles`
-		 * is absent (see `packages/focus-appearance-audit/src/audit.ts`). The synthetic F55 snapshot
-		 * never sets `baselineStyles`, so this consumer would call `ensureUnfocusedPair()` for it if
-		 * ever notified, which throws synchronously ("unfocusedPair capture not implemented") since
-		 * there is no `activeHandle` for the synthetic stop to hold. Scoping notification to
-		 * `contextSignals` declarers means this consumer should never be handed the synthetic snapshot
-		 * at all.
-		 */
-		function unfocusedPairConsumer(): TabConsumer & {
-			stops: TabStopSnapshot[];
-			ensureCalls: number;
-		} {
-			const record = {
-				stops: [] as TabStopSnapshot[],
-				ensureCalls: 0,
-				capabilities: new Set(["unfocusedPair", "baselineStyles"] as const),
-				async onTabStop(
-					snapshot: TabStopSnapshot,
-					session: { ensureUnfocusedPair(): Promise<unknown> },
-				) {
-					record.stops.push(snapshot);
-
-					if (!snapshot.baselineStyles) {
-						record.ensureCalls++;
-						await session.ensureUnfocusedPair();
-					}
-				},
-			};
-
-			return record;
-		}
-
 		function f55Adaptor(): BrowserAdaptor {
 			const adaptor = loopAdaptor({
-				hasFocus: [true],
+				focusBeforeTab: [true],
 				active: [],
 			});
 			const attributedRef = { kind: "attributed" };
@@ -1725,8 +1600,8 @@ describe("tab loop", () => {
 
 				return {};
 			}) as BrowserAdaptor["evaluateHandle"];
-			const original = adaptor.evaluate.bind(adaptor);
-			adaptor.evaluate = (async (fn, ...args) => {
+			const original = asDispatch(adaptor.evaluate.bind(adaptor));
+			adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 				if (fn === drainContextObserverScript) {
 					return {
 						openedWindow: false,
@@ -1749,7 +1624,7 @@ describe("tab loop", () => {
 				}
 
 				return original(fn, ...args);
-			}) as BrowserAdaptor["evaluate"];
+			});
 
 			return adaptor;
 		}
@@ -1758,8 +1633,8 @@ describe("tab loop", () => {
 			const adaptor = f55Adaptor();
 			const rectTargets: unknown[] = [];
 			const disposed: unknown[] = [];
-			const withRect = adaptor.evaluate.bind(adaptor);
-			adaptor.evaluate = (async (fn, ...args) => {
+			const withRect = asDispatch(adaptor.evaluate.bind(adaptor));
+			adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 				if (fn === pageDimensionsScript) {
 					return { width: 2000, height: 4000 };
 				}
@@ -1771,7 +1646,7 @@ describe("tab loop", () => {
 				}
 
 				return withRect(fn, ...args);
-			}) as BrowserAdaptor["evaluate"];
+			});
 			adaptor.disposeRef = async (ref) => {
 				disposed.push(ref);
 			};
@@ -1794,14 +1669,14 @@ describe("tab loop", () => {
 			expect(stats).toMatchObject({ tabStops: 1, screenshots: 1, endReason: "completed" });
 		});
 
-		it("does not crash a combined session when an unfocusedPair-declaring consumer (like focus-appearance-audit) is attached alongside contextSignals, and still rescues the contextSignals consumer (unfocusedPair-consumer attached first)", async () => {
+		it("does not crash a session shared with focus-appearance-audit, and still rescues the contextSignals consumer (focus-appearance-audit attached first)", async () => {
 			const adaptor = f55Adaptor();
-			const pairConsumer = unfocusedPairConsumer();
+			const appearance = createFocusAppearanceAudit();
 			const ctx = recordingConsumer(["contextSignals"]);
 			const orchestrator = createTabOrchestrator(adaptor, {
 				screenshotSettleDelay: 0,
 			});
-			orchestrator.attach(pairConsumer);
+			orchestrator.attach(appearance);
 			orchestrator.attach(ctx);
 
 			await expect(orchestrator.run()).resolves.toMatchObject({ endReason: "completed" });
@@ -1809,36 +1684,34 @@ describe("tab loop", () => {
 			expect(ctx.sessionEnds).toEqual(["completed"]);
 			expect(ctx.stops).toHaveLength(1);
 			expect(ctx.stops[0]?.contextSignals?.signals.focusRemoved).toBe(true);
-			// Scoped out of notification entirely: no live element for it to act on, so
-			// ensureUnfocusedPair() (which would throw) is never reached.
-			expect(pairConsumer.stops).toHaveLength(0);
-			expect(pairConsumer.ensureCalls).toBe(0);
+			expect(appearance.result.elements).toHaveLength(0);
+			expect(orchestrator.failures).toEqual([]);
 		});
 
-		it("does not crash a combined session when an unfocusedPair-declaring consumer (like focus-appearance-audit) is attached alongside contextSignals, and still rescues the contextSignals consumer (contextSignals attached first)", async () => {
+		it("does not crash a session shared with focus-appearance-audit, and still rescues the contextSignals consumer (contextSignals attached first)", async () => {
 			const adaptor = f55Adaptor();
-			const pairConsumer = unfocusedPairConsumer();
+			const appearance = createFocusAppearanceAudit();
 			const ctx = recordingConsumer(["contextSignals"]);
 			const orchestrator = createTabOrchestrator(adaptor, {
 				screenshotSettleDelay: 0,
 			});
 			orchestrator.attach(ctx);
-			orchestrator.attach(pairConsumer);
+			orchestrator.attach(appearance);
 
 			await expect(orchestrator.run()).resolves.toMatchObject({ endReason: "completed" });
 
 			expect(ctx.sessionEnds).toEqual(["completed"]);
 			expect(ctx.stops).toHaveLength(1);
 			expect(ctx.stops[0]?.contextSignals?.signals.focusRemoved).toBe(true);
-			expect(pairConsumer.stops).toHaveLength(0);
-			expect(pairConsumer.ensureCalls).toBe(0);
+			expect(appearance.result.elements).toHaveLength(0);
+			expect(orchestrator.failures).toEqual([]);
 		});
 
 		it("still clears the attributed marker when a contextSignals consumer's onTabStop throws", async () => {
 			const adaptor = f55Adaptor();
 			let clearCalls = 0;
-			const original = adaptor.evaluate.bind(adaptor);
-			adaptor.evaluate = (async (fn, ...args) => {
+			const original = asDispatch(adaptor.evaluate.bind(adaptor));
+			adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 				if (fn === clearAttributedScript) {
 					clearCalls++;
 
@@ -1846,7 +1719,7 @@ describe("tab loop", () => {
 				}
 
 				return original(fn, ...args);
-			}) as BrowserAdaptor["evaluate"];
+			});
 
 			const throwingCtx: TabConsumer = {
 				capabilities: new Set(["contextSignals"]),
@@ -1872,7 +1745,7 @@ describe("session limits and failures", () => {
 
 	it("ends with reason limit once maxTabPresses is used up", async () => {
 		const a = recordingConsumer();
-		const adaptor = loopAdaptor({ hasFocus: focused, active: many });
+		const adaptor = loopAdaptor({ focusBeforeTab: focused, active: many });
 		const pressTab = vi.spyOn(adaptor, "pressTab");
 		const orchestrator = createTabOrchestrator(adaptor, {
 			screenshotSettleDelay: 0,
@@ -1892,10 +1765,13 @@ describe("session limits and failures", () => {
 		const a = recordingConsumer([], async () => {
 			await new Promise((resolve) => setTimeout(resolve, 15));
 		});
-		const orchestrator = createTabOrchestrator(loopAdaptor({ hasFocus: focused, active: many }), {
-			screenshotSettleDelay: 0,
-			maxDuration: 20,
-		});
+		const orchestrator = createTabOrchestrator(
+			loopAdaptor({ focusBeforeTab: focused, active: many }),
+			{
+				screenshotSettleDelay: 0,
+				maxDuration: 20,
+			},
+		);
 		orchestrator.attach(a);
 
 		const stats = await orchestrator.run();
@@ -1913,7 +1789,10 @@ describe("session limits and failures", () => {
 		});
 		const healthy = recordingConsumer();
 		const orchestrator = createTabOrchestrator(
-			loopAdaptor({ hasFocus: [true, true, true, true], active: [info(0), info(1), info(2)] }),
+			loopAdaptor({
+				focusBeforeTab: [true, true, true, true],
+				active: [info(0), info(1), info(2)],
+			}),
 			{ screenshotSettleDelay: 0 },
 		);
 		orchestrator.attach(broken);
@@ -1939,7 +1818,7 @@ describe("session limits and failures", () => {
 		};
 		const healthy = recordingConsumer();
 		const orchestrator = createTabOrchestrator(
-			loopAdaptor({ hasFocus: [true, true], active: [info(0)] }),
+			loopAdaptor({ focusBeforeTab: [true, true], active: [info(0)] }),
 			{ screenshotSettleDelay: 0 },
 		);
 		orchestrator.attach(broken);
@@ -1970,17 +1849,17 @@ describe("session limits and failures", () => {
 
 	/** A two-stop session whose context observer answers each drain from `drains` in turn. */
 	function dialogAdaptor(counts: number[], drains: Array<Record<string, unknown>>): BrowserAdaptor {
-		const adaptor = loopAdaptor({ hasFocus: [true, true, true], active: [info(0), info(1)] });
-		const original = adaptor.evaluate.bind(adaptor);
+		const adaptor = loopAdaptor({ focusBeforeTab: [true, true, true], active: [info(0), info(1)] });
+		const original = asDispatch(adaptor.evaluate.bind(adaptor));
 
 		adaptor.takeDismissedDialogs = () => counts.shift() ?? 0;
-		adaptor.evaluate = (async (fn, ...args) => {
+		adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 			if (fn === drainContextObserverScript) {
 				return drains.shift() ?? quietDrain();
 			}
 
 			return original(fn, ...args);
-		}) as BrowserAdaptor["evaluate"];
+		});
 
 		return adaptor;
 	}
@@ -2124,11 +2003,11 @@ describe("session limits and failures", () => {
 	});
 
 	function navigatingAdaptor(replaced: boolean | Error): BrowserAdaptor {
-		const adaptor = loopAdaptor({ hasFocus: [true, true, true], active: [info(0), info(1)] });
+		const adaptor = loopAdaptor({ focusBeforeTab: [true, true, true], active: [info(0), info(1)] });
 		const evaluate = adaptor.evaluate;
 		let selectors = 0;
 
-		adaptor.evaluate = (async (fn, ...args) => {
+		adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 			// The second stop's selector lookup is where the document goes away: a call the loop
 			// has no navigation check around.
 			if (fn === getSelector && ++selectors === 2) {
@@ -2144,7 +2023,7 @@ describe("session limits and failures", () => {
 			}
 
 			return evaluate(fn, ...args);
-		}) as BrowserAdaptor["evaluate"];
+		});
 
 		return adaptor;
 	}
@@ -2177,17 +2056,17 @@ describe("session limits and failures", () => {
 
 	it("ends with reason navigation when the tab observer is gone, without contextSignals", async () => {
 		const a = recordingConsumer();
-		const adaptor = loopAdaptor({ hasFocus: [true, true, true], active: [info(0), info(1)] });
+		const adaptor = loopAdaptor({ focusBeforeTab: [true, true, true], active: [info(0), info(1)] });
 		const evaluate = adaptor.evaluate;
 		let checks = 0;
 
-		adaptor.evaluate = (async (fn, ...args) => {
+		adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 			if (fn === documentReplacedScript) {
 				return ++checks === 2;
 			}
 
 			return evaluate(fn, ...args);
-		}) as BrowserAdaptor["evaluate"];
+		});
 
 		const orchestrator = createTabOrchestrator(adaptor, { screenshotSettleDelay: 0 });
 		orchestrator.attach(a);

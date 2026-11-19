@@ -1,3 +1,4 @@
+import { asDispatch, asEvaluate } from "@a11y-pulse/integration-harness/fake-evaluate";
 import { fakeStashAdaptor } from "@a11y-pulse/integration-harness/fake-stash-adaptor";
 import { describe, expect, it } from "vitest";
 import { runPasteBlockingAudit } from "./audit";
@@ -135,18 +136,18 @@ describe("runPasteBlockingAudit", () => {
 	it("passes the field limit to the page and asks it to report focus first", async () => {
 		const calls: unknown[][] = [];
 		const page = fakePage([]);
-		const evaluate = page.adaptor.evaluate.bind(page.adaptor);
+		const evaluate = asDispatch(page.adaptor.evaluate.bind(page.adaptor));
 		let focusReportingBeforeInspect = false;
 		let inspected = false;
 
-		page.adaptor.evaluate = ((fn: unknown, ...args: unknown[]) => {
+		page.adaptor.evaluate = asEvaluate((fn, ...args) => {
 			if (fn === inspectAuthFieldsScript) {
 				inspected = true;
 				calls.push(args);
 			}
 
-			return evaluate(fn as never, ...args);
-		}) as typeof page.adaptor.evaluate;
+			return evaluate(fn, ...args);
+		});
 		page.adaptor.ensureFocusReporting = async () => {
 			focusReportingBeforeInspect = !inspected;
 		};

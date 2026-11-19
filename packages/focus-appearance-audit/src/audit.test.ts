@@ -1,5 +1,10 @@
 import type { BrowserAdaptor } from "@a11y-pulse/browser-adaptor";
 import { getSelector } from "@a11y-pulse/browser-adaptor/dom";
+import { asDispatch, asEvaluate } from "@a11y-pulse/integration-harness/fake-evaluate";
+import {
+	type TabLoopScript,
+	loopAdaptor as tabLoopAdaptor,
+} from "@a11y-pulse/integration-harness/fake-tab-adaptor";
 import {
 	type ActiveElementInfo,
 	type BaselinePayload,
@@ -107,125 +112,86 @@ function recordingConsumer(): TabConsumer & { stops: TabStopSnapshot[] } {
 	return record;
 }
 
-function loopAdaptor(script: {
-	hasFocus?: boolean[];
-	active?: Array<Omit<ActiveElementInfo, "selector"> | null>;
-	baseline?: BaselinePayload;
-	pngs?: Uint8Array[];
-	/** What pairTargetScript answers at each pair. Defaults to the element itself, with no caret. */
-	pairTargets?: Array<Partial<PairTarget>>;
-	/** What pairContextScript answers, call by call: focused then blurred for each pair. */
-	contexts?: PairContextPayload[];
-	/** Whether something still covers the element once it has been centred. */
-	covered?: boolean;
-}): BrowserAdaptor & { clipCalls: number } {
-	let stopIndex = -1;
-	let tabbed = false;
-	let activeCall = 0;
+function loopAdaptor(
+	script: TabLoopScript & {
+		pngs?: Uint8Array[];
+		/** What pairTargetScript answers at each pair. Defaults to the element itself, with no caret. */
+		pairTargets?: Array<Partial<PairTarget>>;
+		/** What pairContextScript answers, call by call: focused then blurred for each pair. */
+		contexts?: PairContextPayload[];
+		/** Whether something still covers the element once it has been centred. */
+		covered?: boolean;
+	},
+): BrowserAdaptor & { clipCalls: number } {
+	const base = tabLoopAdaptor(script);
+	const original = asDispatch(base.evaluate.bind(base));
 	let lastIndex: number | null = null;
 	let pngCall = 0;
 	let pairCall = 0;
 	let contextCall = 0;
-	const adaptor: BrowserAdaptor & { clipCalls: number } = {
-		clipCalls: 0,
-		evaluate: (async (fn, ..._args) => {
-			if (fn === baselineScript) {
-				return script.baseline ?? { styles: [EMPTY_STYLES], entries: [] };
-			}
+	const adaptor = Object.assign(base, { clipCalls: 0 });
 
-			if (fn === probeActiveElementScript) {
-				tabbed = false;
+	adaptor.evaluate = asEvaluate(async (fn, ...args) => {
+		if (fn === probeActiveElementScript) {
+			const next = (await original(fn, ...args)) as { index: number | null } | null;
+			lastIndex = next?.index ?? null;
 
-				const next = script.active?.[activeCall++] ?? {
-					index: null,
-					isBody: true,
-					isIframe: false,
-					html: "",
-					styles: EMPTY_STYLES,
-					rect: { x: 0, y: 0, width: 0, height: 0 },
-				};
-				lastIndex = next?.index ?? null;
+			return next;
+		}
 
-				return next;
-			}
+		if (fn === getSelector) {
+			return lastIndex === null ? "#fake" : `#e${lastIndex}`;
+		}
 
-			if (fn === getSelector) {
-				return lastIndex === null ? "#fake" : `#e${lastIndex}`;
-			}
+		if (fn === pairTargetScript) {
+			return {
+				unpainted: false,
+				clipTarget: "element",
+				caret: false,
+				...script.pairTargets?.[pairCall++],
+			};
+		}
 
-			if (fn === elementStylesScript) {
-				return EMPTY_STYLES;
-			}
+		if (fn === pairContextScript) {
+			return script.contexts?.[contextCall++] ?? { entries: [], background: null };
+		}
 
-			if (fn === pairTargetScript) {
-				return {
-					unpainted: false,
-					clipTarget: "element",
-					caret: false,
-					...script.pairTargets?.[pairCall++],
-				};
-			}
+		if (fn === isCenterObscuredScript) {
+			return script.covered ?? false;
+		}
 
-			if (fn === pairContextScript) {
-				return script.contexts?.[contextCall++] ?? { entries: [], background: null };
-			}
+		if (fn === hideCaretScript || fn === endPairScript) {
+			return undefined;
+		}
 
-			if (fn === isCenterObscuredScript) {
-				return script.covered ?? false;
-			}
+		if (fn === pageDimensionsScript) {
+			return { width: 2000, height: 4000 };
+		}
 
-			if (fn === hideCaretScript || fn === endPairScript) {
-				return undefined;
-			}
-
-			if (fn === pageDimensionsScript) {
-				return { width: 2000, height: 4000 };
-			}
-
-			if (fn === needsCentringScript) {
-				return false;
-			}
-
-			if (fn === elementRectScript || fn === pairRectScript) {
-				return { x: 100, y: 100, width: 40, height: 20 };
-			}
-
-			if (
-				fn === blurScript ||
-				fn === focusScript ||
-				fn === scrollToCenterScript ||
-				fn === clearMarkersScript
-			) {
-				return undefined;
-			}
-
-			if (fn === hasFocusScript) {
-				return script.hasFocus?.[tabbed ? stopIndex : stopIndex + 1] ?? false;
-			}
-
+		if (fn === needsCentringScript) {
 			return false;
-		}) as BrowserAdaptor["evaluate"],
-		async evaluateHandle() {
-			return {};
-		},
-		async disposeRef() {},
-		async pressTab() {
-			stopIndex++;
-			tabbed = true;
-		},
-		async pressEnter() {},
-		async pressKey() {},
-		async screenshotClip() {
-			adaptor.clipCalls++;
-			const pngs = script.pngs;
+		}
 
-			if (pngs !== undefined && pngs.length > 0) {
-				return pngs[pngCall++ % pngs.length] ?? WHITE_PNG;
-			}
+		if (fn === elementRectScript || fn === pairRectScript) {
+			return { x: 100, y: 100, width: 40, height: 20 };
+		}
 
-			return WHITE_PNG;
-		},
-		async ensureFocusReporting() {},
+		if (fn === blurScript || fn === focusScript || fn === scrollToCenterScript) {
+			return undefined;
+		}
+
+		return original(fn, ...args);
+	});
+
+	adaptor.screenshotClip = async () => {
+		adaptor.clipCalls++;
+		const pngs = script.pngs;
+
+		if (pngs !== undefined && pngs.length > 0) {
+			return pngs[pngCall++ % pngs.length] ?? WHITE_PNG;
+		}
+
+		return WHITE_PNG;
 	};
 
 	return adaptor;
@@ -257,7 +223,7 @@ async function runWithOrchestrator(
 describe("createFocusAppearanceAudit", () => {
 	it("passes via style without calling screenshotClip", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [stylePassActive(0)],
 			baseline: stylePassBaseline([0]),
 		});
@@ -275,7 +241,7 @@ describe("createFocusAppearanceAudit", () => {
 		const unfocused = { ...EMPTY_STYLES, element: { color: "rgb(51, 51, 51)" } };
 		const focused = { ...EMPTY_STYLES, element: { color: "rgb(46, 93, 46)" } };
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [info(0, { styles: focused })],
 			baseline: { styles: [unfocused], entries: [{ index: 0, styleIndex: 0, rect: RECT }] },
 		});
@@ -300,7 +266,7 @@ describe("createFocusAppearanceAudit", () => {
 		const unfocused = { ...EMPTY_STYLES, element: { color: "rgb(255, 255, 255)" } };
 		const focused = { ...EMPTY_STYLES, element: { color: "rgb(0, 0, 0)" } };
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [info(0, { styles: focused })],
 			baseline: { styles: [unfocused], entries: [{ index: 0, styleIndex: 0, rect: RECT }] },
 		});
@@ -314,7 +280,7 @@ describe("createFocusAppearanceAudit", () => {
 
 	it("records no colour-only change when another indicator appears", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [stylePassActive(0)],
 			baseline: stylePassBaseline([0]),
 		});
@@ -326,7 +292,7 @@ describe("createFocusAppearanceAudit", () => {
 
 	it("calls ensureUnfocusedPair on a style miss and passes via pixel-diff", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [info(0, { styles: UNFOCUSED_STYLES })],
 			baseline: {
 				styles: [UNFOCUSED_STYLES],
@@ -345,7 +311,7 @@ describe("createFocusAppearanceAudit", () => {
 
 	it("disconnects after failedElementLimit: 1 while another consumer keeps receiving stops", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true, true],
+			focusBeforeTab: [true, true, true],
 			active: [info(0), info(1)],
 		});
 		const other = recordingConsumer();
@@ -362,7 +328,7 @@ describe("createFocusAppearanceAudit", () => {
 
 	it("disconnects after elementLimit: 1", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true, true],
+			focusBeforeTab: [true, true, true],
 			active: [stylePassActive(0), stylePassActive(1)],
 			baseline: stylePassBaseline([0, 1]),
 		});
@@ -378,7 +344,7 @@ describe("createFocusAppearanceAudit", () => {
 
 	it("records no appearance row when the only candidate is an iframe then body", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [
 				info(0, {
 					index: null,
@@ -397,7 +363,7 @@ describe("createFocusAppearanceAudit", () => {
 
 	it("sets sessionEnd to lostFocus when the document loses focus while attached", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true, false],
+			focusBeforeTab: [true, false],
 			active: [stylePassActive(0)],
 			baseline: stylePassBaseline([0]),
 		});
@@ -410,7 +376,7 @@ describe("createFocusAppearanceAudit", () => {
 
 	it("records a failure with evidence when neither stage finds an indicator", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [info(0)],
 		});
 
@@ -427,7 +393,7 @@ describe("createFocusAppearanceAudit", () => {
 
 	it("lists the properties that changed on a style pass", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [
 				info(0, {
 					styles: {
@@ -471,7 +437,7 @@ describe("createFocusAppearanceAudit", () => {
 		// A visually hidden checkbox still gets the browser's default outline, where nobody sees it.
 		const hidden = { x: 0, y: 0, width: 1, height: 1 };
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [info(0, { styles: FOCUSED_STYLES, rect: hidden })],
 			baseline: {
 				styles: [UNFOCUSED_STYLES],
@@ -498,7 +464,7 @@ describe("createFocusAppearanceAudit", () => {
 			after: {},
 		});
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [info(0, { styles: styles("auto") })],
 			baseline: { styles: [styles("none")], entries: [{ index: 0, styleIndex: 0, rect: RECT }] },
 			pairTargets: [{ unpainted: true, clipTarget: "parent" }],
@@ -527,7 +493,7 @@ describe("createFocusAppearanceAudit", () => {
 			background: null,
 		});
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [info(0)],
 			contexts: [entry("rgb(0, 80, 255) 0px 0px 0px 4px"), entry("none")],
 		});
@@ -566,7 +532,7 @@ describe("createFocusAppearanceAudit", () => {
 			shadows: [string, string] = [RING, "none"],
 		) {
 			const adaptor = loopAdaptor({
-				hasFocus: [true, true],
+				focusBeforeTab: [true, true],
 				active: [info(0)],
 				pngs,
 				contexts: [context(shadows[0], flags), context(shadows[1], flags)],
@@ -628,7 +594,7 @@ describe("createFocusAppearanceAudit", () => {
 			after: {},
 		};
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			// Not in the baseline (rendered later), so only the screenshots can find its indicator.
 			active: [info(0, { styles: ring })],
 			pngs: [WHITE_PNG, BLACK_PNG],
@@ -647,7 +613,7 @@ describe("createFocusAppearanceAudit", () => {
 			after: {},
 		});
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [info(0, { styles: styles("rgb(255, 221, 0)"), backdrop: "rgb(255, 255, 255)" })],
 			baseline: {
 				styles: [styles("rgba(0, 0, 0, 0)")],
@@ -680,7 +646,7 @@ describe("createFocusAppearanceAudit", () => {
 			background: null,
 		});
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [info(0)],
 			contexts: [entry("rgb(0, 80, 255) 0px 0px 0px 4px"), entry("none")],
 		});
@@ -692,7 +658,7 @@ describe("createFocusAppearanceAudit", () => {
 
 	it("sends a text field whose only sign of focus is its caret for review", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [info(0)],
 			pairTargets: [{ caret: true }],
 		});
@@ -711,7 +677,7 @@ describe("createFocusAppearanceAudit", () => {
 
 	it("prefers a real indicator over the caret", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [info(0)],
 			pairTargets: [{ caret: true }],
 			pngs: [WHITE_PNG, BLACK_PNG],
@@ -725,7 +691,7 @@ describe("createFocusAppearanceAudit", () => {
 
 	it("sends an element that stayed covered for review rather than failing it", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true, true],
+			focusBeforeTab: [true, true, true],
 			active: [info(0), info(1)],
 			covered: true,
 		});
@@ -745,7 +711,7 @@ describe("createFocusAppearanceAudit", () => {
 
 	it("passes a covered element whose screenshots still differ", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [info(0)],
 			covered: true,
 			pngs: [WHITE_PNG, BLACK_PNG],
@@ -759,7 +725,7 @@ describe("createFocusAppearanceAudit", () => {
 
 	it("keeps screenshots for only the first screenshotLimit elements", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true, true, true],
+			focusBeforeTab: [true, true, true, true],
 			active: [info(0), info(1), info(2)],
 		});
 
@@ -776,7 +742,7 @@ describe("createFocusAppearanceAudit", () => {
 
 	it("does not report the screenshot limit as reached when it was not needed", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true, true],
+			focusBeforeTab: [true, true, true],
 			active: [info(0), info(1)],
 		});
 
@@ -789,7 +755,7 @@ describe("createFocusAppearanceAudit", () => {
 		const unfocused = { ...EMPTY_STYLES, element: { color: "rgb(51, 51, 51)" } };
 		const focused = { ...EMPTY_STYLES, element: { color: "rgb(46, 93, 46)" } };
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true],
+			focusBeforeTab: [true, true],
 			active: [info(0, { styles: focused })],
 			baseline: { styles: [unfocused], entries: [{ index: 0, styleIndex: 0, rect: RECT }] },
 			contexts: [{ entries: [], background: "rgb(250, 250, 250)" }],
@@ -807,7 +773,7 @@ describe("createFocusAppearanceAudit", () => {
 describe("createFocusAppearanceAudit: failedElementLimit", () => {
 	it("never finishes early when the limit is 0", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true, true, true],
+			focusBeforeTab: [true, true, true, true],
 			active: [info(0), info(1), info(2)],
 		});
 
@@ -825,7 +791,7 @@ describe("createFocusAppearanceAudit: failedElementLimit", () => {
 describe("createFocusAppearanceAudit: timeout", () => {
 	it("returns results gathered so far when timeout fires during a hung settle", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true, true, true],
+			focusBeforeTab: [true, true, true, true],
 			active: [stylePassActive(0), stylePassActive(1), stylePassActive(2)],
 			baseline: stylePassBaseline([0, 1, 2]),
 		});
@@ -846,7 +812,7 @@ describe("createFocusAppearanceAudit: timeout", () => {
 
 	it("times out with no results when settle hangs immediately", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true],
+			focusBeforeTab: [true],
 			active: [stylePassActive(0)],
 			baseline: stylePassBaseline([0]),
 		});
@@ -865,7 +831,7 @@ describe("createFocusAppearanceAudit: timeout", () => {
 
 	it("does not time out when the timeout is 0", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true, true],
+			focusBeforeTab: [true, true, true],
 			active: [stylePassActive(0), stylePassActive(1)],
 			baseline: stylePassBaseline([0, 1]),
 		});
@@ -879,7 +845,7 @@ describe("createFocusAppearanceAudit: timeout", () => {
 
 	it("completes normally when the audit finishes before the timeout", async () => {
 		const adaptor = loopAdaptor({
-			hasFocus: [true, true, true],
+			focusBeforeTab: [true, true, true],
 			active: [stylePassActive(0), stylePassActive(1)],
 			baseline: stylePassBaseline([0, 1]),
 		});
@@ -941,10 +907,9 @@ function fakeAdaptor(script: AdaptorScript = {}): {
 	};
 
 	const adaptor: FocusAppearanceAuditAdaptor = {
-		// biome-ignore lint/suspicious/noExplicitAny: dispatching on script identity needs loose types
-		async evaluate(fn: any, ...args: any[]): Promise<any> {
+		evaluate: asEvaluate(async (fn, ...args) => {
 			if (fn === baselineScript) {
-				record.baselineLimit = args[2];
+				record.baselineLimit = args[2] as number;
 
 				return script.baseline ?? { styles: [], entries: [] };
 			}
@@ -1010,7 +975,7 @@ function fakeAdaptor(script: AdaptorScript = {}): {
 			}
 
 			return undefined;
-		},
+		}),
 		async evaluateHandle() {
 			return {};
 		},

@@ -1,4 +1,4 @@
-import type { Rect } from "@a11y-pulse/browser-adaptor";
+import type { EvaluateArgs, PageFunction, Rect } from "@a11y-pulse/browser-adaptor";
 
 export type { Rect } from "@a11y-pulse/browser-adaptor";
 
@@ -15,11 +15,10 @@ export interface ReflowAuditAdaptor {
 	/**
 	 * Run `fn` in the page context, passing in any serialisable `args`
 	 */
-	evaluate<T>(
-		// biome-ignore lint/suspicious/noExplicitAny: `fn` accepts arbitrary serialised arguments
-		fn: (...args: any[]) => T | Promise<T>,
-		...args: unknown[]
-	): Promise<T>;
+	evaluate<F extends PageFunction>(
+		fn: F,
+		...args: EvaluateArgs<Parameters<F>>
+	): Promise<Awaited<ReturnType<F>>>;
 
 	/**
 	 * Return the page's current CSS viewport size.

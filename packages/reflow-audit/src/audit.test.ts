@@ -1,3 +1,4 @@
+import { asEvaluate } from "@a11y-pulse/integration-harness/fake-evaluate";
 import { describe, expect, it } from "vitest";
 import type { ReflowAuditAdaptor } from "./adaptor";
 import { DEFAULT_SCREENSHOT_LIMIT, runReflowAudit } from "./audit";
@@ -71,15 +72,12 @@ function createFake(opts: {
 			setCalls.push({ ...v });
 			viewport = { ...v };
 		},
-		evaluate: async <T>(
-			fn: (...args: never[]) => T | Promise<T>,
-			...args: unknown[]
-		): Promise<T> => {
+		evaluate: asEvaluate(async (fn, ...args) => {
 			if ((fn as unknown) === scrollWindowToScript) {
 				const previous = scroll;
 				scroll = { x: args[0] as number, y: (args[1] as number | null) ?? previous.y };
 
-				return previous as T;
+				return previous;
 			}
 
 			if (fn === readLayoutFingerprintScript) {
@@ -87,7 +85,7 @@ function createFake(opts: {
 				const next = list[Math.min(fingerprintIndex, list.length - 1)];
 				fingerprintIndex += 1;
 
-				return next as T;
+				return next;
 			}
 
 			if (fn === measureReflowScript) {
@@ -96,18 +94,18 @@ function createFake(opts: {
 				}
 
 				if (typeof opts.measure === "function") {
-					return opts.measure() as T;
+					return opts.measure();
 				}
 
-				return (opts.measure ?? emptyMeasure()) as T;
+				return opts.measure ?? emptyMeasure();
 			}
 
 			if (fn === pageDimensionsScript) {
-				return (opts.pageDimensions ?? { width: 320, height: 1024 }) as T;
+				return opts.pageDimensions ?? { width: 320, height: 1024 };
 			}
 
 			throw new Error(`unexpected evaluate: ${fn.name}`);
-		},
+		}),
 		screenshotClip: async (clip, scale = 1) => {
 			screenshotCalls.push({
 				clip,

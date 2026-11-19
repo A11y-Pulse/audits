@@ -1,11 +1,11 @@
 // @vitest-environment happy-dom
 import type { BrowserAdaptor } from "@a11y-pulse/browser-adaptor";
+import { asDispatch, asEvaluate } from "@a11y-pulse/integration-harness/fake-evaluate";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { type PairContextPayload, pairContextScript } from "./browser-scripts";
 import {
 	endPairScript,
 	hideCaretScript,
-	type PairContextPayload,
-	pairContextScript,
 	pairRectScript,
 	pairTargetHandleScript,
 	pairTargetScript,
@@ -384,8 +384,7 @@ describe("captureUnfocusedPair", () => {
 		let contextCall = 0;
 
 		return {
-			// biome-ignore lint/suspicious/noExplicitAny: dispatching on script identity needs loose types
-			async evaluate(fn: any): Promise<any> {
+			evaluate: asEvaluate(async (fn) => {
 				if (fn === pairTargetScript) {
 					return { unpainted: true, clipTarget: "label", caret: false };
 				}
@@ -407,7 +406,7 @@ describe("captureUnfocusedPair", () => {
 				}
 
 				return false;
-			},
+			}),
 			async evaluateHandle() {
 				return {};
 			},
@@ -483,15 +482,14 @@ describe("captureUnfocusedPair", () => {
 		for (const failOn of [1, 2]) {
 			const adaptor = adaptorFor(empty, empty);
 			const ran: string[] = [];
-			const evaluate = adaptor.evaluate.bind(adaptor);
+			const evaluate = asDispatch(adaptor.evaluate.bind(adaptor));
 			let shots = 0;
 
-			// biome-ignore lint/suspicious/noExplicitAny: recording which page scripts ran
-			adaptor.evaluate = (async (fn: any, ...args: any[]) => {
+			adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 				ran.push(fn.name);
 
 				return evaluate(fn, ...args);
-			}) as BrowserAdaptor["evaluate"];
+			});
 			adaptor.screenshotClip = async () => {
 				if (++shots === failOn) {
 					throw new Error("Target closed");
@@ -511,16 +509,15 @@ describe("captureUnfocusedPair", () => {
 	it("still reports the screenshot failure when the page cannot be put back either", async () => {
 		const empty: PairContextPayload = { entries: [], background: null };
 		const adaptor = adaptorFor(empty, empty);
-		const evaluate = adaptor.evaluate.bind(adaptor);
+		const evaluate = asDispatch(adaptor.evaluate.bind(adaptor));
 
-		// biome-ignore lint/suspicious/noExplicitAny: failing one page script by name
-		adaptor.evaluate = (async (fn: any, ...args: any[]) => {
+		adaptor.evaluate = asEvaluate(async (fn, ...args) => {
 			if (fn.name === "endPairScript") {
 				throw new Error("Execution context was destroyed");
 			}
 
 			return evaluate(fn, ...args);
-		}) as BrowserAdaptor["evaluate"];
+		});
 		adaptor.screenshotClip = async () => {
 			throw new Error("Target closed");
 		};

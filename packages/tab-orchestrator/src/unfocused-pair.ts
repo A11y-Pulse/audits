@@ -24,7 +24,7 @@ export type CaptureUnfocusedPairOptions = {
 export async function captureUnfocusedPair(
 	adaptor: BrowserAdaptor,
 	options: CaptureUnfocusedPairOptions,
-	handle: ElementRef,
+	borrowedElement: ElementRef,
 ): Promise<UnfocusedPair> {
 	const run = { composed: options.composed ?? false };
 	const styleProps = [...options.styleProps];
@@ -40,7 +40,7 @@ export async function captureUnfocusedPair(
 			styleProps,
 			ancestorLimit: CONTEXT_ANCESTOR_LIMIT,
 		},
-		handle,
+		borrowedElement,
 	);
 
 	const { page, rect: focusedRect } = focused;
@@ -54,7 +54,8 @@ export async function captureUnfocusedPair(
 
 	const scale = adaptor.screenshotClipScale ?? 1;
 
-	const restore = () => runComposed(adaptor, pairRestoreScript, run, { styleProps }, handle);
+	const restore = () =>
+		runComposed(adaptor, pairRestoreScript, run, { styleProps }, borrowedElement);
 
 	const capture = async () => {
 		// Capture the focused state first, while focus is genuine: re-focusing the element afterwards
@@ -74,7 +75,7 @@ export async function captureUnfocusedPair(
 				ancestorLimit: CONTEXT_ANCESTOR_LIMIT,
 				transitionMs: PAIR_TRANSITION_WAIT_MS,
 			},
-			handle,
+			borrowedElement,
 		);
 		const unfocusedRect = blurred.rect;
 		const unfocusedClip = bufferedClip(

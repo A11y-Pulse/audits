@@ -32,7 +32,7 @@ function stop(
 		late?: LateContextChange[];
 		unattributed?: UnattributedContextChange[];
 	} = {},
-): TabStopSnapshot {
+): TabStopSnapshot<"contextSignals"> {
 	return {
 		tabIndex: n,
 		activeElement: {
@@ -69,6 +69,9 @@ function fakeSession(): FakeSession {
 			session.disconnects++;
 		},
 		async ensureUnfocusedPair() {
+			throw new Error("not used by this audit");
+		},
+		async screenshotContext() {
 			throw new Error("not used by this audit");
 		},
 		async screenshotClip(target = "focused") {

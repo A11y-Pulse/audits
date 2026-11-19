@@ -39,6 +39,7 @@ const session: TabSessionHandle = {
 	disconnect: vi.fn(),
 	ensureUnfocusedPair: vi.fn(),
 	screenshotClip: vi.fn(),
+	screenshotContext: vi.fn(),
 };
 
 const PAGE_URL = "https://example.test/";

@@ -1,3 +1,4 @@
+import { asEvaluate } from "@a11y-pulse/integration-harness/fake-evaluate";
 import { describe, expect, it } from "vitest";
 import type { TextSpacingAuditAdaptor } from "./adaptor";
 import {
@@ -381,10 +382,7 @@ function scriptedAdaptor(page: ScriptedPage = {}): TextSpacingAuditAdaptor & {
 		calls,
 		args,
 		screenshotCalls,
-		evaluate: async <T>(
-			fn: (...fnArgs: never[]) => T | Promise<T>,
-			...fnArgs: unknown[]
-		): Promise<T> => {
+		evaluate: asEvaluate(async (fn, ...fnArgs) => {
 			calls.push(fn.name);
 			args[fn.name] = fnArgs;
 
@@ -397,9 +395,9 @@ function scriptedAdaptor(page: ScriptedPage = {}): TextSpacingAuditAdaptor & {
 					return {
 						candidates: page.baseline ?? [],
 						limitReached: page.limitReached ?? false,
-					} as T;
+					};
 				case "applyOverrideScript":
-					return { candidates: page.after ?? page.baseline ?? [] } as T;
+					return { candidates: page.after ?? page.baseline ?? [] };
 				case "describeFindingsScript": {
 					const request = fnArgs[0] as DescribeRequest;
 					const payload: DescribePayload = {
@@ -408,14 +406,14 @@ function scriptedAdaptor(page: ScriptedPage = {}): TextSpacingAuditAdaptor & {
 						clippers: (page.clippers ?? []).filter((el) => request.clippers.includes(el.index)),
 					};
 
-					return payload as T;
+					return payload;
 				}
 				case "restoreAndVerifyScript":
-					return { restored: page.restored ?? true } as T;
+					return { restored: page.restored ?? true };
 				default:
 					throw new Error(`unexpected evaluate: ${fn.name}`);
 			}
-		},
+		}),
 		screenshotClip: async (clip) => {
 			calls.push("screenshotClip");
 			screenshotCalls.push(clip);
