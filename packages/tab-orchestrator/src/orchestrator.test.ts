@@ -472,10 +472,6 @@ describe("tab loop", () => {
 	});
 
 	it("ends as completed when the last tab press walks off the end of the tab order", async () => {
-		// Tabbing past the final element moves focus out of the document: the page
-		// reports no focus and the probe reports <body>. That is the ordinary end
-		// of a session, not a stolen focus, and re-asserting focus emulation
-		// cannot bring it back.
 		const a = recordingConsumer();
 		const orchestrator = createTabOrchestrator(
 			loopAdaptor({
@@ -1314,9 +1310,6 @@ describe("tab loop", () => {
 			}
 
 			if (fn === drainContextObserverScript) {
-				// Soft-nav flag is false: the observer's execution context survived long enough to answer,
-				// but this was a hard nav, not a pushState/hashchange, so the href-diff layer must still
-				// treat it as a full navigation rather than trusting a stale soft flag.
 				return {
 					openedWindow: false,
 					submittedForm: false,
@@ -1397,11 +1390,6 @@ describe("tab loop", () => {
 		});
 		orchestrator.attach(ctx);
 		await orchestrator.run();
-		// href is unchanged (loopAdaptor's default), so the primary href-diff layer sees no change and
-		// this stop reaches the full-mapping drain call with a resolved active element already in hand:
-		// the stop is still notified (matching "aborts the session after notifying a navigation drain"
-		// above) before the session ends, since a thrown destroyed-context error here is just an
-		// alternate way of learning the same thing a non-throwing `navigation: true` drain reports.
 		expect(ctx.stops).toHaveLength(1);
 		expect(ctx.stops[0]?.contextSignals?.signals.navigation).toBe(true);
 		expect(ctx.sessionEnds).toEqual(["navigation"]);
@@ -1590,11 +1578,6 @@ describe("tab loop", () => {
 			orchestrator.attach(plain);
 			await orchestrator.run();
 
-			// The synthetic F55 snapshot has no live focused element (it already blurred itself), so only
-			// the contextSignals declarer (the capability this mechanism exists to serve) gets notified.
-			// A plain consumer with no contextSignals capability has nothing here it could act on, unlike
-			// a normal tab stop where every consumer's fields are meaningfully absent-or-present for a
-			// real element.
 			expect(plain.stops).toHaveLength(0);
 			expect(ctx.stops).toHaveLength(1);
 			expect(plain.sessionEnds).toEqual(["completed"]);

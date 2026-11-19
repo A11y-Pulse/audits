@@ -21,15 +21,6 @@ export type CaptureUnfocusedPairOptions = {
 	composed?: boolean;
 };
 
-/**
- * Capture focused and unfocused screenshots of the same element, plus the unfocused style snapshot
- * and clip anchors appearance needs to score later.
- *
- * The screenshots show the element's label or nearest visible ancestor instead when the element
- * draws nothing itself, and never show the text caret.
- *
- * The caller owns `handle` and must dispose it after this promise settles.
- */
 export async function captureUnfocusedPair(
 	adaptor: BrowserAdaptor,
 	options: CaptureUnfocusedPairOptions,
@@ -117,9 +108,6 @@ export async function captureUnfocusedPair(
 	const { focusedScreenshot, blurred, unfocusedRect, unfocusedClip, unfocusedScreenshot } =
 		captured;
 
-	// Restore focus so the next Tab advances from this element rather than restarting traversal. (A
-	// closed-shadow host can't be re-focused into the root; the loop still progresses because Tab
-	// re-enters from there.)
 	const unfocusedStyles = await restore();
 
 	const context: PairContext[] = [];

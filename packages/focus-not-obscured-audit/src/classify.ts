@@ -1,7 +1,3 @@
-/**
- * Focus not obscured (WCAG 2.4.11) AA bucket classification.
- */
-
 export type { ObscuredMeasurement } from "@a11y-pulse/tab-orchestrator";
 
 import type { ObscuredMeasurement } from "@a11y-pulse/tab-orchestrator";

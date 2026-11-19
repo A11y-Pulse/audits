@@ -50,13 +50,6 @@ import type {
 } from "./types";
 import { captureUnfocusedPair } from "./unfocused-pair";
 
-/**
- * Whether an `evaluate()` rejection looks like the page navigated out from
- * under it (execution context destroyed) rather than an unexpected failure.
- * A full navigation is the one context-change signal the in-page observer
- * can never self-report: it destroys the JS context before it can log
- * anything, so the host has to infer it from how `evaluate()` failed.
- */
 export function isContextDestroyedError(error: unknown): boolean {
 	const message = error instanceof Error ? error.message : String(error);
 
@@ -992,13 +985,6 @@ export function createTabOrchestrator(
 							nextMarker = Math.max(nextMarker, blurredIndex + 1);
 						}
 
-						// Focus landed on <body>. This is normally "done tabbing", but it
-						// is also what F55 focus-removal looks like (an element receives
-						// focus and then blurs itself, e.g. `onfocus="this.blur()"`): the
-						// in-page observer's focusin history still attributes that stop to
-						// the element that briefly held focus, even though nothing is
-						// focused now. That case gets one last notification instead of
-						// vanishing silently.
 						const raw = step.raw;
 
 						if (wantContext && raw?.hasAttributed) {
@@ -1303,10 +1289,6 @@ export function createTabOrchestrator(
 								carried = {};
 								lastHasAttributed = raw.hasAttributed;
 							} else {
-								// The page navigated out from under the drain call: the
-								// in-page observer's own state (and any DOM markers it
-								// set) went with it, so there is nothing left to report
-								// besides the navigation itself.
 								const signals: ContextChangeSignals = {
 									openedWindow: false,
 									submittedForm: false,

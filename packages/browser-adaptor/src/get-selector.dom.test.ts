@@ -163,8 +163,6 @@ describe("getSelector minimal segments", () => {
 	});
 
 	it("does not build href features from volatile query-string URLs", () => {
-		// Query strings change between runs (pagination, session ids), which would destabilise the
-		// selector; positional pins handle these instead.
 		document.body.innerHTML = `
 			<div><a href="/list?page=1">1</a><a href="/list?page=2">2</a></div>
 		`;

@@ -198,9 +198,6 @@ describe("baseline snapshot DOM state", () => {
 	});
 
 	it("snapshots styles with the marker attribute applied, matching the probe", () => {
-		// The probe always reads styles while the marker is present, so the baseline must too.
-		// Otherwise page CSS targeting the marker attribute would register as a style change on every
-		// element.
 		const markerSeenDuringReads: boolean[] = [];
 		vi.stubGlobal("getComputedStyle", (el: Element) => ({
 			display: "inline-block",

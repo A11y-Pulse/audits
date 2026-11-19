@@ -627,10 +627,6 @@ describeEachEngine<BrowserAdaptor>(
 		});
 
 		it("ends as completed once the page has been tabbed to the end", async () => {
-			// The tab press that leaves the last element takes focus out of the
-			// document entirely, which reads identically to a stolen focus. Ending
-			// such a session as `lostFocus` would demote every genuine failure on a
-			// fully-walked page to `incomplete`.
 			const result = await runFixture("all-pass.html");
 			expect(result.summary.sessionEnd).toBe("completed");
 		});
@@ -641,8 +637,6 @@ describeEachEngine<BrowserAdaptor>(
 
 			try {
 				await page.goto(`${server.url}/all-pass.html`);
-				// The loss under test is the one pressTab introduces below, not a page that never had focus
-				// at all.
 				await page.bringToFront();
 
 				const adaptor = page.adaptor;

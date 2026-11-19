@@ -1137,8 +1137,6 @@ describe("runFocusAppearanceAudit", () => {
 	});
 
 	it("does not throw when an entry references a missing snapshot", async () => {
-		// Orchestrator skips dangling interned indexes instead of throwing; the style stage is skipped
-		// and detection falls through to the pixel diff.
 		const { adaptor } = fakeAdaptor({
 			tabStops: 1,
 			baseline: {

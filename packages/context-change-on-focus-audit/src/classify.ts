@@ -1,7 +1,3 @@
-/**
- * Context change on focus (WCAG 3.2.1) finding types and classification.
- */
-
 export type { ContextChangeDetails, ContextChangeSignals } from "@a11y-pulse/tab-orchestrator";
 
 import type { ContextChangeDetails, ContextChangeSignals } from "@a11y-pulse/tab-orchestrator";

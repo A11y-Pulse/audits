@@ -330,7 +330,6 @@ describe("createFocusNotObscuredAudit", () => {
 		orchestrator.attach(audit);
 		await orchestrator.run();
 		const element = audit.result.elements[0];
-		// truncateHtml keeps only the opening tag (see ActiveElementInfo.html).
 		expect(element?.measurement.obscuredBy?.html).toBe("<footer>");
 		expect(element?.measurement.fullyObscured).toBe(true);
 		expect(element?.selector).toBe("#fake");

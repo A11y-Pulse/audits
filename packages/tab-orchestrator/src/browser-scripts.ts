@@ -1943,7 +1943,6 @@ type ContextObserverState = {
 	baselineHref: string;
 	/** What the page did since the last drain. */
 	events: ContextEvent[];
-	/** Elements that received focusin since the last drain. */
 	focusIns: Element[];
 	/** The owner of the timer callback now running, if it is one the tab observer tagged. */
 	timerOwner: ContextEventOwner | null;
@@ -2154,7 +2153,6 @@ export function installContextObserverScript(): void {
 	const onFocus = (event: Event): void => {
 		const target = event.target;
 
-		// Prefer nodeType: instanceof can be brittle across some embeddings.
 		if (target && (target as Node).nodeType === 1) {
 			state.focusIns.push(target as Element);
 		}
@@ -2323,7 +2321,6 @@ export type DrainContextObserverResult = ContextEventSummary & {
 	focusGuard: boolean;
 	navigation: boolean;
 	attributedHtml: string | null;
-	/** True when an attributed element was marked for selector resolution. */
 	hasAttributed: boolean;
 	/** True when the submitted form is held for `submittedFormHandleScript`. */
 	hasSubmittedForm: boolean;
@@ -2718,10 +2715,6 @@ export function awaitOwnedTimersScript(maxMs: number): Promise<void> {
 	});
 }
 
-/**
- * Return the element marked as attributed by drainContextObserverScript (the element that received
- * a focus event this stop and then lost it), if any.
- */
 export function attributedHandleScript(): Element | null {
 	return document.querySelector("[data-a11y-ctx-attr]");
 }
@@ -2761,7 +2754,6 @@ export function clearContextFocusInsScript(): void {
 	}
 }
 
-/** Current location.href for navigation comparison in the host. */
 export function locationHrefScript(): string {
 	return location.href;
 }

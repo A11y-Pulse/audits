@@ -244,11 +244,6 @@ export function createFocusNotObscuredAudit(
 
 			const bucket = classifyObscuring(measurement);
 
-			// Pass elements need no evidence; only screenshot the elements that are actually worth a
-			// human looking at, and only up to the limit, since each capture is a real page.screenshot()
-			// call.
-			// The capture is a strip of the viewport with the element's box outlined: a clip of the
-			// element alone would show nothing but whatever covers it.
 			const screenshot =
 				bucket !== "pass" && screenshotsTaken < resolved.screenshotLimit
 					? await (session.screenshotContext?.() ?? session.screenshotClip())
