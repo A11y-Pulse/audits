@@ -23,14 +23,12 @@ export function classifyObscuring(m: ObscuredMeasurement): ObscuringBucket {
 		return "pass";
 	}
 
-	if (m.opacity === "opaque") {
-		return "violation";
+	switch (m.opacity) {
+		case "opaque":
+			return "violation";
+		case "unknown":
+			return "incomplete";
+		case "semi-transparent":
+			return "pass";
 	}
-
-	if (m.opacity === "unknown") {
-		return "incomplete";
-	}
-
-	// Semi-transparent: visible through the cover, so not "entirely hidden".
-	return "pass";
 }
