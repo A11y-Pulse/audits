@@ -85,8 +85,8 @@ function resolveOptions(options: FocusAppearanceOptions): ResolvedOptions {
 		baselineElementLimit: options.baselineElementLimit ?? elementLimit * 2,
 		screenshotSettleDelay: options.screenshotSettleDelay ?? DEFAULT_SCREENSHOT_SETTLE_DELAY,
 		screenshotClipBuffer: options.screenshotClipBuffer ?? DEFAULT_SCREENSHOT_CLIP_BUFFER,
-		// Floor at 1: regionsDiffer uses `diffPixels >= threshold`, so a threshold of 0 would report
-		// every region (even identical ones) as differing.
+		// Floor at 1: alignedRegionsDiffer uses `diffPixels >= threshold`, so a threshold of 0 would
+		// report every region (even identical ones) as differing.
 		screenshotDiffThreshold: Math.max(
 			1,
 			options.screenshotDiffThreshold ?? DEFAULT_SCREENSHOT_DIFF_THRESHOLD,
