@@ -5,6 +5,8 @@
   input, textarea { font: inherit; padding: 6px 8px; border: 1px solid #555; outline: none; width: 280px; }
   #no-caret { caret-color: transparent; }
   #outlined:focus { outline: 3px solid #0050ff; }
+  /* Engines differ on whether a read-only field's text is selected and painted on Tab. */
+  #readonly::selection { background: transparent; color: inherit; }
 </style></head><body>
   <h1>Sign up</h1>
   <form>
