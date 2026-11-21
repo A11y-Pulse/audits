@@ -136,21 +136,15 @@ describeEachEngine<BrowserAdaptor>(
 
 		it("sends text fields that show only a caret for review, the same on every engine", async () => {
 			const result = await runFixture("text-inputs.html");
-			// Firefox selects a read-only field's text on Tab and paints the selection.
-			const readonlySelects = engine.name === "playwright-firefox";
 
 			expect(outcomes(result)).toEqual({
 				"#caret-only": "review:caret",
 				"#caret-textarea": "review:caret",
 				"#no-caret": "fail",
 				"#outlined": "style",
-				"#readonly": readonlySelects ? "pixel-diff" : "fail",
+				"#readonly": "fail",
 			});
-			expect(result.summary).toMatchObject(
-				readonlySelects
-					? { passed: 2, failed: 1, needsReview: 2 }
-					: { passed: 1, failed: 2, needsReview: 2 },
-			);
+			expect(result.summary).toMatchObject({ passed: 1, failed: 2, needsReview: 2 });
 		});
 
 		it("leaves no trace of hiding the caret", async () => {
