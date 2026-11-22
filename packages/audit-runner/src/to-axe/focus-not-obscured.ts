@@ -15,13 +15,12 @@ export const FOCUS_NOT_OBSCURED_AUDIT_ID = "focus-not-obscured";
 
 export const FOCUS_NOT_OBSCURED_EVIDENCE_CHECK_ID = "focus-not-obscured-evidence";
 
-const METADATA: AuditMetadata = {
+export const METADATA: AuditMetadata = {
 	id: FOCUS_NOT_OBSCURED_AUDIT_ID,
 	help: "Focused elements must not be entirely hidden by author-created content",
 	description:
 		"Ensures that when a user interface component receives keyboard focus it is not entirely hidden by author-created content, as required by WCAG 2.4.11 Focus Not Obscured (Minimum).",
-	helpUrl:
-		"https://github.com/A11y-Pulse/audits/tree/main/packages/focus-not-obscured-audit#readme",
+	helpUrl: "https://www.a11ypulse.com/docs/focus-not-obscured-audit",
 	impact: "serious",
 	tags: ["wcag22aa", "wcag2411", "cat.keyboard"],
 };

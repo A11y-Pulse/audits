@@ -15,12 +15,12 @@ export const FILENAME_ALT_TEXT_AUDIT_ID = "filename-alt-text";
 
 export const FILENAME_ALT_TEXT_EVIDENCE_CHECK_ID = "filename-alt-text-evidence";
 
-const METADATA: AuditMetadata = {
+export const METADATA: AuditMetadata = {
 	id: FILENAME_ALT_TEXT_AUDIT_ID,
 	help: "Alt text must not be a filename or placeholder text",
 	description:
 		"Ensures that image alt text is not the image's filename, a camera file name or placeholder text, which are not text alternatives (WCAG 1.1.1 Non-text Content, failure F30).",
-	helpUrl: "https://github.com/A11y-Pulse/audits/tree/main/packages/filename-alt-text-audit#readme",
+	helpUrl: "https://www.a11ypulse.com/docs/filename-alt-text-audit",
 	impact: "serious",
 	tags: ["wcag2a", "wcag111", "cat.text-alternatives"],
 };

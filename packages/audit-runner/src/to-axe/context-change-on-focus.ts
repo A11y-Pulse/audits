@@ -16,13 +16,12 @@ export const CONTEXT_CHANGE_ON_FOCUS_AUDIT_ID = "context-change-on-focus";
 
 export const CONTEXT_CHANGE_ON_FOCUS_EVIDENCE_CHECK_ID = "context-change-on-focus-evidence";
 
-const METADATA: AuditMetadata = {
+export const METADATA: AuditMetadata = {
 	id: CONTEXT_CHANGE_ON_FOCUS_AUDIT_ID,
 	help: "Focusing an element must not trigger an unexpected change of context",
 	description:
 		"Ensures that receiving keyboard focus does not initiate a change of context, as required by WCAG 3.2.1 On Focus.",
-	helpUrl:
-		"https://github.com/A11y-Pulse/audits/tree/main/packages/context-change-on-focus-audit#readme",
+	helpUrl: "https://www.a11ypulse.com/docs/context-change-on-focus-audit",
 	impact: "serious",
 	tags: ["wcag2a", "wcag321", "cat.keyboard"],
 };

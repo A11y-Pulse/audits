@@ -24,7 +24,7 @@ export const UNREACHABLE_CONTROLS_EVIDENCE_CHECK_ID = "unreachable-controls-evid
 const HELP_URL =
 	"https://github.com/A11y-Pulse/audits/tree/main/packages/unreachable-controls-audit#readme";
 
-const REACHABILITY: AuditMetadata = {
+export const REACHABILITY: AuditMetadata = {
 	id: KEYBOARD_REACHABILITY_AUDIT_ID,
 	help: "Controls must be reachable with the keyboard",
 	description:
@@ -34,7 +34,7 @@ const REACHABILITY: AuditMetadata = {
 	tags: ["wcag2a", "wcag211", "cat.keyboard"],
 };
 
-const ROLE: AuditMetadata = {
+export const ROLE: AuditMetadata = {
 	id: CONTROL_WITHOUT_ROLE_AUDIT_ID,
 	help: "Focusable controls must expose a role",
 	description:

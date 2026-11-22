@@ -12,12 +12,12 @@ export const FOCUS_APPEARANCE_AUDIT_ID = "focus-appearance";
 
 export const FOCUS_APPEARANCE_EVIDENCE_CHECK_ID = "focus-appearance-evidence";
 
-const METADATA: AuditMetadata = {
+export const METADATA: AuditMetadata = {
 	id: FOCUS_APPEARANCE_AUDIT_ID,
 	help: "Interactive elements must have a visible focus indicator",
 	description:
 		"Ensures that elements which receive keyboard focus show a visible focus indicator, as required by WCAG 2.4.7 Focus Visible.",
-	helpUrl: "https://github.com/A11y-Pulse/audits/tree/main/packages/focus-appearance-audit#readme",
+	helpUrl: "https://www.a11ypulse.com/docs/focus-appearance-audit",
 	impact: "serious",
 	tags: ["wcag2aa", "wcag247", "cat.keyboard"],
 };

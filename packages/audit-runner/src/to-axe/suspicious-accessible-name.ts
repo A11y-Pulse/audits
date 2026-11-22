@@ -4,11 +4,11 @@ import type {
 	SuspiciousNameResult,
 	WcagCriterion,
 } from "@a11y-pulse/suspicious-accessible-name-audit";
-import type { Result } from "axe-core";
 import {
 	type AuditMetadata,
 	type AuditNode,
 	type AuditOutput,
+	type CountedResult,
 	emptyOutput,
 	evidenceCheck,
 	toResult,
@@ -18,13 +18,12 @@ export const SUSPICIOUS_ACCESSIBLE_NAME_AUDIT_ID = "suspicious-accessible-name";
 
 export const SUSPICIOUS_ACCESSIBLE_NAME_EVIDENCE_CHECK_ID = "suspicious-accessible-name-evidence";
 
-const METADATA: Omit<AuditMetadata, "impact" | "tags"> = {
+export const METADATA: Omit<AuditMetadata, "impact" | "tags"> = {
 	id: SUSPICIOUS_ACCESSIBLE_NAME_AUDIT_ID,
 	help: "Accessible names must not be code or placeholder text",
 	description:
 		"Ensures that the accessible names of controls, links, landmarks and iframes are not a code identifier, an unrendered template token or placeholder text (WCAG 1.1.1 Non-text Content for icon-only controls and iframes, 2.4.4 Link Purpose for links, 2.4.6 Headings and Labels otherwise).",
-	helpUrl:
-		"https://github.com/A11y-Pulse/audits/tree/main/packages/suspicious-accessible-name-audit#readme",
+	helpUrl: "https://www.a11ypulse.com/docs/suspicious-accessible-name-audit",
 };
 
 // Null is a role word, which is best practice rather than a WCAG failure. The order keeps tags
@@ -101,14 +100,14 @@ function metadataFor(criteria: ReadonlySet<WcagCriterion | null>): AuditMetadata
 	};
 }
 
-function toBucket(elements: readonly SuspiciousNameElement[]): Result[] {
+function toBucket(elements: readonly SuspiciousNameElement[], count: number): CountedResult[] {
 	if (elements.length === 0) {
 		return [];
 	}
 
 	const criteria = new Set(elements.map(({ criterion }) => criterion));
 
-	return [toResult(metadataFor(criteria), elements.map(toAuditNode))];
+	return [toResult(metadataFor(criteria), elements.map(toAuditNode), count)];
 }
 
 /**
@@ -124,8 +123,8 @@ export function suspiciousAccessibleNameToAxe(result: SuspiciousNameResult): Aud
 
 	return {
 		...emptyOutput(),
-		violations: toBucket(result.failed),
-		incomplete: toBucket(result.needsReview),
-		passes: toBucket(result.passed),
+		violations: toBucket(result.failed, result.summary.failed),
+		incomplete: toBucket(result.needsReview, result.summary.needsReview),
+		passes: toBucket(result.passed, result.summary.passed),
 	};
 }

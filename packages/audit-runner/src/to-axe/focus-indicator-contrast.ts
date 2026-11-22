@@ -18,7 +18,7 @@ export const FOCUS_INDICATOR_CONTRAST_AUDIT_ID = "focus-indicator-contrast";
 
 export const FOCUS_INDICATOR_CONTRAST_EVIDENCE_CHECK_ID = "focus-indicator-contrast-evidence";
 
-const METADATA: AuditMetadata = {
+export const METADATA: AuditMetadata = {
 	id: FOCUS_INDICATOR_CONTRAST_AUDIT_ID,
 	help: "Focus indicators must have sufficient contrast",
 	description:

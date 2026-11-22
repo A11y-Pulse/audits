@@ -12,12 +12,12 @@ export const REFLOW_AUDIT_ID = "reflow";
 
 export const REFLOW_EVIDENCE_CHECK_ID = "reflow-evidence";
 
-const METADATA: AuditMetadata = {
+export const METADATA: AuditMetadata = {
 	id: REFLOW_AUDIT_ID,
 	help: "Content must reflow without two-dimensional scrolling",
 	description:
 		"Ensures that content can be presented at a width equivalent to 320 CSS pixels without requiring two-dimensional scrolling, as required by WCAG 1.4.10 Reflow.",
-	helpUrl: "https://github.com/A11y-Pulse/audits/tree/main/packages/reflow-audit#readme",
+	helpUrl: "https://www.a11ypulse.com/docs/reflow-audit",
 	impact: "serious",
 	tags: ["wcag21aa", "wcag1410", "cat.structure"],
 };

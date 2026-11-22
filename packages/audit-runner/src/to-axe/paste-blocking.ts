@@ -14,7 +14,7 @@ import {
 
 export const ACCESSIBLE_AUTHENTICATION_AUDIT_ID = "accessible-authentication";
 
-const METADATA: AuditMetadata = {
+export const METADATA: AuditMetadata = {
 	id: ACCESSIBLE_AUTHENTICATION_AUDIT_ID,
 	help: "Sign-in fields must let a password manager or a paste fill them",
 	description:

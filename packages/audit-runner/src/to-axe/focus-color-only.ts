@@ -17,13 +17,12 @@ export const FOCUS_COLOR_ONLY_AUDIT_ID = "focus-color-only";
 
 export const FOCUS_COLOR_ONLY_EVIDENCE_CHECK_ID = "focus-color-only-evidence";
 
-const METADATA: AuditMetadata = {
+export const METADATA: AuditMetadata = {
 	id: FOCUS_COLOR_ONLY_AUDIT_ID,
 	help: "Focus must not be shown by a change of color alone",
 	description:
 		"Ensures that elements whose only focus indicator is a change of one color (text, border, outline or background) use colors that differ in lightness by at least 3:1, as required by WCAG 1.4.1 Use of Color.",
-	helpUrl:
-		"https://github.com/A11y-Pulse/audits/tree/main/packages/focus-appearance-audit#colour-only-focus-indicators",
+	helpUrl: "https://www.a11ypulse.com/docs/focus-color-only-audit",
 	impact: "serious",
 	tags: ["wcag2a", "wcag141", "cat.color"],
 };

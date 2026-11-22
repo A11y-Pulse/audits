@@ -45,11 +45,14 @@ export {
 	runAllAudits,
 } from "./run-audits";
 export { base64Replacer, toJson } from "./serialise";
+export type { AuditDescription } from "./to-axe/audit-metadata";
+export { AUDIT_METADATA } from "./to-axe/audit-metadata";
 export type {
 	AuditEvidence,
 	AuditMetadata,
 	AuditNode,
 	AuditOutput,
+	CountedResult,
 } from "./to-axe/audit-output";
 export {
 	AUDIT_INCONCLUSIVE_TAG,

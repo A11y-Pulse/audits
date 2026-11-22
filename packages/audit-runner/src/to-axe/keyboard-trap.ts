@@ -13,7 +13,7 @@ export const KEYBOARD_TRAP_AUDIT_ID = "keyboard-trap";
 
 export const KEYBOARD_TRAP_EVIDENCE_CHECK_ID = "keyboard-trap-evidence";
 
-const METADATA: AuditMetadata = {
+export const METADATA: AuditMetadata = {
 	id: KEYBOARD_TRAP_AUDIT_ID,
 	help: "Keyboard focus must be able to leave every component it can enter",
 	description:

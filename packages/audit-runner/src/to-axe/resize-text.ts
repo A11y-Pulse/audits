@@ -13,7 +13,7 @@ export const RESIZE_TEXT_AUDIT_ID = "resize-text";
 
 export const RESIZE_TEXT_EVIDENCE_CHECK_ID = "resize-text-evidence";
 
-const METADATA: AuditMetadata = {
+export const METADATA: AuditMetadata = {
 	id: RESIZE_TEXT_AUDIT_ID,
 	help: "Text must remain readable when the page is zoomed to 200%",
 	description:

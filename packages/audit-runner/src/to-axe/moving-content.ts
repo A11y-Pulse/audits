@@ -15,7 +15,7 @@ export const MOVING_CONTENT_AUDIT_ID = "moving-content";
 
 export const MOVING_CONTENT_EVIDENCE_CHECK_ID = "moving-content-evidence";
 
-const METADATA: AuditMetadata = {
+export const METADATA: AuditMetadata = {
 	id: MOVING_CONTENT_AUDIT_ID,
 	help: "Moving content must have a way to pause, stop or hide it",
 	description:

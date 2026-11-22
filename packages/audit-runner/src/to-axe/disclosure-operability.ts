@@ -14,7 +14,7 @@ export const DISCLOSURE_OPERABILITY_AUDIT_ID = "disclosure-operability";
 
 export const DISCLOSURE_OPERABILITY_EVIDENCE_CHECK_ID = "disclosure-operability-evidence";
 
-const METADATA: AuditMetadata = {
+export const METADATA: AuditMetadata = {
 	id: DISCLOSURE_OPERABILITY_AUDIT_ID,
 	help: "Controls that expand content must work from the keyboard and report their state",
 	description:

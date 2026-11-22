@@ -20,7 +20,7 @@ export const FOCUS_ORDER_EVIDENCE_CHECK_ID = "focus-order-evidence";
 // Each offending transition is one node, and a scrambled page can produce dozens.
 const NODE_LIMIT = 10;
 
-const METADATA: AuditMetadata = {
+export const METADATA: AuditMetadata = {
 	id: FOCUS_ORDER_AUDIT_ID,
 	help: "Focus should not repeatedly jump a long way against the reading order",
 	description:
