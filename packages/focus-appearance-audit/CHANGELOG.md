@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.12.0
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @a11y-pulse/browser-adaptor@0.12.0
+  - @a11y-pulse/tab-orchestrator@0.12.0
+
 ## 0.7.0
 
 ### Minor Changes

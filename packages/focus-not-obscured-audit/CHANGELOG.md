@@ -1,5 +1,13 @@
 # @a11y-pulse/focus-not-obscured-audit
 
+## 0.12.0
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @a11y-pulse/browser-adaptor@0.12.0
+  - @a11y-pulse/tab-orchestrator@0.12.0
+
 ## 0.6.0
 
 ### Minor Changes

@@ -1,5 +1,13 @@
 # @a11y-pulse/resize-text-audit
 
+## 0.12.0
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @a11y-pulse/browser-adaptor@0.12.0
+  - @a11y-pulse/text-spacing-audit@0.12.0
+
 ## 0.2.0
 
 ### Minor Changes

@@ -1,5 +1,33 @@
 # @a11y-pulse/audit-runner
 
+## 0.12.0
+
+### Minor Changes
+
+- [#124](https://github.com/A11y-Pulse/audits/pull/124) [`6d5446d`](https://github.com/A11y-Pulse/audits/commit/6d5446d914f4f29b5dab391e320e1a3d4c3992c4) Thanks [@wildlyinaccurate](https://github.com/wildlyinaccurate)! - Export the axe-core converters from `@a11y-pulse/audit-runner/to-axe`, along with `AUDIT_METADATA`, so a pipeline of your own can convert each audit's result the way the CLI does. Every package is now released together on one version, and each pins the exact versions of the others it depends on, so an install always gets a set that was tested together.
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @a11y-pulse/browser-adaptor@0.12.0
+  - @a11y-pulse/context-change-on-focus-audit@0.12.0
+  - @a11y-pulse/disclosure-operability-audit@0.12.0
+  - @a11y-pulse/filename-alt-text-audit@0.12.0
+  - @a11y-pulse/focus-appearance-audit@0.12.0
+  - @a11y-pulse/focus-not-obscured-audit@0.12.0
+  - @a11y-pulse/focus-order-audit@0.12.0
+  - @a11y-pulse/keyboard-trap-audit@0.12.0
+  - @a11y-pulse/moving-content-audit@0.12.0
+  - @a11y-pulse/orphaned-tab-roles-audit@0.12.0
+  - @a11y-pulse/paste-blocking-audit@0.12.0
+  - @a11y-pulse/reflow-audit@0.12.0
+  - @a11y-pulse/resize-text-audit@0.12.0
+  - @a11y-pulse/skip-link-audit@0.12.0
+  - @a11y-pulse/suspicious-accessible-name-audit@0.12.0
+  - @a11y-pulse/tab-orchestrator@0.12.0
+  - @a11y-pulse/text-spacing-audit@0.12.0
+  - @a11y-pulse/unreachable-controls-audit@0.12.0
+
 ## 0.11.0
 
 ### Minor Changes

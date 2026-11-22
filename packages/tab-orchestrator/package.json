@@ -1,6 +1,6 @@
 {
 	"name": "@a11y-pulse/tab-orchestrator",
-	"version": "0.11.0",
+	"version": "0.12.0",
 	"description": "Shared Tab-session runner for A11y Pulse keyboard audits.",
 	"type": "module",
 	"license": "MIT",
@@ -41,7 +41,7 @@
 		"access": "public"
 	},
 	"dependencies": {
-		"@a11y-pulse/browser-adaptor": "0.11.0"
+		"@a11y-pulse/browser-adaptor": "0.12.0"
 	},
 	"devDependencies": {
 		"@a11y-pulse/context-change-on-focus-audit": "*",
