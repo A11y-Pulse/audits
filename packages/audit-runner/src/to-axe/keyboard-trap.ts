@@ -18,7 +18,7 @@ export const METADATA: AuditMetadata = {
 	help: "Keyboard focus must be able to leave every component it can enter",
 	description:
 		"Ensures that keyboard focus is not confined to part of the page with no standard way out, as required by WCAG 2.1.2 No Keyboard Trap.",
-	helpUrl: "https://github.com/A11y-Pulse/audits/tree/main/packages/keyboard-trap-audit#readme",
+	helpUrl: "https://www.a11ypulse.com/docs/keyboard-trap-audit",
 	impact: "serious",
 	tags: ["wcag2a", "wcag212", "cat.keyboard"],
 };

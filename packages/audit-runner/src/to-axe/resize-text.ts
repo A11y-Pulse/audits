@@ -18,7 +18,7 @@ export const METADATA: AuditMetadata = {
 	help: "Text must remain readable when the page is zoomed to 200%",
 	description:
 		"Ensures that text is not cut off and does not overlap other text when the page is zoomed to 200%, as WCAG 1.4.4 requires.",
-	helpUrl: "https://github.com/A11y-Pulse/audits/tree/main/packages/resize-text-audit#readme",
+	helpUrl: "https://www.a11ypulse.com/docs/resize-text-audit",
 	impact: "serious",
 	tags: ["wcag2aa", "wcag144", "cat.sensory-and-visual-cues"],
 };

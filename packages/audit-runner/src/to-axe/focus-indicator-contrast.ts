@@ -23,8 +23,7 @@ export const METADATA: AuditMetadata = {
 	help: "Focus indicators must have sufficient contrast",
 	description:
 		"Ensures that a focus indicator (an outline, border, box-shadow or background fill) has a contrast ratio of at least 3:1 against the colors next to it, as required by WCAG 1.4.11 Non-text Contrast. How much the indicator differs from the unfocused state is not judged here.",
-	helpUrl:
-		"https://github.com/A11y-Pulse/audits/tree/main/packages/focus-appearance-audit#focus-indicator-contrast",
+	helpUrl: "https://www.a11ypulse.com/docs/focus-indicator-contrast-audit",
 	impact: "serious",
 	tags: ["wcag2aa", "wcag21aa", "wcag1411", "cat.color"],
 };

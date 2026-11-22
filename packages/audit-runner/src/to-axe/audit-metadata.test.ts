@@ -9,12 +9,16 @@ describe("AUDIT_METADATA", () => {
 		expect(Object.keys(AUDIT_METADATA).sort()).toEqual([...converted].sort());
 	});
 
-	it("links each audit with a docs page there, and the rest to their README", () => {
+	it("links every audit to its page in the A11y Pulse docs", () => {
+		for (const { helpUrl } of Object.values(AUDIT_METADATA)) {
+			expect(helpUrl).toMatch(/^https:\/\/www\.a11ypulse\.com\/docs\/[a-z-]+-audit$/);
+		}
+
 		expect(AUDIT_METADATA["skip-link-activation"]?.helpUrl).toBe(
 			"https://www.a11ypulse.com/docs/skip-link-audit",
 		);
-		expect(AUDIT_METADATA["keyboard-trap"]?.helpUrl).toBe(
-			"https://github.com/A11y-Pulse/audits/tree/main/packages/keyboard-trap-audit#readme",
+		expect(AUDIT_METADATA["control-without-role"]?.helpUrl).toBe(
+			"https://www.a11ypulse.com/docs/control-without-role-audit",
 		);
 	});
 

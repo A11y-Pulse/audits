@@ -20,7 +20,7 @@ export const METADATA: AuditMetadata = {
 	help: "Moving content must have a way to pause, stop or hide it",
 	description:
 		"Ensures that content which starts moving on its own and keeps moving for more than five seconds can be paused, stopped or hidden (WCAG 2.2.2 Pause, Stop, Hide).",
-	helpUrl: "https://github.com/A11y-Pulse/audits/tree/main/packages/moving-content-audit#readme",
+	helpUrl: "https://www.a11ypulse.com/docs/moving-content-audit",
 	impact: "serious",
 	tags: ["wcag2a", "wcag222", "cat.time-and-media"],
 };
