@@ -62,8 +62,8 @@
 		"access": "public"
 	},
 	"dependencies": {
-		"@a11y-pulse/browser-adaptor": "*",
-		"@a11y-pulse/text-spacing-audit": "*"
+		"@a11y-pulse/browser-adaptor": "0.11.0",
+		"@a11y-pulse/text-spacing-audit": "0.5.0"
 	},
 	"peerDependencies": {
 		"playwright-core": ">=1.40",

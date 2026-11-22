@@ -51,7 +51,7 @@
 		"access": "public"
 	},
 	"dependencies": {
-		"@a11y-pulse/browser-adaptor": "*"
+		"@a11y-pulse/browser-adaptor": "0.11.0"
 	},
 	"devDependencies": {
 		"@types/pngjs": "^6.0.5",
