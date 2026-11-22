@@ -17,12 +17,12 @@ export const SKIP_LINK_AUDIT_ID = "skip-link-activation";
 
 export const SKIP_LINK_EVIDENCE_CHECK_ID = "skip-link-activation-evidence";
 
-const METADATA: AuditMetadata = {
+export const METADATA: AuditMetadata = {
 	id: SKIP_LINK_AUDIT_ID,
 	help: "Skip links must move keyboard focus to their target",
 	description:
 		"Ensures that skip-link-like in-page anchors in the first tab stops move keyboard focus to their target when activated, as required by WCAG 2.4.1 Bypass Blocks.",
-	helpUrl: "https://github.com/A11y-Pulse/audits/tree/main/packages/skip-link-audit#readme",
+	helpUrl: "https://www.a11ypulse.com/docs/skip-link-audit",
 	impact: "moderate",
 	tags: ["wcag2a", "wcag241", "cat.keyboard"],
 };

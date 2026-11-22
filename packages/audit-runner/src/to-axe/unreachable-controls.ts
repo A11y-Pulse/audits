@@ -21,25 +21,22 @@ export const CONTROL_WITHOUT_ROLE_AUDIT_ID = "control-without-role";
 
 export const UNREACHABLE_CONTROLS_EVIDENCE_CHECK_ID = "unreachable-controls-evidence";
 
-const HELP_URL =
-	"https://github.com/A11y-Pulse/audits/tree/main/packages/unreachable-controls-audit#readme";
-
-const REACHABILITY: AuditMetadata = {
+export const REACHABILITY: AuditMetadata = {
 	id: KEYBOARD_REACHABILITY_AUDIT_ID,
 	help: "Controls must be reachable with the keyboard",
 	description:
 		"Ensures that elements which act as controls (they handle clicks, or have a widget role) can be reached with the Tab key, as required by WCAG 2.1.1 Keyboard.",
-	helpUrl: HELP_URL,
+	helpUrl: "https://www.a11ypulse.com/docs/keyboard-reachability-audit",
 	impact: "serious",
 	tags: ["wcag2a", "wcag211", "cat.keyboard"],
 };
 
-const ROLE: AuditMetadata = {
+export const ROLE: AuditMetadata = {
 	id: CONTROL_WITHOUT_ROLE_AUDIT_ID,
 	help: "Focusable controls must expose a role",
 	description:
 		"Ensures that elements which take keyboard focus and handle clicks or key presses expose a role, so assistive technology can say what they are, as required by WCAG 4.1.2 Name, Role, Value.",
-	helpUrl: HELP_URL,
+	helpUrl: "https://www.a11ypulse.com/docs/control-without-role-audit",
 	impact: "serious",
 	tags: ["wcag2a", "wcag412", "cat.aria"],
 };

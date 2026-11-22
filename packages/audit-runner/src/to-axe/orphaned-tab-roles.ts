@@ -15,13 +15,12 @@ export const ORPHANED_TAB_ROLES_AUDIT_ID = "orphaned-tab-roles";
 
 export const ORPHANED_TAB_ROLES_EVIDENCE_CHECK_ID = "orphaned-tab-roles-evidence";
 
-const METADATA: AuditMetadata = {
+export const METADATA: AuditMetadata = {
 	id: ORPHANED_TAB_ROLES_AUDIT_ID,
 	help: "Tabs must control a tab panel, and tab panels must belong to a tab",
 	description:
 		"Ensures that every element with role tab is associated with a tab panel and every tab panel with a tab, so assistive technology is not promised a tab interface that does not exist (WCAG 1.3.1 Info and Relationships, 4.1.2 Name, Role, Value).",
-	helpUrl:
-		"https://github.com/A11y-Pulse/audits/tree/main/packages/orphaned-tab-roles-audit#readme",
+	helpUrl: "https://www.a11ypulse.com/docs/orphaned-tab-roles-audit",
 	impact: "serious",
 	tags: ["cat.aria", "wcag2a", "wcag131", "wcag412"],
 };

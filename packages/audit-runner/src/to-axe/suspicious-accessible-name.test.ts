@@ -43,6 +43,23 @@ function result(
 }
 
 describe("suspiciousAccessibleNameToAxe", () => {
+	it("counts every item past the report limit in nodeCount", () => {
+		const listed = result([element({ signal: "artefact" })]);
+		const output = suspiciousAccessibleNameToAxe({
+			...listed,
+			summary: { ...listed.summary, failed: 40 },
+		});
+
+		expect(output.violations[0]?.nodes).toHaveLength(1);
+		expect(output.violations[0]?.nodeCount).toBe(40);
+	});
+
+	it("leaves nodeCount out when every item is listed", () => {
+		const output = suspiciousAccessibleNameToAxe(result([element({ signal: "artefact" })]));
+
+		expect(output.violations[0]).not.toHaveProperty("nodeCount");
+	});
+
 	it("routes each list to its bucket", () => {
 		const output = suspiciousAccessibleNameToAxe(
 			result(

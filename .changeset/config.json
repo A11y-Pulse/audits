@@ -5,7 +5,7 @@
 		{ "repo": "A11y-Pulse/audits" }
 	],
 	"commit": false,
-	"fixed": [],
+	"fixed": [["@a11y-pulse/*"]],
 	"linked": [],
 	"access": "public",
 	"baseBranch": "main",

@@ -14,12 +14,12 @@ import {
 
 export const ACCESSIBLE_AUTHENTICATION_AUDIT_ID = "accessible-authentication";
 
-const METADATA: AuditMetadata = {
+export const METADATA: AuditMetadata = {
 	id: ACCESSIBLE_AUTHENTICATION_AUDIT_ID,
 	help: "Sign-in fields must let a password manager or a paste fill them",
 	description:
 		"Ensures that password, username and one-time-code fields do not block pasting or autofill, so that signing in does not depend on remembering or transcribing a secret (WCAG 3.3.8 Accessible Authentication (Minimum)).",
-	helpUrl: "https://github.com/A11y-Pulse/audits/tree/main/packages/paste-blocking-audit#readme",
+	helpUrl: "https://www.a11ypulse.com/docs/accessible-authentication-audit",
 	impact: "serious",
 	tags: ["cat.forms", "wcag22aa", "wcag338"],
 };

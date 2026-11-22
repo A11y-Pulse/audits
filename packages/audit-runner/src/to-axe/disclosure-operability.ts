@@ -14,13 +14,12 @@ export const DISCLOSURE_OPERABILITY_AUDIT_ID = "disclosure-operability";
 
 export const DISCLOSURE_OPERABILITY_EVIDENCE_CHECK_ID = "disclosure-operability-evidence";
 
-const METADATA: AuditMetadata = {
+export const METADATA: AuditMetadata = {
 	id: DISCLOSURE_OPERABILITY_AUDIT_ID,
 	help: "Controls that expand content must work from the keyboard and report their state",
 	description:
 		"Ensures that disclosure triggers (elements with aria-expanded) open and close with Enter and Space and update aria-expanded when they do, as required by WCAG 2.1.1 Keyboard and 4.1.2 Name, Role, Value.",
-	helpUrl:
-		"https://github.com/A11y-Pulse/audits/tree/main/packages/disclosure-operability-audit#readme",
+	helpUrl: "https://www.a11ypulse.com/docs/disclosure-operability-audit",
 	impact: "serious",
 	tags: ["cat.keyboard", "wcag2a", "wcag211", "wcag412"],
 };

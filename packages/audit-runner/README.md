@@ -189,6 +189,19 @@ The return value is in the shape of [axe-core's results object](https://github.c
 | Paste blocked on sign-in fields (WCAG 3.3.8) | `accessible-authentication` |
 | Disclosure operability (WCAG 2.1.1 and 4.1.2) | `disclosure-operability` |
 
+### Converting results yourself
+
+Each audit's converter is exported, so a pipeline that runs the audits itself can report them the way this package does. Every converter takes the audit's own result and returns the four axe-core buckets:
+
+```ts
+import { AUDIT_METADATA, focusAppearanceToAxe } from "@a11y-pulse/audit-runner";
+
+const { violations, incomplete, passes, inapplicable } = focusAppearanceToAxe(focusAppearance.result);
+const { help, description, helpUrl } = AUDIT_METADATA["focus-appearance"];
+```
+
+`AUDIT_METADATA` holds each audit's name (`help`), description and help page, keyed by the IDs above, for showing an audit without converting a result.
+
 axe-core is injected into the page and every same-origin iframe inside it, so its rules cover framed content. A cross-origin iframe cannot be reached and is reported by axe-core's own `frame-tested` rule as needing review. The A11y Pulse audits examine the top document only.
 
 ### Order and run time
@@ -262,7 +275,9 @@ Each audit documents the cases where it reports a problem that is not one, and w
 
 ## JSON output
 
-Audit evidence is attached to the node it belongs to, as a single axe-core check under `any`. Its `data` carries what the audit measured, under the field names the audit's own result uses, so a report can be acted on without re-running the audit. Screenshots are optional fields of `data` (they are capped per audit), carried as raw `Uint8Array`s. `toJson` is a thin `JSON.stringify` wrapper that encodes those as base64:
+Audit evidence is attached to the node it belongs to, as a single axe-core check under `any`. Its `data` carries what the audit measured, under the field names the audit's own result uses, so a report can be acted on without re-running the audit. Screenshots are optional fields of `data` (they are capped per audit), carried as raw `Uint8Array`s. `toJson` is a thin `JSON.stringify` wrapper that encodes those as base64.
+
+An audit that stops listing items at its report limit, but counts all of them, also sets `nodeCount` on its result to the full count. It is left out when `nodes` lists everything.
 
 ```json
 {
@@ -332,6 +347,8 @@ Fields an audit did not record are left out. Three names mean the same thing whe
 Releases are managed in the [A11y-Pulse/audits](https://github.com/A11y-Pulse/audits) monorepo with [Changesets](https://github.com/changesets/changesets). Publishing uses [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/) (OIDC). There is no long-lived `NPM_TOKEN`.
 
 ### Ship a change
+
+Every package in the monorepo is released together on the same version, and each depends on the exact versions of the others, so an install always gets a set that was tested together.
 
 1. Open a PR against `main` that includes a changeset (`npx changeset`) naming `@a11y-pulse/audit-runner`.
 2. After merge, the Release workflow opens a Version PR. Merging that PR publishes this package to npm and tags `@a11y-pulse/audit-runner@<version>`.

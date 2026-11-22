@@ -13,12 +13,12 @@ export const TEXT_SPACING_AUDIT_ID = "text-spacing";
 
 export const TEXT_SPACING_EVIDENCE_CHECK_ID = "text-spacing-evidence";
 
-const METADATA: AuditMetadata = {
+export const METADATA: AuditMetadata = {
 	id: TEXT_SPACING_AUDIT_ID,
 	help: "Text must remain readable when spacing is increased",
 	description:
 		"Ensures that text remains readable when line height, paragraph spacing, letter spacing, and word spacing are increased to the WCAG 1.4.12 minima.",
-	helpUrl: "https://github.com/A11y-Pulse/audits/tree/main/packages/text-spacing-audit#readme",
+	helpUrl: "https://www.a11ypulse.com/docs/text-spacing-audit",
 	impact: "serious",
 	tags: ["wcag21aa", "wcag1412", "cat.structure"],
 };

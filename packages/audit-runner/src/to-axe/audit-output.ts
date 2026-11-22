@@ -5,11 +5,17 @@ import type { CheckResult, NodeResult, Result } from "axe-core";
  * into.
  */
 export type AuditOutput = {
-	violations: Result[];
-	incomplete: Result[];
-	passes: Result[];
-	inapplicable: Result[];
+	violations: CountedResult[];
+	incomplete: CountedResult[];
+	passes: CountedResult[];
+	inapplicable: CountedResult[];
 };
+
+/**
+ * An axe-core result. `nodeCount` is set when the audit counted more items than it lists in
+ * `nodes`, which stop at its report limit.
+ */
+export type CountedResult = Result & { nodeCount?: number };
 
 /** Everything about a converted audit except its nodes. */
 export type AuditMetadata = Pick<
@@ -86,8 +92,18 @@ export function toNode(node: AuditNode): NodeResult {
 	return result;
 }
 
-export function toResult(metadata: AuditMetadata, nodes: readonly AuditNode[]): Result {
-	return { ...metadata, nodes: nodes.map(toNode) };
+export function toResult(
+	metadata: AuditMetadata,
+	nodes: readonly AuditNode[],
+	count?: number,
+): CountedResult {
+	const result: CountedResult = { ...metadata, nodes: nodes.map(toNode) };
+
+	if (count !== undefined && count > nodes.length) {
+		result.nodeCount = count;
+	}
+
+	return result;
 }
 
 /** An audit result whose items the audit has already sorted into buckets. */
@@ -95,7 +111,8 @@ export type SortedResult<T> = {
 	failed: readonly T[];
 	needsReview: readonly T[];
 	passed: readonly T[];
-	summary: { checked: number };
+	/** `failed`, `needsReview` and `passed` count every item, when the lists stop at a limit. */
+	summary: { checked: number; failed?: number; needsReview?: number; passed?: number };
 };
 
 /**
@@ -111,14 +128,14 @@ export function sortedResultToAxe<T>(
 		return { ...emptyOutput(), inapplicable: [toResult(metadata, [])] };
 	}
 
-	const bucket = (items: readonly T[]): Result[] =>
-		items.length > 0 ? [toResult(metadata, items.map(toAuditNode))] : [];
+	const bucket = (items: readonly T[], count: number | undefined): CountedResult[] =>
+		items.length > 0 ? [toResult(metadata, items.map(toAuditNode), count)] : [];
 
 	return {
 		...emptyOutput(),
-		violations: bucket(result.failed),
-		incomplete: bucket(result.needsReview),
-		passes: bucket(result.passed),
+		violations: bucket(result.failed, result.summary.failed),
+		incomplete: bucket(result.needsReview, result.summary.needsReview),
+		passes: bucket(result.passed, result.summary.passed),
 	};
 }
 

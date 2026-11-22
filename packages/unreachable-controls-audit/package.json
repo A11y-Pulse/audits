@@ -64,8 +64,8 @@
 		"access": "public"
 	},
 	"dependencies": {
-		"@a11y-pulse/browser-adaptor": "*",
-		"@a11y-pulse/tab-orchestrator": "*"
+		"@a11y-pulse/browser-adaptor": "0.11.0",
+		"@a11y-pulse/tab-orchestrator": "0.11.0"
 	},
 	"peerDependencies": {
 		"playwright-core": ">=1.40",

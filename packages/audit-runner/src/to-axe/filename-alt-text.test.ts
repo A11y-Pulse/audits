@@ -41,6 +41,23 @@ function result(
 }
 
 describe("filenameAltTextToAxe", () => {
+	it("counts every item past the report limit in nodeCount", () => {
+		const listed = result([image({ signal: "filename-match" })], [], []);
+		const output = filenameAltTextToAxe({
+			...listed,
+			summary: { ...listed.summary, failed: 40 },
+		});
+
+		expect(output.violations[0]?.nodes).toHaveLength(1);
+		expect(output.violations[0]?.nodeCount).toBe(40);
+	});
+
+	it("leaves nodeCount out when every item is listed", () => {
+		const output = filenameAltTextToAxe(result([image({ signal: "filename-match" })], [], []));
+
+		expect(output.violations[0]).not.toHaveProperty("nodeCount");
+	});
+
 	it("routes each list to its bucket", () => {
 		const output = filenameAltTextToAxe(
 			result(

@@ -20,12 +20,12 @@ export const FOCUS_ORDER_EVIDENCE_CHECK_ID = "focus-order-evidence";
 // Each offending transition is one node, and a scrambled page can produce dozens.
 const NODE_LIMIT = 10;
 
-const METADATA: AuditMetadata = {
+export const METADATA: AuditMetadata = {
 	id: FOCUS_ORDER_AUDIT_ID,
 	help: "Focus should not repeatedly jump a long way against the reading order",
 	description:
 		"Flags pages where keyboard focus repeatedly jumps a long way against the reading order, a sign that the focus order may not preserve meaning and operability (WCAG 2.4.3 Focus Order).",
-	helpUrl: "https://github.com/A11y-Pulse/audits/tree/main/packages/focus-order-audit#readme",
+	helpUrl: "https://www.a11ypulse.com/docs/focus-order-audit",
 	impact: "moderate",
 	tags: ["wcag2a", "wcag243", "cat.keyboard"],
 };
