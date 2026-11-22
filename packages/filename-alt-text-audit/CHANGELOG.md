@@ -1,5 +1,12 @@
 # @a11y-pulse/filename-alt-text-audit
 
+## 0.12.0
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @a11y-pulse/browser-adaptor@0.12.0
+
 ## 0.3.0
 
 ### Minor Changes
