@@ -96,6 +96,44 @@ describe("filenameAltTextToAxe", () => {
 		);
 	});
 
+	it.each([
+		[
+			"aria-label",
+			'The aria-label "IMG_4032.jpg" is the image\'s filename. Replace it with a description of what the image shows, or remove the aria-label and use alt="" if the image is decorative.',
+		],
+		[
+			"title",
+			'The SVG title "IMG_4032.jpg" is the image\'s filename. Replace it with a description of what the image shows, or remove the title and add aria-hidden="true" if the image is decorative.',
+		],
+	] as const)(
+		"names the %s the text came from and how to hide the image",
+		(altTextSource, summary) => {
+			const output = filenameAltTextToAxe(
+				result(
+					[image({ altText: "IMG_4032.jpg", altTextSource, signal: "filename-match" })],
+					[],
+					[],
+				),
+			);
+
+			expect(output.violations[0]?.nodes[0]?.failureSummary).toBe(summary);
+		},
+	);
+
+	it("names where the text came from in the evidence", () => {
+		const output = filenameAltTextToAxe(
+			result(
+				[],
+				[image({ altText: "DSC_0192", altTextSource: "aria-label", signal: "camera-name" })],
+				[],
+			),
+		);
+
+		expect(output.incomplete[0]?.nodes[0]?.any[0]?.message).toBe(
+			'Image with the aria-label "DSC_0192"',
+		);
+	});
+
 	it("tags results as 1.1.1 results", () => {
 		const output = filenameAltTextToAxe(result([image({ signal: "filename-match" })], [], []));
 
