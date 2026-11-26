@@ -1,5 +1,6 @@
 import type {
 	AltTextSignal,
+	AltTextSource,
 	FilenameAltTextImage,
 	FilenameAltTextResult,
 } from "@a11y-pulse/filename-alt-text-audit";
@@ -25,7 +26,20 @@ export const METADATA: AuditMetadata = {
 	tags: ["wcag2a", "wcag111", "cat.text-alternatives"],
 };
 
-const REPLACEMENT = 'a description of what the image shows, or alt="" if the image is decorative';
+const SOURCE_NAMES: Record<AltTextSource, string> = {
+	alt: "alt text",
+	"aria-label": "aria-label",
+	title: "SVG title",
+};
+
+// Decorative images are hidden differently depending on what names them.
+const REPLACEMENTS: Record<AltTextSource, string> = {
+	alt: 'a description of what the image shows, or alt="" if the image is decorative',
+	"aria-label":
+		'a description of what the image shows, or remove the aria-label and use alt="" if the image is decorative',
+	title:
+		'a description of what the image shows, or remove the title and add aria-hidden="true" if the image is decorative',
+};
 
 const FINDINGS: Record<AltTextSignal, string> = {
 	"filename-match": "is the image's filename",
@@ -37,13 +51,14 @@ const FINDINGS: Record<AltTextSignal, string> = {
 };
 
 function failureSummary(image: FilenameAltTextImage, signal: AltTextSignal): string {
-	const finding = `The alt text "${image.altText}" ${FINDINGS[signal]}.`;
+	const finding = `The ${SOURCE_NAMES[image.altTextSource]} "${image.altText}" ${FINDINGS[signal]}.`;
+	const replacement = REPLACEMENTS[image.altTextSource];
 
 	if (signal === "filename-match" || signal === "artefact") {
-		return `${finding} Replace it with ${REPLACEMENT}.`;
+		return `${finding} Replace it with ${replacement}.`;
 	}
 
-	return `${finding} Check that it describes the image; if it does not, replace it with ${REPLACEMENT}.`;
+	return `${finding} Check that it describes the image; if it does not, replace it with ${replacement}.`;
 }
 
 function toAuditNode(image: FilenameAltTextImage): AuditNode {
@@ -56,7 +71,7 @@ function toAuditNode(image: FilenameAltTextImage): AuditNode {
 	node.evidence = evidenceCheck(
 		FILENAME_ALT_TEXT_EVIDENCE_CHECK_ID,
 		"serious",
-		`Image with the alt text "${image.altText}"`,
+		`Image with the ${SOURCE_NAMES[image.altTextSource]} "${image.altText}"`,
 		{
 			altText: image.altText,
 			altTextSource: image.altTextSource,
