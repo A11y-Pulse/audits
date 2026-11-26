@@ -1,6 +1,6 @@
 {
 	"name": "@a11y-pulse/suspicious-accessible-name-audit",
-	"version": "0.12.0",
+	"version": "0.12.1",
 	"description": "Audit that flags controls, links, landmarks and iframes whose accessible name is code, an unrendered template token or a placeholder (WCAG 1.1.1, 2.4.4 and 2.4.6).",
 	"type": "module",
 	"license": "SEE LICENSE IN LICENSE.md",
@@ -51,7 +51,7 @@
 		"access": "public"
 	},
 	"dependencies": {
-		"@a11y-pulse/browser-adaptor": "0.12.0"
+		"@a11y-pulse/browser-adaptor": "0.12.1"
 	},
 	"devDependencies": {
 		"happy-dom": "^21.0.3",
