@@ -1,5 +1,12 @@
 # @a11y-pulse/moving-content-audit
 
+## 0.12.1
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @a11y-pulse/browser-adaptor@0.12.1
+
 ## 0.12.0
 
 ### Patch Changes

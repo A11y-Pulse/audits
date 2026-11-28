@@ -1,5 +1,30 @@
 # @a11y-pulse/audit-runner
 
+## 0.12.1
+
+### Patch Changes
+
+- [#126](https://github.com/A11y-Pulse/audits/pull/126) [`5e0eeb6`](https://github.com/A11y-Pulse/audits/commit/5e0eeb62f5ecd459583c1a0ee5a1502977149ae9) Thanks [@wildlyinaccurate](https://github.com/wildlyinaccurate)! - Name where filename-alt-text found the text (alt text, `aria-label` or SVG `title`) in its failure summaries and evidence, and say how to hide a decorative image named that way.
+- Updated dependencies []:
+  - @a11y-pulse/browser-adaptor@0.12.1
+  - @a11y-pulse/context-change-on-focus-audit@0.12.1
+  - @a11y-pulse/disclosure-operability-audit@0.12.1
+  - @a11y-pulse/filename-alt-text-audit@0.12.1
+  - @a11y-pulse/focus-appearance-audit@0.12.1
+  - @a11y-pulse/focus-not-obscured-audit@0.12.1
+  - @a11y-pulse/focus-order-audit@0.12.1
+  - @a11y-pulse/keyboard-trap-audit@0.12.1
+  - @a11y-pulse/moving-content-audit@0.12.1
+  - @a11y-pulse/orphaned-tab-roles-audit@0.12.1
+  - @a11y-pulse/paste-blocking-audit@0.12.1
+  - @a11y-pulse/reflow-audit@0.12.1
+  - @a11y-pulse/resize-text-audit@0.12.1
+  - @a11y-pulse/skip-link-audit@0.12.1
+  - @a11y-pulse/suspicious-accessible-name-audit@0.12.1
+  - @a11y-pulse/tab-orchestrator@0.12.1
+  - @a11y-pulse/text-spacing-audit@0.12.1
+  - @a11y-pulse/unreachable-controls-audit@0.12.1
+
 ## 0.12.0
 
 ### Minor Changes
